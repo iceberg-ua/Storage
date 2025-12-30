@@ -3,12 +3,12 @@
     x:Class="Storage.App.AppShell"
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-    xmlns:local="clr-namespace:Storage.App"
-    Title="Storage.App">
+    xmlns:views="clr-namespace:Storage.App.Views"
+    Title="Storage">
 
     <ShellContent
-        Title="Home"
-        ContentTemplate="{DataTemplate local:MainPage}"
-        Route="MainPage" />
+        Title="Items"
+        ContentTemplate="{DataTemplate views:ItemsPage}"
+        Route="items" />
 
 </Shell>
