@@ -34,10 +34,14 @@ public static class MauiProgram
 		// Register ViewModels
 		builder.Services.AddTransient<ViewModels.ItemsViewModel>();
 		builder.Services.AddTransient<ViewModels.AddItemViewModel>();
+		builder.Services.AddTransient<ViewModels.LocationsViewModel>();
+		builder.Services.AddTransient<ViewModels.AddLocationViewModel>();
 
 		// Register Pages
 		builder.Services.AddTransient<Views.ItemsPage>();
 		builder.Services.AddTransient<Views.AddItemPage>();
+		builder.Services.AddTransient<Views.LocationsPage>();
+		builder.Services.AddTransient<Views.AddLocationPage>();
 
 		return builder.Build();
 	}

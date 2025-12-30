@@ -10,5 +10,6 @@ public partial class AppShell : Shell
 
 		// Register routes for navigation
 		Routing.RegisterRoute("additem", typeof(AddItemPage));
+		Routing.RegisterRoute("addlocation", typeof(AddLocationPage));
 	}
 }

@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:Storage.App.ViewModels"
+             x:Class="Storage.App.Views.LocationsPage"
+             x:DataType="vm:LocationsViewModel"
+             Title="Locations">
+
+    <Grid RowDefinitions="Auto,*">
+        <!-- Header with Add Button -->
+        <Button Grid.Row="0"
+                Text="Add Location"
+                Command="{Binding NavigateToAddLocationCommand}"
+                Margin="10"
+                HorizontalOptions="End" />
+
+        <!-- Locations List -->
+        <RefreshView Grid.Row="1"
+                     IsRefreshing="{Binding IsLoading}"
+                     Command="{Binding LoadLocationsCommand}">
+            <CollectionView ItemsSource="{Binding Locations}">
+                <CollectionView.EmptyView>
+                    <StackLayout Padding="20" VerticalOptions="Center">
+                        <Label Text="No locations yet"
+                               FontSize="20"
+                               HorizontalTextAlignment="Center"
+                               TextColor="Gray" />
+                        <Label Text="Tap 'Add Location' to create your first location"
+                               FontSize="14"
+                               HorizontalTextAlignment="Center"
+                               TextColor="Gray"
+                               Margin="0,10,0,0" />
+                    </StackLayout>
+                </CollectionView.EmptyView>
+
+                <CollectionView.ItemTemplate>
+                    <DataTemplate>
+                        <SwipeView>
+                            <SwipeView.RightItems>
+                                <SwipeItems>
+                                    <SwipeItem Text="Delete"
+                                               BackgroundColor="Red"
+                                               Command="{Binding Source={RelativeSource AncestorType={x:Type vm:LocationsViewModel}}, Path=DeleteLocationCommand}"
+                                               CommandParameter="{Binding .}" />
+                                </SwipeItems>
+                            </SwipeView.RightItems>
+
+                            <Frame Margin="10,5" Padding="10" CornerRadius="5">
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <StackLayout Grid.Column="0">
+                                        <Label Text="{Binding Name}"
+                                               FontSize="18"
+                                               FontAttributes="Bold" />
+                                        <Label Text="{Binding Parent.Name, StringFormat='Parent: {0}'}"
+                                               FontSize="12"
+                                               TextColor="DarkGray"
+                                               IsVisible="{Binding Parent, Converter={StaticResource IsNotNullConverter}}" />
+                                    </StackLayout>
+                                </Grid>
+                            </Frame>
+                        </SwipeView>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+        </RefreshView>
+    </Grid>
+
+</ContentPage>

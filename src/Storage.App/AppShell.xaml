@@ -6,9 +6,18 @@
     xmlns:views="clr-namespace:Storage.App.Views"
     Title="Storage">
 
-    <ShellContent
-        Title="Items"
-        ContentTemplate="{DataTemplate views:ItemsPage}"
-        Route="items" />
+    <TabBar>
+        <ShellContent
+            Title="Items"
+            Icon="box.png"
+            ContentTemplate="{DataTemplate views:ItemsPage}"
+            Route="items" />
+
+        <ShellContent
+            Title="Locations"
+            Icon="folder.png"
+            ContentTemplate="{DataTemplate views:LocationsPage}"
+            Route="locations" />
+    </TabBar>
 
 </Shell>

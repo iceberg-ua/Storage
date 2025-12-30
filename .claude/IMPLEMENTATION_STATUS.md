@@ -52,6 +52,18 @@
   - SaveItemAsync command with validation
   - CancelAsync command
 
+- **LocationsViewModel** ([ViewModels/LocationsViewModel.cs](../src/Storage.App/ViewModels/LocationsViewModel.cs))
+  - LoadLocationsAsync command
+  - NavigateToAddLocationAsync command
+  - DeleteLocationAsync command with confirmation
+  - Observable Locations collection
+
+- **AddLocationViewModel** ([ViewModels/AddLocationViewModel.cs](../src/Storage.App/ViewModels/AddLocationViewModel.cs))
+  - Form fields: Name, ParentLocation
+  - LoadParentLocationsAsync command (for hierarchy)
+  - SaveLocationAsync command with validation
+  - CancelAsync command
+
 #### 7. Views (UI)
 - **ItemsPage** ([Views/ItemsPage.xaml](../src/Storage.App/Views/ItemsPage.xaml))
   - List of all items with pull-to-refresh
@@ -65,10 +77,26 @@
   - Location picker (optional)
   - Save and Cancel buttons
 
+- **LocationsPage** ([Views/LocationsPage.xaml](../src/Storage.App/Views/LocationsPage.xaml))
+  - List of all locations with pull-to-refresh
+  - Empty state message
+  - Add button in header
+  - Swipe-to-delete functionality
+  - Shows: Name, Parent location (if nested)
+
+- **AddLocationPage** ([Views/AddLocationPage.xaml](../src/Storage.App/Views/AddLocationPage.xaml))
+  - Name input (required)
+  - Parent location picker (optional, for hierarchy)
+  - Helpful text explaining parent locations
+  - Save and Cancel buttons
+
 #### 8. Navigation
-- Shell-based navigation configured
-- Route registered: `additem` → AddItemPage
-- Default route: `items` → ItemsPage
+- Shell-based navigation with TabBar
+- Two tabs: Items and Locations
+- Routes registered:
+  - `additem` → AddItemPage
+  - `addlocation` → AddLocationPage
+- Default tab: Items
 
 #### 9. Utilities
 - IsNotNullConverter for conditional XAML visibility
