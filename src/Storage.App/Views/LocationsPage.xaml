@@ -2,6 +2,7 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:Storage.App.ViewModels"
+             xmlns:models="clr-namespace:Storage.Core.Models;assembly=Storage.Core"
              x:Class="Storage.App.Views.LocationsPage"
              x:DataType="vm:LocationsViewModel"
              Title="Locations">
@@ -20,21 +21,21 @@
                      Command="{Binding LoadLocationsCommand}">
             <CollectionView ItemsSource="{Binding Locations}">
                 <CollectionView.EmptyView>
-                    <StackLayout Padding="20" VerticalOptions="Center">
-                        <Label Text="No locations yet"
-                               FontSize="20"
+                    <StackLayout Padding="20" VerticalOptions="CenterAndExpand" HorizontalOptions="CenterAndExpand">
+                        <Label Text="📍 No locations yet"
+                               FontSize="24"
                                HorizontalTextAlignment="Center"
-                               TextColor="Gray" />
+                               TextColor="#666666" />
                         <Label Text="Tap 'Add Location' to create your first location"
-                               FontSize="14"
+                               FontSize="16"
                                HorizontalTextAlignment="Center"
-                               TextColor="Gray"
+                               TextColor="#999999"
                                Margin="0,10,0,0" />
                     </StackLayout>
                 </CollectionView.EmptyView>
 
                 <CollectionView.ItemTemplate>
-                    <DataTemplate>
+                    <DataTemplate x:DataType="models:Location">
                         <SwipeView>
                             <SwipeView.RightItems>
                                 <SwipeItems>
