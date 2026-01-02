@@ -41,4 +41,20 @@ public partial class ItemsViewModel : ObservableObject
     {
         await Shell.Current.GoToAsync("additem");
     }
+
+    [RelayCommand]
+    private async Task DeleteItemAsync(Item item)
+    {
+        var confirm = await Shell.Current.DisplayAlertAsync(
+            "Delete Item",
+            $"Are you sure you want to delete '{item.Name}'?",
+            "Delete",
+            "Cancel");
+
+        if (confirm)
+        {
+            await _itemRepository.DeleteAsync(item.Id);
+            Items.Remove(item);
+        }
+    }
 }

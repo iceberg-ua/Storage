@@ -36,26 +36,50 @@
 
                 <CollectionView.ItemTemplate>
                     <DataTemplate x:DataType="models:Item">
-                        <Frame Margin="10,5" Padding="10" CornerRadius="5">
-                            <Grid ColumnDefinitions="*,Auto">
-                                <StackLayout Grid.Column="0">
-                                    <Label Text="{Binding Name}"
-                                           FontSize="18"
-                                           FontAttributes="Bold" />
-                                    <Label Text="{Binding Description}"
-                                           FontSize="14"
-                                           TextColor="Gray"
-                                           IsVisible="{Binding Description, Converter={StaticResource IsNotNullConverter}}" />
-                                    <Label Text="{Binding Location.Name, StringFormat='Location: {0}'}"
-                                           FontSize="12"
-                                           TextColor="DarkGray"
-                                           IsVisible="{Binding Location, Converter={StaticResource IsNotNullConverter}}" />
-                                    <Label Text="{Binding CreatedAt, StringFormat='{0:MMM d, yyyy}'}"
-                                           FontSize="12"
-                                           TextColor="LightGray" />
-                                </StackLayout>
-                            </Grid>
-                        </Frame>
+                        <SwipeView>
+                            <SwipeView.RightItems>
+                                <SwipeItems>
+                                    <SwipeItemView Command="{Binding Source={RelativeSource AncestorType={x:Type vm:ItemsViewModel}}, Path=DeleteItemCommand}"
+                                                   CommandParameter="{Binding .}">
+                                        <Grid BackgroundColor="#FF3B30"
+                                              WidthRequest="100"
+                                              Padding="10">
+                                            <VerticalStackLayout VerticalOptions="Center"
+                                                                HorizontalOptions="Center">
+                                                <Label Text="🗑️"
+                                                       FontSize="24"
+                                                       HorizontalOptions="Center"/>
+                                                <Label Text="Delete"
+                                                       TextColor="White"
+                                                       FontSize="14"
+                                                       HorizontalOptions="Center"/>
+                                            </VerticalStackLayout>
+                                        </Grid>
+                                    </SwipeItemView>
+                                </SwipeItems>
+                            </SwipeView.RightItems>
+
+                            <Frame Margin="10,5" Padding="10" CornerRadius="5">
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <StackLayout Grid.Column="0">
+                                        <Label Text="{Binding Name}"
+                                               FontSize="18"
+                                               FontAttributes="Bold" />
+                                        <Label Text="{Binding Description}"
+                                               FontSize="14"
+                                               TextColor="Gray"
+                                               IsVisible="{Binding Description, Converter={StaticResource IsNotNullConverter}}" />
+                                        <Label Text="{Binding Location.Name, StringFormat='Location: {0}'}"
+                                               FontSize="12"
+                                               TextColor="DarkGray"
+                                               IsVisible="{Binding Location, Converter={StaticResource IsNotNullConverter}}" />
+                                        <Label Text="{Binding CreatedAt, StringFormat='{0:MMM d, yyyy}'}"
+                                               FontSize="12"
+                                               TextColor="LightGray" />
+                                    </StackLayout>
+                                </Grid>
+                            </Frame>
+                        </SwipeView>
                     </DataTemplate>
                 </CollectionView.ItemTemplate>
             </CollectionView>

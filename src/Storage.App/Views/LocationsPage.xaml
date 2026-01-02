@@ -39,10 +39,23 @@
                         <SwipeView>
                             <SwipeView.RightItems>
                                 <SwipeItems>
-                                    <SwipeItem Text="Delete"
-                                               BackgroundColor="Red"
-                                               Command="{Binding Source={RelativeSource AncestorType={x:Type vm:LocationsViewModel}}, Path=DeleteLocationCommand}"
-                                               CommandParameter="{Binding .}" />
+                                    <SwipeItemView Command="{Binding Source={RelativeSource AncestorType={x:Type vm:LocationsViewModel}}, Path=DeleteLocationCommand}"
+                                                   CommandParameter="{Binding .}">
+                                        <Grid BackgroundColor="#FF3B30"
+                                              WidthRequest="100"
+                                              Padding="10">
+                                            <VerticalStackLayout VerticalOptions="Center"
+                                                                HorizontalOptions="Center">
+                                                <Label Text="🗑️"
+                                                       FontSize="24"
+                                                       HorizontalOptions="Center"/>
+                                                <Label Text="Delete"
+                                                       TextColor="White"
+                                                       FontSize="14"
+                                                       HorizontalOptions="Center"/>
+                                            </VerticalStackLayout>
+                                        </Grid>
+                                    </SwipeItemView>
                                 </SwipeItems>
                             </SwipeView.RightItems>
 
