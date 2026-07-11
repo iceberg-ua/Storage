@@ -43,6 +43,15 @@ public static class MauiProgram
 		builder.Services.AddTransient<Views.LocationsPage>();
 		builder.Services.AddTransient<Views.AddLocationPage>();
 
-		return builder.Build();
+		var app = builder.Build();
+
+		// Apply any pending migrations (creates the SQLite DB on first run)
+		using (var scope = app.Services.CreateScope())
+		{
+			var db = scope.ServiceProvider.GetRequiredService<StorageDbContext>();
+			db.Database.Migrate();
+		}
+
+		return app;
 	}
 }
