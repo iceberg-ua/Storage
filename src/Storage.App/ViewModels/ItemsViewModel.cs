@@ -43,6 +43,12 @@ public partial class ItemsViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private async Task EditItemAsync(Item item)
+    {
+        await Shell.Current.GoToAsync($"additem?itemId={item.Id}");
+    }
+
+    [RelayCommand]
     private async Task DeleteItemAsync(Item item)
     {
         var confirm = await Shell.Current.DisplayAlertAsync(

@@ -12,6 +12,9 @@ public class Item
     // Path to the item's photo on device storage
     public string? PhotoPath { get; set; }
 
+    // How many of this item are stored; always at least 1
+    public int Quantity { get; set; } = 1;
+
     public DateTime CreatedAt { get; set; }
     public int? LocationId { get; set; }
 

@@ -43,6 +43,12 @@ public partial class LocationsViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private async Task EditLocationAsync(StorageLocation location)
+    {
+        await Shell.Current.GoToAsync($"addlocation?locationId={location.Id}");
+    }
+
+    [RelayCommand]
     private async Task DeleteLocationAsync(StorageLocation location)
     {
         var confirm = await Shell.Current.DisplayAlertAsync(

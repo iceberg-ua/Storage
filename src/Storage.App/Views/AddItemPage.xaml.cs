@@ -16,6 +16,6 @@ public partial class AddItemPage : ContentPage
     protected override async void OnAppearing()
     {
         base.OnAppearing();
-        await _viewModel.LoadLocationsCommand.ExecuteAsync(null);
+        await _viewModel.LoadCommand.ExecuteAsync(null);
     }
 }

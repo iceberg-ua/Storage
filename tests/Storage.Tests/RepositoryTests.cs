@@ -89,6 +89,71 @@ public class RepositoryTests : IDisposable
         Assert.All(garageItems, i => Assert.Equal(garage.Id, i.LocationId));
     }
 
+    [Fact]
+    public async Task ItemDefaultsToQuantityOne()
+    {
+        var itemRepo = new ItemRepository(_context);
+
+        var item = await itemRepo.AddAsync(new Item { Name = "Screwdriver" });
+
+        _context.ChangeTracker.Clear();
+        var fetched = await itemRepo.GetByIdAsync(item.Id);
+
+        Assert.NotNull(fetched);
+        Assert.Equal(1, fetched!.Quantity);
+    }
+
+    [Fact]
+    public async Task UpdateItemPersistsChanges()
+    {
+        var locationRepo = new LocationRepository(_context);
+        var itemRepo = new ItemRepository(_context);
+
+        var shed = await locationRepo.AddAsync(new Location { Name = "Shed" });
+        var loft = await locationRepo.AddAsync(new Location { Name = "Loft" });
+
+        var item = await itemRepo.AddAsync(new Item
+        {
+            Name = "Paint Tin",
+            Description = "White emulsion",
+            Quantity = 2,
+            LocationId = shed.Id
+        });
+
+        item.Name = "Paint Tins";
+        item.Description = "Magnolia emulsion";
+        item.Quantity = 5;
+        item.LocationId = loft.Id;
+        await itemRepo.UpdateAsync(item);
+
+        // Drop the tracked instances so the assertions read from the database.
+        _context.ChangeTracker.Clear();
+        var fetched = await itemRepo.GetByIdAsync(item.Id);
+
+        Assert.NotNull(fetched);
+        Assert.Equal("Paint Tins", fetched!.Name);
+        Assert.Equal("Magnolia emulsion", fetched.Description);
+        Assert.Equal(5, fetched.Quantity);
+        Assert.Equal(loft.Id, fetched.LocationId);
+    }
+
+    [Fact]
+    public async Task UpdateLocationPersistsChanges()
+    {
+        var locationRepo = new LocationRepository(_context);
+
+        var location = await locationRepo.AddAsync(new Location { Name = "Cellar" });
+
+        location.Name = "Wine Cellar";
+        await locationRepo.UpdateAsync(location);
+
+        _context.ChangeTracker.Clear();
+        var fetched = await locationRepo.GetByIdAsync(location.Id);
+
+        Assert.NotNull(fetched);
+        Assert.Equal("Wine Cellar", fetched!.Name);
+    }
+
     public void Dispose()
     {
         _context.Dispose();
