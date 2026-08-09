@@ -3,22 +3,63 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Storage.Core.Models;
 using Storage.Core.Repositories;
+using StorageLocation = Storage.Core.Models.Location;
 
 namespace Storage.App.ViewModels;
 
-public partial class ItemsViewModel : ObservableObject
+// Backs the "Items" tab and, when Shell passes a "locationId", the same page scoped
+// to a single location (pushed from the Locations list). In the scoped view the page
+// gains a second tab listing that location's child locations.
+public partial class ItemsViewModel : ObservableObject, IQueryAttributable
 {
     private readonly IItemRepository _itemRepository;
+    private readonly ILocationRepository _locationRepository;
+
+    private int? _locationId;
 
     [ObservableProperty]
     private ObservableCollection<Item> _items = [];
 
     [ObservableProperty]
+    private ObservableCollection<StorageLocation> _childLocations = [];
+
+    [ObservableProperty]
     private bool _isLoading;
 
-    public ItemsViewModel(IItemRepository itemRepository)
+    [ObservableProperty]
+    private bool _isLocationView;
+
+    [ObservableProperty]
+    private string _pageTitle = "My Items";
+
+    [ObservableProperty]
+    private string _emptyMessage = "Tap ➕ to get started";
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsChildLocationsTabSelected))]
+    private bool _isItemsTabSelected = true;
+
+    public bool IsChildLocationsTabSelected => !IsItemsTabSelected;
+
+    public ItemsViewModel(IItemRepository itemRepository, ILocationRepository locationRepository)
     {
         _itemRepository = itemRepository;
+        _locationRepository = locationRepository;
+    }
+
+    // Shell calls this on the page's BindingContext before the page appears.
+    public void ApplyQueryAttributes(IDictionary<string, object> query)
+    {
+        if (query.TryGetValue("locationId", out var locationId) &&
+            int.TryParse(Convert.ToString(locationId), out var parsedLocationId))
+        {
+            _locationId = parsedLocationId;
+        }
+
+        IsLocationView = _locationId is not null;
+
+        if (IsLocationView)
+            EmptyMessage = "Tap ➕ to store something here";
     }
 
     [RelayCommand]
@@ -27,8 +68,24 @@ public partial class ItemsViewModel : ObservableObject
         IsLoading = true;
         try
         {
-            var items = await _itemRepository.GetAllAsync();
-            Items = new ObservableCollection<Item>(items);
+            if (_locationId is int id)
+            {
+                // Re-read the location each time so a rename made on the edit screen
+                // is reflected when we come back to this page.
+                var location = await _locationRepository.GetByIdAsync(id);
+                PageTitle = location?.Name ?? "Location";
+
+                var items = await _itemRepository.GetByLocationIdAsync(id);
+                Items = new ObservableCollection<Item>(items);
+
+                var children = await _locationRepository.GetChildrenAsync(id);
+                ChildLocations = new ObservableCollection<StorageLocation>(children);
+            }
+            else
+            {
+                var items = await _itemRepository.GetAllAsync();
+                Items = new ObservableCollection<Item>(items);
+            }
         }
         finally
         {
@@ -37,9 +94,33 @@ public partial class ItemsViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private void SelectItemsTab() => IsItemsTabSelected = true;
+
+    [RelayCommand]
+    private void SelectChildLocationsTab() => IsItemsTabSelected = false;
+
+    [RelayCommand]
     private async Task NavigateToAddItemAsync()
     {
-        await Shell.Current.GoToAsync("additem");
+        // In a location view, new items belong to that location by default.
+        var route = _locationId is int id ? $"additem?locationId={id}" : "additem";
+        await Shell.Current.GoToAsync(route);
+    }
+
+    [RelayCommand]
+    private async Task EditLocationAsync()
+    {
+        if (_locationId is not int id)
+            return;
+
+        await Shell.Current.GoToAsync($"addlocation?locationId={id}");
+    }
+
+    // Drill further down the hierarchy into a child location.
+    [RelayCommand]
+    private async Task OpenChildLocationAsync(StorageLocation location)
+    {
+        await Shell.Current.GoToAsync($"locationitems?locationId={location.Id}");
     }
 
     [RelayCommand]

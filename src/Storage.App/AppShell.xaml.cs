@@ -11,5 +11,8 @@ public partial class AppShell : Shell
 		// Register routes for navigation
 		Routing.RegisterRoute("additem", typeof(AddItemPage));
 		Routing.RegisterRoute("addlocation", typeof(AddLocationPage));
+
+		// Same page as the Items tab, pushed with a "locationId" to scope it to one location
+		Routing.RegisterRoute("locationitems", typeof(ItemsPage));
 	}
 }
