@@ -12,7 +12,8 @@ public partial class AppShell : Shell
 		Routing.RegisterRoute("additem", typeof(AddItemPage));
 		Routing.RegisterRoute("addlocation", typeof(AddLocationPage));
 
-		// Same page as the Items tab, pushed with a "locationId" to scope it to one location
-		Routing.RegisterRoute("locationitems", typeof(ItemsPage));
+		// Pushed with a "locationId" to scope the items view to one location. Must be its
+		// own type, not ItemsPage, or Shell resolves the route to the Items tab instead.
+		Routing.RegisterRoute("locationitems", typeof(LocationItemsPage));
 	}
 }

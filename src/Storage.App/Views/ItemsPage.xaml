@@ -8,15 +8,7 @@
              Title="{Binding PageTitle}">
 
     <ContentPage.Resources>
-        <!-- Icon-only action buttons; the label lives in SemanticProperties for screen readers. -->
-        <Style x:Key="IconButton" TargetType="Button">
-            <Setter Property="FontSize" Value="20" />
-            <Setter Property="WidthRequest" Value="52" />
-            <Setter Property="HeightRequest" Value="44" />
-            <Setter Property="Padding" Value="0" />
-        </Style>
-
-        <!-- Unselected tab: flat grey instead of the default filled Primary. -->
+        <!-- Tabs sit flush against each other to read as one strip. -->
         <Style x:Key="TabButton" TargetType="Button">
             <Setter Property="CornerRadius" Value="0" />
         </Style>
@@ -41,11 +33,11 @@
                     ToolTipProperties.Text="Add item" />
         </HorizontalStackLayout>
 
-        <!-- Tab strip: only a location has child locations to switch to. -->
+        <!-- Tab strip: shown only when this location actually has children. -->
         <Grid Grid.Row="1"
               ColumnDefinitions="*,*"
               Margin="10,0,10,10"
-              IsVisible="{Binding IsLocationView}">
+              IsVisible="{Binding ShowTabStrip}">
             <Button Grid.Column="0"
                     Text="Items"
                     Style="{StaticResource TabButton}"
@@ -162,20 +154,6 @@
         <CollectionView Grid.Row="2"
                         ItemsSource="{Binding ChildLocations}"
                         IsVisible="{Binding IsChildLocationsTabSelected}">
-            <CollectionView.EmptyView>
-                <StackLayout Padding="20" VerticalOptions="CenterAndExpand" HorizontalOptions="CenterAndExpand">
-                    <Label Text="📍 No sub-locations"
-                           FontSize="24"
-                           HorizontalTextAlignment="Center"
-                           TextColor="{AppThemeBinding Light={StaticResource Gray500}, Dark={StaticResource Gray300}}" />
-                    <Label Text="Locations nested under this one appear here"
-                           FontSize="16"
-                           HorizontalTextAlignment="Center"
-                           TextColor="{AppThemeBinding Light={StaticResource Gray400}, Dark={StaticResource Gray400}}"
-                           Margin="0,10,0,0" />
-                </StackLayout>
-            </CollectionView.EmptyView>
-
             <CollectionView.ItemTemplate>
                 <DataTemplate x:DataType="models:Location">
                     <Frame Margin="10,5"

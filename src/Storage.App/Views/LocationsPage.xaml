@@ -10,10 +10,13 @@
     <Grid RowDefinitions="Auto,*">
         <!-- Header with Add Button -->
         <Button Grid.Row="0"
-                Text="Add Location"
+                Text="➕"
+                Style="{StaticResource IconButton}"
                 Command="{Binding NavigateToAddLocationCommand}"
                 Margin="10"
-                HorizontalOptions="End" />
+                HorizontalOptions="End"
+                SemanticProperties.Description="Add location"
+                ToolTipProperties.Text="Add location" />
 
         <!-- Locations List -->
         <RefreshView Grid.Row="1"

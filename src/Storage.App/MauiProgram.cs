@@ -39,6 +39,7 @@ public static class MauiProgram
 
 		// Register Pages
 		builder.Services.AddTransient<Views.ItemsPage>();
+		builder.Services.AddTransient<Views.LocationItemsPage>();
 		builder.Services.AddTransient<Views.AddItemPage>();
 		builder.Services.AddTransient<Views.LocationsPage>();
 		builder.Services.AddTransient<Views.AddLocationPage>();

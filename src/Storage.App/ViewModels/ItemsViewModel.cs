@@ -29,6 +29,10 @@ public partial class ItemsViewModel : ObservableObject, IQueryAttributable
     [ObservableProperty]
     private bool _isLocationView;
 
+    // The strip only earns its space once there is a second tab worth switching to.
+    [ObservableProperty]
+    private bool _showTabStrip;
+
     [ObservableProperty]
     private string _pageTitle = "My Items";
 
@@ -80,6 +84,13 @@ public partial class ItemsViewModel : ObservableObject, IQueryAttributable
 
                 var children = await _locationRepository.GetChildrenAsync(id);
                 ChildLocations = new ObservableCollection<StorageLocation>(children);
+
+                ShowTabStrip = ChildLocations.Count > 0;
+
+                // Without the strip there is no control to switch back, so the
+                // items list has to be the one on show.
+                if (!ShowTabStrip)
+                    IsItemsTabSelected = true;
             }
             else
             {
