@@ -42,6 +42,13 @@ public partial class LocationsViewModel : ObservableObject
         await Shell.Current.GoToAsync("addlocation");
     }
 
+    // Tapping a location drills into its contents; editing lives on that screen.
+    [RelayCommand]
+    private async Task OpenLocationAsync(StorageLocation location)
+    {
+        await Shell.Current.GoToAsync($"locationitems?locationId={location.Id}");
+    }
+
     [RelayCommand]
     private async Task DeleteLocationAsync(StorageLocation location)
     {

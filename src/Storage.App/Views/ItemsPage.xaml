@@ -5,18 +5,66 @@
              xmlns:models="clr-namespace:Storage.Core.Models;assembly=Storage.Core"
              x:Class="Storage.App.Views.ItemsPage"
              x:DataType="vm:ItemsViewModel"
-             Title="My Items">
+             Title="{Binding PageTitle}">
 
-    <Grid RowDefinitions="Auto,*">
-        <!-- Header with Add Button -->
-        <Button Grid.Row="0"
-                Text="Add Item"
-                Command="{Binding NavigateToAddItemCommand}"
-                Margin="10"
-                HorizontalOptions="End" />
+    <ContentPage.Resources>
+        <!-- Tabs sit flush against each other to read as one strip. -->
+        <Style x:Key="TabButton" TargetType="Button">
+            <Setter Property="CornerRadius" Value="0" />
+        </Style>
+    </ContentPage.Resources>
+
+    <Grid RowDefinitions="Auto,Auto,*">
+        <!-- Header. "Edit location" only applies when scoped to a single location. -->
+        <HorizontalStackLayout Grid.Row="0"
+                               Margin="10"
+                               Spacing="10"
+                               HorizontalOptions="End">
+            <Button Text="✏️"
+                    Style="{StaticResource IconButton}"
+                    Command="{Binding EditLocationCommand}"
+                    IsVisible="{Binding IsLocationView}"
+                    SemanticProperties.Description="Edit location"
+                    ToolTipProperties.Text="Edit location" />
+            <Button Text="➕"
+                    Style="{StaticResource IconButton}"
+                    Command="{Binding NavigateToAddItemCommand}"
+                    SemanticProperties.Description="Add item"
+                    ToolTipProperties.Text="Add item" />
+        </HorizontalStackLayout>
+
+        <!-- Tab strip: shown only when this location actually has children. -->
+        <Grid Grid.Row="1"
+              ColumnDefinitions="*,*"
+              Margin="10,0,10,10"
+              IsVisible="{Binding ShowTabStrip}">
+            <Button Grid.Column="0"
+                    Text="Items"
+                    Style="{StaticResource TabButton}"
+                    Command="{Binding SelectItemsTabCommand}">
+                <Button.Triggers>
+                    <DataTrigger TargetType="Button" Binding="{Binding IsItemsTabSelected}" Value="False">
+                        <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource Gray600}}" />
+                        <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}" />
+                    </DataTrigger>
+                </Button.Triggers>
+            </Button>
+            <Button Grid.Column="1"
+                    Text="Locations"
+                    Style="{StaticResource TabButton}"
+                    Command="{Binding SelectChildLocationsTabCommand}">
+                <Button.Triggers>
+                    <DataTrigger TargetType="Button" Binding="{Binding IsChildLocationsTabSelected}" Value="False">
+                        <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource Gray600}}" />
+                        <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}" />
+                    </DataTrigger>
+                </Button.Triggers>
+            </Button>
+        </Grid>
 
         <!-- Items List -->
-        <RefreshView Grid.Row="1"
+        <RefreshView Grid.Row="2"
+                     IsVisible="{Binding IsItemsTabSelected}"
                      IsRefreshing="{Binding IsLoading}"
                      Command="{Binding LoadItemsCommand}">
             <CollectionView ItemsSource="{Binding Items}">
@@ -25,11 +73,11 @@
                         <Label Text="📦 No items yet"
                                FontSize="24"
                                HorizontalTextAlignment="Center"
-                               TextColor="#666666" />
-                        <Label Text="Tap 'Add Item' to get started"
+                               TextColor="{AppThemeBinding Light={StaticResource Gray500}, Dark={StaticResource Gray300}}" />
+                        <Label Text="{Binding EmptyMessage}"
                                FontSize="16"
                                HorizontalTextAlignment="Center"
-                               TextColor="#999999"
+                               TextColor="{AppThemeBinding Light={StaticResource Gray400}, Dark={StaticResource Gray400}}"
                                Margin="0,10,0,0" />
                     </StackLayout>
                 </CollectionView.EmptyView>
@@ -59,24 +107,41 @@
                                 </SwipeItems>
                             </SwipeView.RightItems>
 
-                            <Frame Margin="10,5" Padding="10" CornerRadius="5">
+                            <Frame Margin="10,5"
+                                   Padding="10"
+                                   CornerRadius="5"
+                                   BackgroundColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource Gray900}}"
+                                   BorderColor="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource Gray600}}">
+                                <Frame.GestureRecognizers>
+                                    <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:ItemsViewModel}}, Path=EditItemCommand}"
+                                                          CommandParameter="{Binding .}" />
+                                </Frame.GestureRecognizers>
                                 <Grid ColumnDefinitions="*,Auto">
                                     <StackLayout Grid.Column="0">
                                         <Label Text="{Binding Name}"
                                                FontSize="18"
-                                               FontAttributes="Bold" />
+                                               FontAttributes="Bold"
+                                               TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}" />
                                         <Label Text="{Binding Description}"
                                                FontSize="14"
-                                               TextColor="Gray"
+                                               TextColor="{AppThemeBinding Light={StaticResource Gray500}, Dark={StaticResource Gray300}}"
                                                IsVisible="{Binding Description, Converter={StaticResource IsNotNullConverter}}" />
                                         <Label Text="{Binding Location.Name, StringFormat='Location: {0}'}"
                                                FontSize="12"
-                                               TextColor="DarkGray"
+                                               TextColor="{AppThemeBinding Light={StaticResource Gray500}, Dark={StaticResource Gray400}}"
                                                IsVisible="{Binding Location, Converter={StaticResource IsNotNullConverter}}" />
                                         <Label Text="{Binding CreatedAt, StringFormat='{0:MMM d, yyyy}'}"
                                                FontSize="12"
-                                               TextColor="LightGray" />
+                                               TextColor="{AppThemeBinding Light={StaticResource Gray400}, Dark={StaticResource Gray500}}" />
                                     </StackLayout>
+
+                                    <Label Grid.Column="1"
+                                           Text="{Binding Quantity, StringFormat='×{0}'}"
+                                           FontSize="16"
+                                           FontAttributes="Bold"
+                                           VerticalOptions="Center"
+                                           Margin="10,0,0,0"
+                                           TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}" />
                                 </Grid>
                             </Frame>
                         </SwipeView>
@@ -84,6 +149,30 @@
                 </CollectionView.ItemTemplate>
             </CollectionView>
         </RefreshView>
+
+        <!-- Child locations of the location being viewed -->
+        <CollectionView Grid.Row="2"
+                        ItemsSource="{Binding ChildLocations}"
+                        IsVisible="{Binding IsChildLocationsTabSelected}">
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="models:Location">
+                    <Frame Margin="10,5"
+                           Padding="10"
+                           CornerRadius="5"
+                           BackgroundColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource Gray900}}"
+                           BorderColor="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource Gray600}}">
+                        <Frame.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:ItemsViewModel}}, Path=OpenChildLocationCommand}"
+                                                  CommandParameter="{Binding .}" />
+                        </Frame.GestureRecognizers>
+                        <Label Text="{Binding Name}"
+                               FontSize="18"
+                               FontAttributes="Bold"
+                               TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}" />
+                    </Frame>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
     </Grid>
 
 </ContentPage>

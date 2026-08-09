@@ -7,17 +7,18 @@
     Title="Storage">
 
     <TabBar>
-        <ShellContent
-            Title="Items"
-            Icon="box.png"
-            ContentTemplate="{DataTemplate views:ItemsPage}"
-            Route="items" />
-
+        <!-- Locations is first, so it is the tab the app opens on. -->
         <ShellContent
             Title="Locations"
             Icon="folder.png"
             ContentTemplate="{DataTemplate views:LocationsPage}"
             Route="locations" />
+
+        <ShellContent
+            Title="Items"
+            Icon="box.png"
+            ContentTemplate="{DataTemplate views:ItemsPage}"
+            Route="items" />
     </TabBar>
 
 </Shell>

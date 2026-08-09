@@ -23,6 +23,9 @@ public class StorageDbContext : DbContext
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
             entity.Property(e => e.Description).HasMaxLength(1000);
+            entity.Property(e => e.Tags).HasMaxLength(500);
+            entity.Property(e => e.PhotoPath).HasMaxLength(500);
+            entity.Property(e => e.Quantity).IsRequired().HasDefaultValue(1);
             entity.Property(e => e.CreatedAt).IsRequired();
 
             entity.HasOne(e => e.Location)

@@ -2,42 +2,54 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:Storage.App.ViewModels"
+             xmlns:controls="clr-namespace:Storage.App.Controls"
              x:Class="Storage.App.Views.AddItemPage"
              x:DataType="vm:AddItemViewModel"
-             Title="Add Item">
+             Title="{Binding PageTitle}">
 
-    <ScrollView>
-        <VerticalStackLayout Padding="20" Spacing="15">
+    <!-- Fields scroll; the action buttons stay pinned to the bottom. -->
+    <Grid RowDefinitions="*,Auto">
 
-            <Label Text="Item Name" FontSize="16" />
-            <Entry Text="{Binding Name}"
-                   Placeholder="Enter item name"
-                   MaxLength="200" />
+        <ScrollView Grid.Row="0">
+            <VerticalStackLayout Padding="20" Spacing="15">
 
-            <Label Text="Description (Optional)" FontSize="16" Margin="0,10,0,0" />
-            <Editor Text="{Binding Description}"
-                    Placeholder="Enter description"
-                    HeightRequest="100"
-                    MaxLength="1000" />
+                <Label Text="Item Name" FontSize="16" />
+                <Entry Text="{Binding Name}"
+                       Placeholder="Enter item name"
+                       MaxLength="200" />
 
-            <Label Text="Location (Optional)" FontSize="16" Margin="0,10,0,0" />
-            <Picker ItemsSource="{Binding Locations}"
-                    SelectedItem="{Binding SelectedLocation}"
-                    ItemDisplayBinding="{Binding Name}"
-                    Title="Select a location" />
+                <Label Text="Quantity" FontSize="16" Margin="0,10,0,0" />
+                <controls:NumericStepper Value="{Binding Quantity}" Minimum="1" />
 
-            <Grid ColumnDefinitions="*,*" ColumnSpacing="10" Margin="0,20,0,0">
-                <Button Grid.Column="0"
-                        Text="Cancel"
-                        Command="{Binding CancelCommand}"
-                        BackgroundColor="LightGray" />
-                <Button Grid.Column="1"
-                        Text="Save"
-                        Command="{Binding SaveItemCommand}"
-                        BackgroundColor="#512BD4" />
-            </Grid>
+                <Label Text="Location (Optional)" FontSize="16" Margin="0,10,0,0" />
+                <Picker ItemsSource="{Binding Locations}"
+                        SelectedItem="{Binding SelectedLocation}"
+                        ItemDisplayBinding="{Binding Name}"
+                        Title="Select a location" />
 
-        </VerticalStackLayout>
-    </ScrollView>
+                <Label Text="Description (Optional)" FontSize="16" Margin="0,10,0,0" />
+                <Editor Text="{Binding Description}"
+                        Placeholder="Enter description"
+                        HeightRequest="100"
+                        MaxLength="1000" />
+
+            </VerticalStackLayout>
+        </ScrollView>
+
+        <Grid Grid.Row="1"
+              ColumnDefinitions="*,*"
+              ColumnSpacing="10"
+              Padding="20,10">
+            <Button Grid.Column="0"
+                    Text="Cancel"
+                    Command="{Binding CancelCommand}"
+                    BackgroundColor="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource Gray600}}"
+                    TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}" />
+            <Button Grid.Column="1"
+                    Text="Save"
+                    Command="{Binding SaveItemCommand}" />
+        </Grid>
+
+    </Grid>
 
 </ContentPage>

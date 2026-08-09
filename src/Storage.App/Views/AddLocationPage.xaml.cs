@@ -16,6 +16,6 @@ public partial class AddLocationPage : ContentPage
     protected override async void OnAppearing()
     {
         base.OnAppearing();
-        await _viewModel.LoadParentLocationsCommand.ExecuteAsync(null);
+        await _viewModel.LoadCommand.ExecuteAsync(null);
     }
 }
