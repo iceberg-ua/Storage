@@ -161,11 +161,37 @@ public class PhotoServiceTests : IDisposable
     {
         var referenced = await _service.SaveAsync(SourceImage());
         var orphan = await _service.SaveAsync(SourceImage());
+        Age(orphan, PhotoService.OrphanGracePeriod + TimeSpan.FromMinutes(1));
 
         var removed = await _service.CleanupOrphansAsync([referenced]);
 
         Assert.Equal(1, removed);
         Assert.True(File.Exists(Path.Combine(_photosDirectory, referenced)));
+        Assert.False(File.Exists(Path.Combine(_photosDirectory, orphan)));
+    }
+
+    [Fact]
+    public async Task CleanupOrphansSparesAFileWrittenMomentsAgo()
+    {
+        // A photo staged in the edit form is in no item yet, so it looks exactly like an
+        // orphan. The sweep runs at launch and must not delete it out from under the user.
+        var justCaptured = await _service.SaveAsync(SourceImage());
+
+        var removed = await _service.CleanupOrphansAsync([]);
+
+        Assert.Equal(0, removed);
+        Assert.True(File.Exists(Path.Combine(_photosDirectory, justCaptured)));
+    }
+
+    [Fact]
+    public async Task CleanupOrphansRemovesAnUnreferencedFileOnceItIsPastTheGracePeriod()
+    {
+        var orphan = await _service.SaveAsync(SourceImage());
+        Age(orphan, PhotoService.OrphanGracePeriod + TimeSpan.FromSeconds(1));
+
+        var removed = await _service.CleanupOrphansAsync([]);
+
+        Assert.Equal(1, removed);
         Assert.False(File.Exists(Path.Combine(_photosDirectory, orphan)));
     }
 
@@ -198,6 +224,10 @@ public class PhotoServiceTests : IDisposable
     }
 
     private static MemoryStream SourceImage() => new(new byte[1024]);
+
+    // Backdates a stored photo so it falls outside the sweep's grace period.
+    private void Age(string fileName, TimeSpan by) =>
+        File.SetLastWriteTimeUtc(Path.Combine(_photosDirectory, fileName), DateTime.UtcNow - by);
 
     private sealed record CompressorCall(int MaxEdgePixels, float Quality);
 
