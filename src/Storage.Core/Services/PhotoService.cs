@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging;
+
 namespace Storage.Core.Services;
 
 /// <summary>
@@ -11,7 +13,7 @@ public sealed class PhotoService : IPhotoService
     /// 1440 leaves headroom for detail without storing pixels nobody will see.</summary>
     public const int MaxEdgePixels = 1440;
 
-    /// <summary>Hard ceiling. Quality 0.75 normally lands at 150–250 KB, so the
+    /// <summary>Target ceiling. Quality 0.75 normally lands at 150–250 KB, so the
     /// lower rungs of the ladder exist only to stop a pathological input.</summary>
     public const long MaxFileBytes = 1024 * 1024;
 
@@ -20,32 +22,54 @@ public sealed class PhotoService : IPhotoService
     private readonly string _photosDirectory;
     private readonly IImageCompressor _compressor;
     private readonly IGalleryPicker _galleryPicker;
+    private readonly ILogger<PhotoService> _logger;
 
-    public PhotoService(string baseDirectory, IImageCompressor compressor, IGalleryPicker galleryPicker)
+    public PhotoService(
+        string baseDirectory,
+        IImageCompressor compressor,
+        IGalleryPicker galleryPicker,
+        ILogger<PhotoService> logger)
     {
         _photosDirectory = Path.Combine(baseDirectory, "photos");
         _compressor = compressor;
         _galleryPicker = galleryPicker;
+        _logger = logger;
     }
 
     public async Task<string> SaveAsync(Stream imageStream)
     {
-        // Buffer first: a camera stream is forward-only, and the quality ladder
-        // may need to read the source more than once.
+        // Buffer first: a camera stream is forward-only, and both the orientation
+        // read and the quality ladder need to go over the source more than once.
         using var source = new MemoryStream();
         await imageStream.CopyToAsync(source);
 
-        using var compressed = await CompressAsync(source);
+        var (compressed, quality) = await CompressAsync(source);
 
-        Directory.CreateDirectory(_photosDirectory);
-
-        var fileName = $"{Guid.NewGuid():N}.jpg";
-        using (var file = File.Create(Path.Combine(_photosDirectory, fileName)))
+        try
         {
-            await compressed.CopyToAsync(file);
-        }
+            Directory.CreateDirectory(_photosDirectory);
 
-        return fileName;
+            var fileName = $"{Guid.NewGuid():N}.jpg";
+            using (var file = File.Create(Path.Combine(_photosDirectory, fileName)))
+            {
+                await compressed.CopyToAsync(file);
+            }
+
+#if DEBUG
+            // TEMPORARY (Phase 3 device pass): the ceiling is only unit tested against a
+            // stub encoder, so this reports what the real encoder actually produces.
+            // Remove once the sizes are confirmed on a device.
+            _logger.LogInformation(
+                "Saved photo {FileName}: {Bytes} bytes at quality {Quality}.",
+                fileName, compressed.Length, quality);
+#endif
+
+            return fileName;
+        }
+        finally
+        {
+            compressed.Dispose();
+        }
     }
 
     public async Task<string?> PickFromGalleryAsync()
@@ -65,56 +89,82 @@ public sealed class PhotoService : IPhotoService
         return Task.CompletedTask;
     }
 
-    public Task CleanupOrphansAsync(IEnumerable<string> knownFileNames)
+    public Task<int> CleanupOrphansAsync(IEnumerable<string> knownFileNames)
     {
         if (!Directory.Exists(_photosDirectory))
-            return Task.CompletedTask;
+            return Task.FromResult(0);
 
         var known = new HashSet<string>(knownFileNames, StringComparer.OrdinalIgnoreCase);
+        var removed = 0;
 
         foreach (var path in Directory.EnumerateFiles(_photosDirectory))
         {
-            if (!known.Contains(Path.GetFileName(path)))
-                TryDelete(path);
+            if (!known.Contains(Path.GetFileName(path)) && TryDelete(path))
+                removed++;
         }
 
-        return Task.CompletedTask;
+        return Task.FromResult(removed);
     }
 
-    // Steps the JPEG quality down until the encoded image fits under the ceiling,
-    // keeping the last attempt if even the lowest rung overshoots.
-    private async Task<Stream> CompressAsync(MemoryStream source)
+    // Walks the quality ladder and keeps the smallest encode. Normally the first rung
+    // already fits and the loop stops there. If even the lowest rung overshoots the
+    // ceiling we still store the smallest candidate: an oversized photo is a far better
+    // outcome than throwing away the one the user just took.
+    private async Task<(Stream Stream, float Quality)> CompressAsync(MemoryStream source)
     {
-        Stream? result = null;
+        Stream? best = null;
+        var bestQuality = 0f;
 
         foreach (var quality in QualityLadder)
         {
-            result?.Dispose();
-
             source.Position = 0;
-            result = await _compressor.CompressAsync(source, MaxEdgePixels, quality);
+            var candidate = await _compressor.CompressAsync(source, MaxEdgePixels, quality);
 
-            if (result.Length <= MaxFileBytes)
+            if (best is null || candidate.Length < best.Length)
+            {
+                best?.Dispose();
+                best = candidate;
+                bestQuality = quality;
+            }
+            else
+            {
+                // A lower quality that somehow encoded larger is no use to us.
+                candidate.Dispose();
+            }
+
+            if (best.Length <= MaxFileBytes)
                 break;
         }
 
-        result!.Position = 0;
-        return result;
+        if (best!.Length > MaxFileBytes)
+        {
+            _logger.LogWarning(
+                "Photo is still {Bytes} bytes after the lowest quality rung ({Quality}), over the {Ceiling} byte ceiling. Storing it anyway.",
+                best.Length, bestQuality, MaxFileBytes);
+        }
+
+        best.Position = 0;
+        return (best, bestQuality);
     }
 
     // A photo we cannot delete is not worth failing a save or a startup over.
-    private static void TryDelete(string path)
+    private static bool TryDelete(string path)
     {
         try
         {
-            if (File.Exists(path))
-                File.Delete(path);
+            if (!File.Exists(path))
+                return false;
+
+            File.Delete(path);
+            return true;
         }
         catch (IOException)
         {
+            return false;
         }
         catch (UnauthorizedAccessException)
         {
+            return false;
         }
     }
 }

@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Storage.App.Converters;
 using Storage.Core.Data;
 using Storage.Core.Services;
@@ -43,6 +44,8 @@ public partial class App : Application
 
 	private async Task CleanupOrphanPhotosAsync()
 	{
+		var logger = _serviceProvider.GetRequiredService<ILogger<App>>();
+
 		try
 		{
 			using var scope = _serviceProvider.CreateScope();
@@ -54,11 +57,17 @@ public partial class App : Application
 				.ToListAsync();
 
 			var photoService = _serviceProvider.GetRequiredService<IPhotoService>();
-			await photoService.CleanupOrphansAsync(referenced);
+			var removed = await photoService.CleanupOrphansAsync(referenced);
+
+			logger.LogInformation(
+				"Photo sweep finished: {Removed} orphan(s) removed, {Referenced} referenced.",
+				removed, referenced.Count);
 		}
-		catch (Exception)
+		catch (Exception ex)
 		{
-			// Housekeeping must never take the app down on launch.
+			// Housekeeping must never take the app down on launch — but a failure that
+			// nobody can see is how photo leaks go unnoticed.
+			logger.LogError(ex, "Photo sweep failed. Orphaned photo files may remain on disk.");
 		}
 	}
 }

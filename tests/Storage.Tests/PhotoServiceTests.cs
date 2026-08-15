@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using Storage.Core.Services;
 
 namespace Storage.Tests;
@@ -12,6 +13,7 @@ public class PhotoServiceTests : IDisposable
     private readonly string _photosDirectory;
     private readonly StubCompressor _compressor = new();
     private readonly StubGalleryPicker _picker = new();
+    private readonly RecordingLogger _logger = new();
     private readonly PhotoService _service;
 
     public PhotoServiceTests()
@@ -20,7 +22,7 @@ public class PhotoServiceTests : IDisposable
         _photosDirectory = Path.Combine(_baseDirectory, "photos");
         Directory.CreateDirectory(_baseDirectory);
 
-        _service = new PhotoService(_baseDirectory, _compressor, _picker);
+        _service = new PhotoService(_baseDirectory, _compressor, _picker, _logger);
     }
 
     public void Dispose()
@@ -107,6 +109,30 @@ public class PhotoServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task SaveKeepsTheSmallestEncodeWhenNoRungGetsUnderTheCeiling()
+    {
+        // Losing the photo the user just took is worse than storing an oversized one,
+        // so an exhausted ladder still has to produce a file.
+        _compressor.SizeFor = quality => quality switch
+        {
+            > 0.7f => 5_000_000,
+            > 0.6f => 4_000_000,
+            > 0.5f => 3_000_000,
+            _ => 3_500_000, // lower quality, larger output — the ladder must not fall for it
+        };
+
+        var fileName = await _service.SaveAsync(SourceImage());
+
+        Assert.Equal(4, _compressor.Calls.Count);
+
+        var written = new FileInfo(Path.Combine(_photosDirectory, fileName)).Length;
+        Assert.Equal(3_000_000, written);
+
+        var warning = Assert.Single(_logger.Entries, e => e.Level == LogLevel.Warning);
+        Assert.Contains("3000000", warning.Message);
+    }
+
+    [Fact]
     public void GetFullPathResolvesUnderThePhotoDirectoryAndIsNullSafe()
     {
         Assert.Null(_service.GetFullPath(null));
@@ -136,8 +162,9 @@ public class PhotoServiceTests : IDisposable
         var referenced = await _service.SaveAsync(SourceImage());
         var orphan = await _service.SaveAsync(SourceImage());
 
-        await _service.CleanupOrphansAsync([referenced]);
+        var removed = await _service.CleanupOrphansAsync([referenced]);
 
+        Assert.Equal(1, removed);
         Assert.True(File.Exists(Path.Combine(_photosDirectory, referenced)));
         Assert.False(File.Exists(Path.Combine(_photosDirectory, orphan)));
     }
@@ -147,7 +174,7 @@ public class PhotoServiceTests : IDisposable
     {
         Assert.False(Directory.Exists(_photosDirectory));
 
-        await _service.CleanupOrphansAsync(["something.jpg"]);
+        Assert.Equal(0, await _service.CleanupOrphansAsync(["something.jpg"]));
     }
 
     [Fact]
@@ -199,6 +226,28 @@ public class PhotoServiceTests : IDisposable
         public Func<Stream?> NextImage { get; set; } = () => null;
 
         public Task<Stream?> PickAsync() => Task.FromResult(NextImage());
+    }
+
+    private sealed record LogEntry(LogLevel Level, string Message);
+
+    // Enough of ILogger to assert that the service said something, and at what level.
+    private sealed class RecordingLogger : ILogger<PhotoService>
+    {
+        public List<LogEntry> Entries { get; } = [];
+
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+
+        public bool IsEnabled(LogLevel logLevel) => true;
+
+        public void Log<TState>(
+            LogLevel logLevel,
+            EventId eventId,
+            TState state,
+            Exception? exception,
+            Func<TState, Exception?, string> formatter)
+        {
+            Entries.Add(new LogEntry(logLevel, formatter(state, exception)));
+        }
     }
 
     // Stands in for the camera's capture stream: readable once, not seekable.

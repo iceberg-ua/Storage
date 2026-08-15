@@ -18,5 +18,6 @@ public interface IPhotoService
     Task DeleteAsync(string? fileName);
 
     /// <summary>Deletes every file in the photo directory that no item references.</summary>
-    Task CleanupOrphansAsync(IEnumerable<string> knownFileNames);
+    /// <returns>How many files were removed.</returns>
+    Task<int> CleanupOrphansAsync(IEnumerable<string> knownFileNames);
 }

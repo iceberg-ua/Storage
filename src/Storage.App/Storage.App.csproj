@@ -18,8 +18,12 @@
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
 
-		<!-- CommunityToolkit.Maui.Camera 6.1.0 requires Microsoft.Maui.* 10.0.60 or newer,
-		     which is ahead of the version the installed workload defaults to. -->
+		<!-- CommunityToolkit.Maui.Camera 6.1.0 requires Microsoft.Maui.Controls >= 10.0.60.
+		     The newest MAUI workload manifest (workload set 10.0.303.1, the latest for the
+		     10.0.300 SDK band) still pins 10.0.20, so without this the restore fails with
+		     NU1605. MAUI 10.0.x services through NuGet ahead of the workload manifest, so
+		     setting MauiVersion is the supported way to consume it — not a workaround.
+		     Revisit when a workload set ships a manifest at 10.0.60 or later. -->
 		<MauiVersion>10.0.60</MauiVersion>
 
 		<!-- Display name -->
@@ -65,6 +69,12 @@
 		<PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
 		<PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
 		<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="10.0.0" />
+	</ItemGroup>
+
+	<ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
+		<!-- Reading the capture's EXIF orientation. Already in the graph via the camera
+		     package, but referenced directly because we call it directly. -->
+		<PackageReference Include="Xamarin.AndroidX.ExifInterface" Version="1.4.1.1" />
 	</ItemGroup>
 
 	<ItemGroup>

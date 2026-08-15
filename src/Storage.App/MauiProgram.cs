@@ -41,7 +41,8 @@ public static class MauiProgram
 		builder.Services.AddSingleton<IPhotoService>(sp => new PhotoService(
 			FileSystem.AppDataDirectory,
 			sp.GetRequiredService<IImageCompressor>(),
-			sp.GetRequiredService<IGalleryPicker>()));
+			sp.GetRequiredService<IGalleryPicker>(),
+			sp.GetRequiredService<ILogger<PhotoService>>()));
 
 		// Register ViewModels
 		builder.Services.AddTransient<ViewModels.ItemsViewModel>();

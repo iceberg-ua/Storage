@@ -22,9 +22,16 @@ public partial class AddItemViewModel : ObservableObject, IQueryAttributable
     private bool _isLoaded;
 
     // What the DB holds right now. Anything else in PhotoFileName is uncommitted,
-    // which is what tells us which file to delete on save and which on cancel.
+    // which is what tells us which file to delete on save and which on the way out.
     private string? _savedPhotoFileName;
     private string? _capturedPhotoFileName;
+
+    // Reconciliation runs when the page is left, not from any one exit handler, so
+    // every route out is covered by construction. These two say when "left" is real:
+    // the page also disappears when the camera page is pushed on top of it, and there
+    // is nothing to discard once a save has committed.
+    private bool _isAwaitingCamera;
+    private bool _isCommitted;
 
     [ObservableProperty]
     private string _name = string.Empty;
@@ -97,6 +104,9 @@ public partial class AddItemViewModel : ObservableObject, IQueryAttributable
     [RelayCommand]
     private async Task LoadAsync()
     {
+        // We are back on this page, so the camera round-trip is over either way.
+        _isAwaitingCamera = false;
+
         if (_capturedPhotoFileName is string captured)
         {
             _capturedPhotoFileName = null;
@@ -139,6 +149,8 @@ public partial class AddItemViewModel : ObservableObject, IQueryAttributable
     [RelayCommand]
     private async Task TakePhotoAsync()
     {
+        // The page is about to disappear because it is being covered, not left.
+        _isAwaitingCamera = true;
         await Shell.Current.GoToAsync("camera");
     }
 
@@ -212,6 +224,7 @@ public partial class AddItemViewModel : ObservableObject, IQueryAttributable
             await _photoService.DeleteAsync(_savedPhotoFileName);
 
         _savedPhotoFileName = PhotoFileName;
+        _isCommitted = true;
 
         await Shell.Current.GoToAsync("..");
     }
@@ -219,13 +232,20 @@ public partial class AddItemViewModel : ObservableObject, IQueryAttributable
     [RelayCommand]
     private async Task CancelAsync()
     {
-        await DiscardUncommittedPhotoAsync();
+        // Just navigate. The photo is reconciled on the way out, so this handler does
+        // not have to remember to — and neither does any exit route added later.
         await Shell.Current.GoToAsync("..");
     }
 
-    // Anything captured during this edit and not saved is an orphan the moment we leave.
-    public async Task DiscardUncommittedPhotoAsync()
+    /// <summary>
+    /// Called when the page is leaving. Anything captured during this edit and never
+    /// saved is an orphan from here on.
+    /// </summary>
+    public async Task ReconcilePhotoOnLeaveAsync()
     {
+        if (_isAwaitingCamera || _isCommitted)
+            return;
+
         if (PhotoFileName is not null && PhotoFileName != _savedPhotoFileName)
             await _photoService.DeleteAsync(PhotoFileName);
 

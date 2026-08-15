@@ -19,10 +19,13 @@ public partial class AddItemPage : ContentPage
         await _viewModel.LoadCommand.ExecuteAsync(null);
     }
 
-    // Hardware back is a cancel, and cancelling has to clean up an uncommitted photo.
-    protected override bool OnBackButtonPressed()
+    // Every way out of this page ends here — Cancel, hardware back, the gesture, and
+    // Shell's own back arrow — so this is the one place a staged photo has to be
+    // reconciled. The ViewModel ignores the call when the page is merely being covered
+    // by the camera page.
+    protected override async void OnDisappearing()
     {
-        _ = _viewModel.CancelCommand.ExecuteAsync(null);
-        return true;
+        base.OnDisappearing();
+        await _viewModel.ReconcilePhotoOnLeaveAsync();
     }
 }
