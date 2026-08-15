@@ -1,17 +1,17 @@
 # Storage
 
-A local-first mobile inventory app that uses on-device AI to photograph, recognize, and organize your belongings across any storage space - from cellars to closets.
+A local-first mobile inventory app that helps you photograph, tag, and organize your belongings across any storage space - from cellars to closets.
 
 ## Overview
 
-Storage helps you catalog and find items in your home by combining photos, AI-powered recognition, and flexible organization. Everything works offline with on-device processing - no cloud dependencies.
+Storage helps you catalog and find items in your home by combining photos, manual tagging, and location-based organization. Everything works offline - no cloud dependencies.
 
 ## Tech Stack
 
 - **.NET MAUI** - Cross-platform mobile framework (Android-first, iOS second)
 - **SQLite + EF Core** - Local database for offline-first storage
 - **MAUI Community Toolkit** - Camera integration
-- **ML.NET / ONNX Runtime** - On-device AI for image recognition
+- **ML.NET / ONNX Runtime** - On-device AI for image recognition (post-MVP)
 - **C# 12+** - Modern language features (records, pattern matching, file-scoped namespaces)
 
 ## Architecture
@@ -21,20 +21,25 @@ Storage helps you catalog and find items in your home by combining photos, AI-po
 - **Dependency injection** - Built-in MAUI container
 - **Local-first** - All data stored on device, no cloud sync
 
-## Features (Planned)
+## Features (MVP)
 
-- 📸 Photo capture and attachment to items
-- 🤖 AI-powered item recognition from photos
-- 🗂️ Hierarchical location organization
-- 🔍 Full-text search and filtering
-- 🏷️ Custom tags for flexible organization
+- 🏷️ Free-text tags and descriptions
+- 🗂️ Location organization, flat or nested
+- 🔍 Search by tag/description
+- ✏️ Add/edit items and locations, with quantity stepper
+
+## Features (In Progress / Planned)
+
+- 📸 Photo capture and attachment to items (Phase 3)
+- 🤖 AI-powered category suggestion from photos (Phase 4)
+- 🖼️ Multiple photos per item
 - 💾 Export/import for data backup
 
 ## Development Phases
 
-See [PHASES.md](.claude/PHASES.md) for detailed implementation roadmap.
+See [PHASES.md](PHASES.md) for detailed implementation roadmap and [IMPLEMENTATION.md](IMPLEMENTATION.md) for current build status.
 
-Current status: **Phase 1 - Foundation** (Not Started)
+Current status: **Phase 1 (MVP) complete** — Phase 2 (Design & Visual Identity) next.
 
 ## Getting Started
 
@@ -76,7 +81,7 @@ Storage/
 
 ## Contributing
 
-This is a personal learning project exploring mobile development and on-device AI. Feel free to fork and experiment.
+This is a personal learning project exploring mobile development. Feel free to fork and experiment.
 
 ## License
 
