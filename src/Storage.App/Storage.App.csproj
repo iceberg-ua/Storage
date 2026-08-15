@@ -18,6 +18,10 @@
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
 
+		<!-- CommunityToolkit.Maui.Camera 6.1.0 requires Microsoft.Maui.* 10.0.60 or newer,
+		     which is ahead of the version the installed workload defaults to. -->
+		<MauiVersion>10.0.60</MauiVersion>
+
 		<!-- Display name -->
 		<ApplicationTitle>Storage.App</ApplicationTitle>
 
@@ -57,6 +61,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<PackageReference Include="CommunityToolkit.Maui.Camera" Version="6.1.0" />
 		<PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
 		<PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
 		<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="10.0.0" />

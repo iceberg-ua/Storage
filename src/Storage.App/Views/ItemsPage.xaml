@@ -116,8 +116,31 @@
                                     <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:ItemsViewModel}}, Path=EditItemCommand}"
                                                           CommandParameter="{Binding .}" />
                                 </Frame.GestureRecognizers>
-                                <Grid ColumnDefinitions="*,Auto">
-                                    <StackLayout Grid.Column="0">
+                                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
+                                    <!-- Fixed size either way, so a row with a photo
+                                         is exactly as tall as one without. -->
+                                    <Border Grid.Column="0"
+                                            WidthRequest="48"
+                                            HeightRequest="48"
+                                            Padding="0"
+                                            VerticalOptions="Start"
+                                            BackgroundColor="{AppThemeBinding Light={StaticResource Gray100}, Dark={StaticResource Gray600}}"
+                                            Stroke="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource Gray500}}">
+                                        <Border.StrokeShape>
+                                            <RoundRectangle CornerRadius="6" />
+                                        </Border.StrokeShape>
+                                        <Grid>
+                                            <Label Text="📦"
+                                                   FontSize="20"
+                                                   HorizontalOptions="Center"
+                                                   VerticalOptions="Center" />
+                                            <Image Source="{Binding PhotoPath, Converter={StaticResource PhotoSourceConverter}}"
+                                                   Aspect="AspectFill"
+                                                   IsVisible="{Binding PhotoPath, Converter={StaticResource IsNotNullConverter}}" />
+                                        </Grid>
+                                    </Border>
+
+                                    <StackLayout Grid.Column="1">
                                         <Label Text="{Binding Name}"
                                                FontSize="18"
                                                FontAttributes="Bold"
@@ -135,7 +158,7 @@
                                                TextColor="{AppThemeBinding Light={StaticResource Gray400}, Dark={StaticResource Gray500}}" />
                                     </StackLayout>
 
-                                    <Label Grid.Column="1"
+                                    <Label Grid.Column="2"
                                            Text="{Binding Quantity, StringFormat='×{0}'}"
                                            FontSize="16"
                                            FontAttributes="Bold"

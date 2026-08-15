@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Storage.Core.Models;
 using Storage.Core.Repositories;
+using Storage.Core.Services;
 using StorageLocation = Storage.Core.Models.Location;
 
 namespace Storage.App.ViewModels;
@@ -14,10 +15,16 @@ public partial class AddItemViewModel : ObservableObject, IQueryAttributable
 {
     private readonly IItemRepository _itemRepository;
     private readonly ILocationRepository _locationRepository;
+    private readonly IPhotoService _photoService;
 
     private int _itemId;
     private int? _preselectedLocationId;
     private bool _isLoaded;
+
+    // What the DB holds right now. Anything else in PhotoFileName is uncommitted,
+    // which is what tells us which file to delete on save and which on cancel.
+    private string? _savedPhotoFileName;
+    private string? _capturedPhotoFileName;
 
     [ObservableProperty]
     private string _name = string.Empty;
@@ -40,10 +47,24 @@ public partial class AddItemViewModel : ObservableObject, IQueryAttributable
     [ObservableProperty]
     private string _pageTitle = "Add Item";
 
-    public AddItemViewModel(IItemRepository itemRepository, ILocationRepository locationRepository)
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasPhoto))]
+    [NotifyPropertyChangedFor(nameof(PhotoSource))]
+    private string? _photoFileName;
+
+    public bool HasPhoto => !string.IsNullOrEmpty(PhotoFileName);
+
+    public ImageSource? PhotoSource =>
+        _photoService.GetFullPath(PhotoFileName) is string path ? ImageSource.FromFile(path) : null;
+
+    public AddItemViewModel(
+        IItemRepository itemRepository,
+        ILocationRepository locationRepository,
+        IPhotoService photoService)
     {
         _itemRepository = itemRepository;
         _locationRepository = locationRepository;
+        _photoService = photoService;
     }
 
     // Shell calls this on the page's BindingContext before the page appears.
@@ -61,6 +82,14 @@ public partial class AddItemViewModel : ObservableObject, IQueryAttributable
             _preselectedLocationId = parsedLocationId;
         }
 
+        // Handed back by the camera page. Applied in LoadAsync so the swap can be
+        // awaited — this method can't be.
+        if (query.TryGetValue("photoFileName", out var photoFileName) &&
+            Convert.ToString(photoFileName) is { Length: > 0 } capturedFileName)
+        {
+            _capturedPhotoFileName = capturedFileName;
+        }
+
         IsEditMode = _itemId != 0;
         PageTitle = IsEditMode ? "Edit Item" : "Add Item";
     }
@@ -68,6 +97,12 @@ public partial class AddItemViewModel : ObservableObject, IQueryAttributable
     [RelayCommand]
     private async Task LoadAsync()
     {
+        if (_capturedPhotoFileName is string captured)
+        {
+            _capturedPhotoFileName = null;
+            await SetPendingPhotoAsync(captured);
+        }
+
         // OnAppearing fires again when a pushed page is popped — don't discard edits in progress.
         if (_isLoaded)
             return;
@@ -91,11 +126,41 @@ public partial class AddItemViewModel : ObservableObject, IQueryAttributable
             Description = item.Description ?? string.Empty;
             Quantity = item.Quantity;
             SelectedLocation = Locations.FirstOrDefault(l => l.Id == item.LocationId);
+
+            _savedPhotoFileName = item.PhotoPath;
+            PhotoFileName = item.PhotoPath;
         }
         else if (_preselectedLocationId is int preselected)
         {
             SelectedLocation = Locations.FirstOrDefault(l => l.Id == preselected);
         }
+    }
+
+    [RelayCommand]
+    private async Task TakePhotoAsync()
+    {
+        await Shell.Current.GoToAsync("camera");
+    }
+
+    [RelayCommand]
+    private async Task ChooseFromGalleryAsync()
+    {
+        try
+        {
+            var fileName = await _photoService.PickFromGalleryAsync();
+            if (fileName is not null)
+                await SetPendingPhotoAsync(fileName);
+        }
+        catch (Exception ex)
+        {
+            await Shell.Current.DisplayAlertAsync("Error", $"That image could not be imported.\n\n{ex.Message}", "OK");
+        }
+    }
+
+    [RelayCommand]
+    private async Task RemovePhotoAsync()
+    {
+        await SetPendingPhotoAsync(null);
     }
 
     [RelayCommand]
@@ -126,6 +191,7 @@ public partial class AddItemViewModel : ObservableObject, IQueryAttributable
             item.Description = description;
             item.Quantity = Quantity;
             item.LocationId = SelectedLocation?.Id;
+            item.PhotoPath = PhotoFileName;
 
             await _itemRepository.UpdateAsync(item);
         }
@@ -136,9 +202,16 @@ public partial class AddItemViewModel : ObservableObject, IQueryAttributable
                 Name = Name.Trim(),
                 Description = description,
                 Quantity = Quantity,
-                LocationId = SelectedLocation?.Id
+                LocationId = SelectedLocation?.Id,
+                PhotoPath = PhotoFileName
             });
         }
+
+        // Only now is the replaced photo safe to remove.
+        if (_savedPhotoFileName is not null && _savedPhotoFileName != PhotoFileName)
+            await _photoService.DeleteAsync(_savedPhotoFileName);
+
+        _savedPhotoFileName = PhotoFileName;
 
         await Shell.Current.GoToAsync("..");
     }
@@ -146,6 +219,26 @@ public partial class AddItemViewModel : ObservableObject, IQueryAttributable
     [RelayCommand]
     private async Task CancelAsync()
     {
+        await DiscardUncommittedPhotoAsync();
         await Shell.Current.GoToAsync("..");
+    }
+
+    // Anything captured during this edit and not saved is an orphan the moment we leave.
+    public async Task DiscardUncommittedPhotoAsync()
+    {
+        if (PhotoFileName is not null && PhotoFileName != _savedPhotoFileName)
+            await _photoService.DeleteAsync(PhotoFileName);
+
+        PhotoFileName = _savedPhotoFileName;
+    }
+
+    // Swapping the pending photo drops the file it replaces, unless that file is
+    // the one already stored against the item — that one only goes on a save.
+    private async Task SetPendingPhotoAsync(string? fileName)
+    {
+        if (PhotoFileName is not null && PhotoFileName != _savedPhotoFileName)
+            await _photoService.DeleteAsync(PhotoFileName);
+
+        PhotoFileName = fileName;
     }
 }

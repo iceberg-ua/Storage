@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Storage.Core.Models;
 using Storage.Core.Repositories;
+using Storage.Core.Services;
 using StorageLocation = Storage.Core.Models.Location;
 
 namespace Storage.App.ViewModels;
@@ -14,6 +15,7 @@ public partial class ItemsViewModel : ObservableObject, IQueryAttributable
 {
     private readonly IItemRepository _itemRepository;
     private readonly ILocationRepository _locationRepository;
+    private readonly IPhotoService _photoService;
 
     private int? _locationId;
 
@@ -45,10 +47,14 @@ public partial class ItemsViewModel : ObservableObject, IQueryAttributable
 
     public bool IsChildLocationsTabSelected => !IsItemsTabSelected;
 
-    public ItemsViewModel(IItemRepository itemRepository, ILocationRepository locationRepository)
+    public ItemsViewModel(
+        IItemRepository itemRepository,
+        ILocationRepository locationRepository,
+        IPhotoService photoService)
     {
         _itemRepository = itemRepository;
         _locationRepository = locationRepository;
+        _photoService = photoService;
     }
 
     // Shell calls this on the page's BindingContext before the page appears.
@@ -152,6 +158,7 @@ public partial class ItemsViewModel : ObservableObject, IQueryAttributable
         if (confirm)
         {
             await _itemRepository.DeleteAsync(item.Id);
+            await _photoService.DeleteAsync(item.PhotoPath);
             Items.Remove(item);
         }
     }

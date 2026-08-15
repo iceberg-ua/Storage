@@ -18,4 +18,11 @@ public partial class AddItemPage : ContentPage
         base.OnAppearing();
         await _viewModel.LoadCommand.ExecuteAsync(null);
     }
+
+    // Hardware back is a cancel, and cancelling has to clean up an uncommitted photo.
+    protected override bool OnBackButtonPressed()
+    {
+        _ = _viewModel.CancelCommand.ExecuteAsync(null);
+        return true;
+    }
 }
