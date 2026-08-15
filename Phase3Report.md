@@ -90,6 +90,11 @@ database and removes any file in `photos/` nothing references — cheap insuranc
 a crash mid-edit. The sweep reports how many it removed and logs both success and
 failure; it is still fire-and-forget and still cannot take the app down.
 
+It spares any file written in the last five minutes. A staged capture belongs to no item
+yet, so the sweep cannot tell it from an orphan, and running unawaited at launch it can
+overlap one — without the grace period a photo could be deleted out from under the edit
+form. A genuine orphan comes from an earlier session and is never that new.
+
 ---
 
 ## Storage layout
@@ -171,6 +176,8 @@ Twelve new tests against a temp directory, in `tests/Storage.Tests/PhotoServiceT
 - Path resolution is null-safe in both directions
 - Deleting is idempotent: twice, unknown, and null are all no-ops
 - Orphan cleanup removes unreferenced files only, and tolerates a missing directory
+- A file written moments ago survives the sweep even when nothing references it; the
+  same file backdated past the grace period is removed
 - Gallery import stores the picked image, and returns null when cancelled without
   creating anything
 

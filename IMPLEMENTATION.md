@@ -51,6 +51,7 @@ Ran ahead of Phase 2 rather than after it. Prerequisite for Phase 4 (AI recognit
 - Staged-photo reconciliation runs from the edit page's `OnDisappearing`, gated on a committed flag, so Cancel / hardware back / gesture back / Shell's back arrow — and any exit route added later — are all covered by construction rather than each remembering to clean up. Pushing the camera page on top does not trigger it
 - 48x48 thumbnail in the item list with a neutral placeholder, sized so rows do not shift between the two states
 - Photo file deleted when its item is deleted; `CleanupOrphansAsync` runs once at startup against the set of `PhotoPath` values in the DB, returns how many it removed, and logs both success and failure instead of swallowing them
+- The sweep spares any file written in the last 5 minutes (`PhotoService.OrphanGracePeriod`). A staged capture is in no item yet, so it is indistinguishable from an orphan, and the sweep runs unawaited at launch where it can overlap one — the grace period stops it deleting a photo the user is still holding. A genuine orphan comes from an earlier session and is never that new
 - 13 xUnit tests for `PhotoService` covering unique bare filenames, the size ceiling, the quality ladder including exhaustion, forward-only source streams, idempotent delete, and orphan cleanup
 
 **Deviations from the phase prompt (API had moved on):**
@@ -90,3 +91,4 @@ Linear: VOL-27
 - `Implementation_plan.md` (old status doc) was removed from the repo for being stale. This file (`IMPLEMENTATION.md`) replaces it as the single build-status source of truth.
 - PHASES.md is the roadmap (what's planned per phase); this file is the status (what's actually done).
 - PROJECT.md is the scope document (what's in vs. out of the product); it should only change when scope changes, not on every implementation update.
+- **Phase 1 leftover resolved (during Phase 3):** the app initialized the database twice, `Migrate()` in `MauiProgram` followed by `EnsureCreated()` in `App`'s constructor. The ordering made the second a no-op, so nothing was broken, but the two are mutually exclusive strategies — `EnsureCreated` builds a schema with no `__EFMigrationsHistory` table, so any reordering would have silently stopped migrations applying, surfacing much later as a missing column. `EnsureCreated` and its wrapper are gone; `Migrate()` is the single initialization path. It remains in the repository tests, where it is the right tool for an in-memory database.

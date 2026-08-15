@@ -17,6 +17,16 @@ public sealed class PhotoService : IPhotoService
     /// lower rungs of the ladder exist only to stop a pathological input.</summary>
     public const long MaxFileBytes = 1024 * 1024;
 
+    /// <summary>
+    /// How recently written a file has to be for the sweep to leave it alone. A photo
+    /// staged in the edit form is not referenced by any item yet, so to the sweep it is
+    /// indistinguishable from an orphan — and the sweep runs unawaited at launch, which
+    /// can overlap a capture. A genuine orphan is left behind by an earlier session and
+    /// is never this new, so skipping recent files costs nothing and stops the sweep
+    /// deleting a photo out from under the user.
+    /// </summary>
+    public static readonly TimeSpan OrphanGracePeriod = TimeSpan.FromMinutes(5);
+
     private static readonly float[] QualityLadder = [0.75f, 0.65f, 0.55f, 0.45f];
 
     private readonly string _photosDirectory;
@@ -95,11 +105,19 @@ public sealed class PhotoService : IPhotoService
             return Task.FromResult(0);
 
         var known = new HashSet<string>(knownFileNames, StringComparer.OrdinalIgnoreCase);
+        var cutoff = DateTime.UtcNow - OrphanGracePeriod;
         var removed = 0;
 
         foreach (var path in Directory.EnumerateFiles(_photosDirectory))
         {
-            if (!known.Contains(Path.GetFileName(path)) && TryDelete(path))
+            if (known.Contains(Path.GetFileName(path)))
+                continue;
+
+            // Too new to be an orphan — most likely a capture the user is still holding.
+            if (File.GetLastWriteTimeUtc(path) > cutoff)
+                continue;
+
+            if (TryDelete(path))
                 removed++;
         }
 

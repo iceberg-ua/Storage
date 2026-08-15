@@ -22,24 +22,18 @@ public partial class App : Application
 		Resources["PhotoSourceConverter"] =
 			new PhotoSourceConverter(serviceProvider.GetRequiredService<IPhotoService>());
 
-		// Initialize database
-		InitializeDatabase(serviceProvider);
+		// The database is created and migrated in MauiProgram. Deliberately not touched
+		// here: EnsureCreated builds a schema with no migrations-history table, so having
+		// both paths meant a reordering could silently stop migrations applying.
 
-		// Startup is the one moment we can be sure nothing is mid-edit, so it's
-		// where files left behind by a crash get swept up.
+		// Files left behind by a crash get swept up on launch. The sweep spares anything
+		// written in the last few minutes, so a capture racing it is safe.
 		_ = CleanupOrphanPhotosAsync();
 	}
 
 	protected override Window CreateWindow(IActivationState? activationState)
 	{
 		return new Window(new AppShell());
-	}
-
-	private static void InitializeDatabase(IServiceProvider serviceProvider)
-	{
-		using var scope = serviceProvider.CreateScope();
-		var dbContext = scope.ServiceProvider.GetRequiredService<StorageDbContext>();
-		dbContext.Database.EnsureCreated();
 	}
 
 	private async Task CleanupOrphanPhotosAsync()
