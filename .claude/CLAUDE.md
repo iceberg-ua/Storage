@@ -46,6 +46,30 @@ Storage is a local-first mobile inventory app built with .NET MAUI. The user is 
 - AI features use ML.NET or ONNX Runtime
 - Camera handling via MAUI Community Toolkit
 
+## Package APIs — verified, do not guess
+
+These were wrong in an earlier phase prompt and cost a round of rework. Use these names.
+
+**CommunityToolkit.Maui.Camera 6.1.0**
+- Register with `.UseMauiCommunityToolkitCamera()` — *not* `.UseMauiCameraView()`
+- `CameraView` has no `Cameras` property. Get hardware with `await GetAvailableCameras(token)`
+- Events are `MediaCaptured` (`MediaCapturedEventArgs.Media`) and `MediaCaptureFailed`
+  (`MediaCaptureFailedEventArgs.FailureReason`)
+- Preview control is `StartCameraPreview(token)` / `StopCameraPreview()`
+- The package is self-contained. It does **not** need the main `CommunityToolkit.Maui`
+  package — its only dependencies are Microsoft.Maui.Controls and AndroidX
+
+**MAUI 10 Essentials**
+- `MediaPicker.PickPhotoAsync()` is obsolete. Use `PickPhotosAsync` with
+  `MediaPickerOptions { SelectionLimit = 1 }` — same picker, one result
+
+**Microsoft.Maui.Graphics**
+- `PlatformImage` exists only in the platform-specific builds. It is unreachable from a
+  plain `net10.0` library, which is why image work sits behind `IImageCompressor`
+
+Always check an installed package's actual surface before writing against it, and say so
+if it differs from what a prompt assumed rather than working around it silently.
+
 ## What to Avoid
 
 - Don't suggest cloud-based AI services (Google Vision, Azure AI, etc.)

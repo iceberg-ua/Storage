@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:camera="clr-namespace:CommunityToolkit.Maui.Views;assembly=CommunityToolkit.Maui.Camera"
+             x:Class="Storage.App.Views.CameraPage"
+             Shell.NavBarIsVisible="False"
+             Shell.TabBarIsVisible="False"
+             BackgroundColor="Black"
+             Title="Take Photo">
+
+    <ContentPage.Resources>
+        <!-- Controls sit on top of the preview, so they need their own contrast
+             rather than the app's theme-aware button colours. -->
+        <Style x:Key="OverlayButton" TargetType="Button">
+            <Setter Property="BackgroundColor" Value="#B3000000" />
+            <Setter Property="TextColor" Value="White" />
+            <Setter Property="FontSize" Value="16" />
+            <Setter Property="CornerRadius" Value="8" />
+        </Style>
+    </ContentPage.Resources>
+
+    <Grid>
+
+        <!-- Live preview -->
+        <Grid x:Name="LiveLayer" IsVisible="False">
+            <camera:CameraView x:Name="Camera" />
+
+            <Grid ColumnDefinitions="Auto,*,Auto"
+                  VerticalOptions="End"
+                  Padding="20,20,20,40"
+                  ColumnSpacing="10">
+                <Button Grid.Column="0"
+                        Text="Cancel"
+                        Style="{StaticResource OverlayButton}"
+                        Clicked="OnCancelClicked" />
+
+                <!-- Round shutter: a Border keeps the hit target big and obviously tappable. -->
+                <Border Grid.Column="1"
+                        WidthRequest="72"
+                        HeightRequest="72"
+                        Padding="0"
+                        StrokeThickness="4"
+                        Stroke="White"
+                        BackgroundColor="#66FFFFFF"
+                        HorizontalOptions="Center">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="36" />
+                    </Border.StrokeShape>
+                    <Border.GestureRecognizers>
+                        <TapGestureRecognizer Tapped="OnShutterTapped" />
+                    </Border.GestureRecognizers>
+                    <Label Text="📷"
+                           FontSize="28"
+                           HorizontalOptions="Center"
+                           VerticalOptions="Center"
+                           SemanticProperties.Description="Take photo" />
+                </Border>
+
+                <Button Grid.Column="2"
+                        Text="Gallery"
+                        Style="{StaticResource OverlayButton}"
+                        Clicked="OnGalleryClicked" />
+            </Grid>
+        </Grid>
+
+        <!-- Review state: the capture, before it is committed to the item -->
+        <Grid x:Name="ReviewLayer" IsVisible="False">
+            <Image x:Name="ReviewImage" Aspect="AspectFit" />
+
+            <Grid ColumnDefinitions="*,*"
+                  ColumnSpacing="15"
+                  VerticalOptions="End"
+                  Padding="20,20,20,40">
+                <Button Grid.Column="0"
+                        Text="Retake"
+                        Style="{StaticResource OverlayButton}"
+                        Clicked="OnRetakeClicked" />
+                <Button Grid.Column="1"
+                        Text="Use photo"
+                        Clicked="OnUsePhotoClicked" />
+            </Grid>
+        </Grid>
+
+        <!-- No camera / permission refused -->
+        <VerticalStackLayout x:Name="MessageLayer"
+                             IsVisible="False"
+                             Padding="30"
+                             Spacing="20"
+                             VerticalOptions="Center">
+            <Label x:Name="MessageLabel"
+                   TextColor="White"
+                   FontSize="16"
+                   HorizontalTextAlignment="Center" />
+            <Button x:Name="GalleryFallbackButton"
+                    Text="Choose from gallery"
+                    IsVisible="False"
+                    Clicked="OnGalleryClicked" />
+            <Button x:Name="SettingsButton"
+                    Text="Open app settings"
+                    IsVisible="False"
+                    Clicked="OnSettingsClicked" />
+            <Button Text="Back"
+                    Style="{StaticResource OverlayButton}"
+                    Clicked="OnCancelClicked" />
+        </VerticalStackLayout>
+
+        <ActivityIndicator x:Name="BusyIndicator"
+                           IsRunning="False"
+                           IsVisible="False"
+                           Color="White"
+                           VerticalOptions="Center"
+                           HorizontalOptions="Center" />
+
+    </Grid>
+
+</ContentPage>

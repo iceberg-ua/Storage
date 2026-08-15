@@ -27,10 +27,10 @@ Storage helps you catalog and find items in your home by combining photos, manua
 - 🗂️ Location organization, flat or nested
 - 🔍 Search by tag/description
 - ✏️ Add/edit items and locations, with quantity stepper
+- 📸 Photo capture and attachment to items — **Android only for now**; iOS is deferred
 
 ## Features (In Progress / Planned)
 
-- 📸 Photo capture and attachment to items (Phase 3)
 - 🤖 AI-powered category suggestion from photos (Phase 4)
 - 🖼️ Multiple photos per item
 - 💾 Export/import for data backup
@@ -39,7 +39,14 @@ Storage helps you catalog and find items in your home by combining photos, manua
 
 See [PHASES.md](PHASES.md) for detailed implementation roadmap and [IMPLEMENTATION.md](IMPLEMENTATION.md) for current build status.
 
-Current status: **Phase 1 (MVP) complete** — Phase 2 (Design & Visual Identity) next.
+Current status: **Phase 1 (MVP) and Phase 3 (Photo Capture) complete** — Phase 2 (Design & Visual Identity) next.
+
+### Photo capture is Android-only
+
+The in-app camera uses `CommunityToolkit.Maui.Camera`, and only the Android side has been
+wired up and tested: the `CAMERA` permission is declared in the Android manifest, and no
+`Info.plist` usage strings or iOS-specific handling have been added. Photo capture will not
+work on an iOS build until that is done.
 
 ## Getting Started
 
