@@ -168,13 +168,13 @@
                                                     <Border Margin="0,0,6,4"
                                                             Padding="8,3"
                                                             StrokeThickness="0"
-                                                            BackgroundColor="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource Gray600}}">
+                                                            BackgroundColor="{Binding Color, Converter={StaticResource HexToColorConverter}}">
                                                         <Border.StrokeShape>
                                                             <RoundRectangle CornerRadius="10" />
                                                         </Border.StrokeShape>
                                                         <Label Text="{Binding Name}"
                                                                FontSize="11"
-                                                               TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}" />
+                                                               TextColor="White" />
                                                     </Border>
                                                 </DataTemplate>
                                             </BindableLayout.ItemTemplate>

@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:Storage.App.ViewModels"
              xmlns:controls="clr-namespace:Storage.App.Controls"
+             xmlns:models="clr-namespace:Storage.Core.Models;assembly=Storage.Core"
              x:Class="Storage.App.Views.AddItemPage"
              x:DataType="vm:AddItemViewModel"
              Title="{Binding PageTitle}">
@@ -88,11 +89,11 @@
                             Direction="Row"
                             IsVisible="{Binding ItemTags.Count, Converter={StaticResource CountToBoolConverter}}">
                     <BindableLayout.ItemTemplate>
-                        <DataTemplate x:DataType="x:String">
+                        <DataTemplate x:DataType="models:Tag">
                             <Border Margin="0,0,8,8"
                                     Padding="12,6"
                                     StrokeThickness="0"
-                                    BackgroundColor="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource Gray600}}">
+                                    BackgroundColor="{Binding Color, Converter={StaticResource HexToColorConverter}}">
                                 <Border.StrokeShape>
                                     <RoundRectangle CornerRadius="16" />
                                 </Border.StrokeShape>
@@ -100,9 +101,11 @@
                                     <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:AddItemViewModel}}, Path=RemoveTagCommand}"
                                                           CommandParameter="{Binding .}" />
                                 </Border.GestureRecognizers>
-                                <Label Text="{Binding ., StringFormat='{0}  ✕'}"
+                                <!-- White throughout: every palette colour is dark
+                                     enough to carry it in either theme. -->
+                                <Label Text="{Binding Name, StringFormat='{0}  ✕'}"
                                        FontSize="14"
-                                       TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}" />
+                                       TextColor="White" />
                             </Border>
                         </DataTemplate>
                     </BindableLayout.ItemTemplate>
@@ -121,7 +124,7 @@
                                      Spacing="1"
                                      IsVisible="{Binding HasTagSuggestions}">
                     <BindableLayout.ItemTemplate>
-                        <DataTemplate x:DataType="x:String">
+                        <DataTemplate x:DataType="models:Tag">
                             <Border Padding="12,10"
                                     StrokeThickness="0"
                                     BackgroundColor="{AppThemeBinding Light={StaticResource Gray100}, Dark={StaticResource Gray900}}">
@@ -129,9 +132,23 @@
                                     <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:AddItemViewModel}}, Path=SelectSuggestionCommand}"
                                                           CommandParameter="{Binding .}" />
                                 </Border.GestureRecognizers>
-                                <Label Text="{Binding .}"
-                                       FontSize="14"
-                                       TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}" />
+                                <HorizontalStackLayout Spacing="8">
+                                    <!-- Its colour, so a suggestion is recognisable as
+                                         the chip it will become. -->
+                                    <Border WidthRequest="14"
+                                            HeightRequest="14"
+                                            Padding="0"
+                                            StrokeThickness="0"
+                                            VerticalOptions="Center"
+                                            BackgroundColor="{Binding Color, Converter={StaticResource HexToColorConverter}}">
+                                        <Border.StrokeShape>
+                                            <RoundRectangle CornerRadius="7" />
+                                        </Border.StrokeShape>
+                                    </Border>
+                                    <Label Text="{Binding Name}"
+                                           FontSize="14"
+                                           TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}" />
+                                </HorizontalStackLayout>
                             </Border>
                         </DataTemplate>
                     </BindableLayout.ItemTemplate>

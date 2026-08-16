@@ -53,6 +53,7 @@ public class StorageDbContext : DbContext
             // NOCASE is what makes "Tools" and "tools" one tag: it governs the unique
             // index below and every equality comparison EF translates against Name.
             entity.Property(e => e.Name).IsRequired().HasMaxLength(50).UseCollation("NOCASE");
+            entity.Property(e => e.Color).IsRequired().HasMaxLength(7);
             entity.HasIndex(e => e.Name).IsUnique();
         });
 

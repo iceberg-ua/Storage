@@ -20,9 +20,9 @@ public partial class AddItemViewModel : ObservableObject, IQueryAttributable
     private readonly ITagRepository _tagRepository;
     private readonly IPhotoService _photoService;
 
-    // Every tag in the database, for autocomplete and for reusing the casing a tag
-    // was first stored under.
-    private List<string> _allTagNames = [];
+    // Every tag in the database, for autocomplete and for reusing the casing and
+    // colour a tag is already stored under.
+    private List<Tag> _allTags = [];
 
     private int _itemId;
     private int? _preselectedLocationId;
@@ -56,14 +56,14 @@ public partial class AddItemViewModel : ObservableObject, IQueryAttributable
     private ObservableCollection<StorageLocation> _locations = [];
 
     [ObservableProperty]
-    private ObservableCollection<string> _itemTags = [];
+    private ObservableCollection<Tag> _itemTags = [];
 
     [ObservableProperty]
     private string _tagInput = string.Empty;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasTagSuggestions))]
-    private ObservableCollection<string> _tagSuggestions = [];
+    private ObservableCollection<Tag> _tagSuggestions = [];
 
     public bool HasTagSuggestions => TagSuggestions.Count > 0;
 
@@ -144,7 +144,7 @@ public partial class AddItemViewModel : ObservableObject, IQueryAttributable
         Locations = new ObservableCollection<StorageLocation>(locations);
 
         var tags = await _tagRepository.GetAllAsync();
-        _allTagNames = tags.Select(t => t.Name).ToList();
+        _allTags = tags.ToList();
 
         if (IsEditMode)
         {
@@ -160,7 +160,7 @@ public partial class AddItemViewModel : ObservableObject, IQueryAttributable
             Description = item.Description ?? string.Empty;
             Quantity = item.Quantity;
             SelectedLocation = Locations.FirstOrDefault(l => l.Id == item.LocationId);
-            ItemTags = new ObservableCollection<string>(item.Tags.Select(t => t.Name).Order());
+            ItemTags = new ObservableCollection<Tag>(item.Tags.OrderBy(t => t.Name));
 
             _savedPhotoFileName = item.PhotoPath;
             PhotoFileName = item.PhotoPath;
@@ -178,10 +178,10 @@ public partial class AddItemViewModel : ObservableObject, IQueryAttributable
 
         TagSuggestions = input.Length == 0
             ? []
-            : new ObservableCollection<string>(
-                _allTagNames
-                    .Where(t => t.Contains(input, StringComparison.OrdinalIgnoreCase))
-                    .Where(t => !IsAlreadyOnItem(t))
+            : new ObservableCollection<Tag>(
+                _allTags
+                    .Where(t => t.Name.Contains(input, StringComparison.OrdinalIgnoreCase))
+                    .Where(t => !IsAlreadyOnItem(t.Name))
                     .Take(MaxSuggestions));
     }
 
@@ -189,10 +189,10 @@ public partial class AddItemViewModel : ObservableObject, IQueryAttributable
     private void AddTag() => AddTagName(TagInput);
 
     [RelayCommand]
-    private void SelectSuggestion(string name) => AddTagName(name);
+    private void SelectSuggestion(Tag tag) => AddTagName(tag.Name);
 
     [RelayCommand]
-    private void RemoveTag(string name) => ItemTags.Remove(name);
+    private void RemoveTag(Tag tag) => ItemTags.Remove(tag);
 
     private void AddTagName(string? name)
     {
@@ -202,15 +202,24 @@ public partial class AddItemViewModel : ObservableObject, IQueryAttributable
 
         if (!IsAlreadyOnItem(trimmed))
         {
-            // Reuse the casing this tag is already stored under, so the chips can't
-            // show "Tools" and "tools" as if they were two different things.
-            var known = _allTagNames.FirstOrDefault(t => string.Equals(t, trimmed, StringComparison.OrdinalIgnoreCase));
-            ItemTags.Add(known ?? trimmed);
+            // Reuse the tag already stored under this name, so the chips can't show
+            // "Tools" and "tools" as two different things, and so an existing tag
+            // keeps its colour instead of appearing in a new one.
+            var known = _allTags.FirstOrDefault(t => string.Equals(t.Name, trimmed, StringComparison.OrdinalIgnoreCase));
 
-            // A tag typed for the first time is known from here on, so retyping it
-            // in another case during this edit lands on the same casing as well.
             if (known is null)
-                _allTagNames.Add(trimmed);
+            {
+                // Detached, for display only — SetItemTagsAsync creates the real row
+                // on save. The colour is picked the same way it will be there, so the
+                // chip doesn't change colour under the user once saved.
+                known = new Tag { Name = trimmed, Color = TagPalette.ForIndex(_allTags.Count) };
+
+                // Known from here on, so retyping it in another case during this edit
+                // lands on the same tag rather than making a second chip.
+                _allTags.Add(known);
+            }
+
+            ItemTags.Add(known);
         }
 
         // Clearing the input also empties the suggestion list, via OnTagInputChanged.
@@ -218,7 +227,7 @@ public partial class AddItemViewModel : ObservableObject, IQueryAttributable
     }
 
     private bool IsAlreadyOnItem(string name) =>
-        ItemTags.Any(t => string.Equals(t, name, StringComparison.OrdinalIgnoreCase));
+        ItemTags.Any(t => string.Equals(t.Name, name, StringComparison.OrdinalIgnoreCase));
 
     [RelayCommand]
     private async Task TakePhotoAsync()
@@ -304,7 +313,7 @@ public partial class AddItemViewModel : ObservableObject, IQueryAttributable
 
         // Tags are written separately: the new item needs its id first, and the
         // repository resolves each name to a shared row rather than storing text.
-        await _tagRepository.SetItemTagsAsync(savedItemId, ItemTags);
+        await _tagRepository.SetItemTagsAsync(savedItemId, ItemTags.Select(t => t.Name));
 
         // Only now is the replaced photo safe to remove.
         if (_savedPhotoFileName is not null && _savedPhotoFileName != PhotoFileName)

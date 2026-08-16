@@ -144,6 +144,118 @@ public class TagRepositoryTests : IDisposable
         Assert.Equal(0, await _context.Tags.CountAsync());
     }
 
+    [Fact]
+    public async Task NewTagsGetAPaletteColour()
+    {
+        var item = await _itemRepo.AddAsync(new Item { Name = "Drill" });
+
+        await _tagRepo.SetItemTagsAsync(item.Id, ["tools"]);
+
+        _context.ChangeTracker.Clear();
+        var tag = await _context.Tags.SingleAsync();
+
+        Assert.Contains(tag.Color, TagPalette.Colors);
+    }
+
+    [Fact]
+    public async Task TwoNewTagsInOneSaveGetDifferentColours()
+    {
+        var item = await _itemRepo.AddAsync(new Item { Name = "Drill" });
+
+        await _tagRepo.SetItemTagsAsync(item.Id, ["tools", "power"]);
+
+        _context.ChangeTracker.Clear();
+        var colors = await _context.Tags.Select(t => t.Color).ToListAsync();
+
+        Assert.Equal(2, colors.Distinct().Count());
+    }
+
+    [Fact]
+    public async Task ExistingTagKeepsItsColourWhenReused()
+    {
+        var drill = await _itemRepo.AddAsync(new Item { Name = "Drill" });
+        var saw = await _itemRepo.AddAsync(new Item { Name = "Saw" });
+
+        await _tagRepo.SetItemTagsAsync(drill.Id, ["tools"]);
+
+        _context.ChangeTracker.Clear();
+        var original = (await _context.Tags.SingleAsync()).Color;
+
+        await _tagRepo.SetItemTagsAsync(saw.Id, ["TOOLS"]);
+
+        _context.ChangeTracker.Clear();
+        var tag = await _context.Tags.SingleAsync();
+
+        Assert.Equal(original, tag.Color);
+    }
+
+    [Fact]
+    public async Task AddAndRenamePersistNameAndColour()
+    {
+        var tag = await _tagRepo.AddAsync("  tools  ", TagPalette.Colors[2]);
+
+        Assert.Equal("tools", tag.Name);
+
+        tag.Name = "Power Tools";
+        tag.Color = TagPalette.Colors[5];
+        await _tagRepo.UpdateAsync(tag);
+
+        _context.ChangeTracker.Clear();
+        var fetched = await _tagRepo.GetByIdAsync(tag.Id);
+
+        Assert.NotNull(fetched);
+        Assert.Equal("Power Tools", fetched!.Name);
+        Assert.Equal(TagPalette.Colors[5], fetched.Color);
+    }
+
+    [Fact]
+    public async Task NameExistsIsCaseInsensitiveAndCanExcludeATag()
+    {
+        var tag = await _tagRepo.AddAsync("books", TagPalette.Default);
+
+        Assert.True(await _tagRepo.NameExistsAsync("BOOKS"));
+        Assert.True(await _tagRepo.NameExistsAsync("  Books  "));
+        Assert.False(await _tagRepo.NameExistsAsync("magazines"));
+
+        // A tag is allowed to keep its own name — recolouring must not read as a clash.
+        Assert.False(await _tagRepo.NameExistsAsync("Books", excludingId: tag.Id));
+    }
+
+    [Fact]
+    public async Task DeleteTagRemovesItFromItsItemsButKeepsThem()
+    {
+        var drill = await _itemRepo.AddAsync(new Item { Name = "Drill" });
+        var saw = await _itemRepo.AddAsync(new Item { Name = "Saw" });
+
+        await _tagRepo.SetItemTagsAsync(drill.Id, ["tools", "power"]);
+        await _tagRepo.SetItemTagsAsync(saw.Id, ["tools"]);
+
+        var tools = await _context.Tags.SingleAsync(t => t.Name == "tools");
+        await _tagRepo.DeleteAsync(tools.Id);
+
+        _context.ChangeTracker.Clear();
+
+        // The tag and its joins are gone; "power" and both items are not.
+        Assert.Equal("power", (await _context.Tags.SingleAsync()).Name);
+        Assert.Equal("power", Assert.Single((await _itemRepo.GetByIdAsync(drill.Id))!.Tags).Name);
+        Assert.Empty((await _itemRepo.GetByIdAsync(saw.Id))!.Tags);
+    }
+
+    [Fact]
+    public async Task GetAllWithItemCountsLoadsTheItems()
+    {
+        var drill = await _itemRepo.AddAsync(new Item { Name = "Drill" });
+        var saw = await _itemRepo.AddAsync(new Item { Name = "Saw" });
+
+        await _tagRepo.SetItemTagsAsync(drill.Id, ["tools"]);
+        await _tagRepo.SetItemTagsAsync(saw.Id, ["tools"]);
+
+        _context.ChangeTracker.Clear();
+        var tags = await _tagRepo.GetAllWithItemCountsAsync();
+
+        Assert.Equal(2, Assert.Single(tags).Items.Count);
+    }
+
     public void Dispose()
     {
         _context.Dispose();

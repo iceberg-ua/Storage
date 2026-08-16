@@ -20,6 +20,52 @@ public class TagRepository : ITagRepository
             .ToListAsync();
     }
 
+    public async Task<IEnumerable<Tag>> GetAllWithItemCountsAsync()
+    {
+        return await _context.Tags
+            .Include(t => t.Items)
+            .OrderBy(t => t.Name)
+            .ToListAsync();
+    }
+
+    public async Task<Tag?> GetByIdAsync(int id)
+    {
+        return await _context.Tags.FirstOrDefaultAsync(t => t.Id == id);
+    }
+
+    public async Task<Tag> AddAsync(string name, string color)
+    {
+        var tag = new Tag { Name = name.Trim(), Color = color };
+        _context.Tags.Add(tag);
+        await _context.SaveChangesAsync();
+        return tag;
+    }
+
+    public async Task UpdateAsync(Tag tag)
+    {
+        _context.Entry(tag).State = EntityState.Modified;
+        await _context.SaveChangesAsync();
+    }
+
+    public async Task DeleteAsync(int id)
+    {
+        var tag = await _context.Tags.FindAsync(id);
+        if (tag != null)
+        {
+            _context.Tags.Remove(tag);
+            await _context.SaveChangesAsync();
+        }
+    }
+
+    public async Task<bool> NameExistsAsync(string name, int? excludingId = null)
+    {
+        var trimmed = name.Trim();
+
+        // Name is NOCASE, so this equality ignores case in SQLite.
+        return await _context.Tags
+            .AnyAsync(t => t.Name == trimmed && (excludingId == null || t.Id != excludingId));
+    }
+
     public async Task SetItemTagsAsync(int itemId, IEnumerable<string> tagNames)
     {
         var item = await _context.Items
@@ -43,18 +89,27 @@ public class TagRepository : ITagRepository
             .Where(t => names.Contains(t.Name))
             .ToListAsync();
 
+        // Walks forward as tags are created, so two new tags in one save land on
+        // different swatches rather than sharing the count they started from.
+        var paletteIndex = await _context.Tags.CountAsync();
+
         item.Tags.Clear();
 
         foreach (var name in names)
         {
-            var tag = existing.FirstOrDefault(t => string.Equals(t.Name, name, StringComparison.OrdinalIgnoreCase))
-                ?? new Tag { Name = name };
+            var tag = existing.FirstOrDefault(t => string.Equals(t.Name, name, StringComparison.OrdinalIgnoreCase));
+
+            if (tag is null)
+            {
+                tag = new Tag { Name = name, Color = TagPalette.ForIndex(paletteIndex) };
+                paletteIndex++;
+            }
 
             item.Tags.Add(tag);
         }
 
         // Tags no longer on any item are left in place — they stay available for
-        // reuse and in autocomplete. Removing them globally is tag management.
+        // reuse and in autocomplete. Removing them is the Tags screen's job.
         await _context.SaveChangesAsync();
     }
 }

@@ -19,6 +19,11 @@
             Icon="box.png"
             ContentTemplate="{DataTemplate views:ItemsPage}"
             Route="items" />
+
+        <ShellContent
+            Title="Tags"
+            ContentTemplate="{DataTemplate views:TagsPage}"
+            Route="tags" />
     </TabBar>
 
 </Shell>

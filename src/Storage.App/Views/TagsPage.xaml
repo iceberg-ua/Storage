@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:Storage.App.ViewModels"
+             xmlns:models="clr-namespace:Storage.Core.Models;assembly=Storage.Core"
+             x:Class="Storage.App.Views.TagsPage"
+             x:DataType="vm:TagsViewModel"
+             Title="Tags">
+
+    <Grid RowDefinitions="Auto,*">
+        <!-- Header with Add Button -->
+        <Button Grid.Row="0"
+                Text="➕"
+                Style="{StaticResource IconButton}"
+                Command="{Binding NavigateToAddTagCommand}"
+                Margin="10"
+                HorizontalOptions="End"
+                SemanticProperties.Description="Add tag"
+                ToolTipProperties.Text="Add tag" />
+
+        <!-- Tags List -->
+        <RefreshView Grid.Row="1"
+                     IsRefreshing="{Binding IsLoading}"
+                     Command="{Binding LoadTagsCommand}">
+            <CollectionView ItemsSource="{Binding Tags}">
+                <CollectionView.EmptyView>
+                    <StackLayout Padding="20" VerticalOptions="CenterAndExpand" HorizontalOptions="CenterAndExpand">
+                        <Label Text="🏷️ No tags yet"
+                               FontSize="24"
+                               HorizontalTextAlignment="Center"
+                               TextColor="{AppThemeBinding Light={StaticResource Gray500}, Dark={StaticResource Gray300}}" />
+                        <Label Text="Tags appear here once you add them to an item"
+                               FontSize="16"
+                               HorizontalTextAlignment="Center"
+                               TextColor="{AppThemeBinding Light={StaticResource Gray400}, Dark={StaticResource Gray400}}"
+                               Margin="0,10,0,0" />
+                    </StackLayout>
+                </CollectionView.EmptyView>
+
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="models:Tag">
+                        <SwipeView>
+                            <SwipeView.RightItems>
+                                <SwipeItems>
+                                    <SwipeItemView Command="{Binding Source={RelativeSource AncestorType={x:Type vm:TagsViewModel}}, Path=DeleteTagCommand}"
+                                                   CommandParameter="{Binding .}">
+                                        <Grid BackgroundColor="#FF3B30"
+                                              WidthRequest="100"
+                                              Padding="10">
+                                            <VerticalStackLayout VerticalOptions="Center"
+                                                                HorizontalOptions="Center">
+                                                <Label Text="🗑️"
+                                                       FontSize="24"
+                                                       HorizontalOptions="Center"/>
+                                                <Label Text="Delete"
+                                                       TextColor="White"
+                                                       FontSize="14"
+                                                       HorizontalOptions="Center"/>
+                                            </VerticalStackLayout>
+                                        </Grid>
+                                    </SwipeItemView>
+                                </SwipeItems>
+                            </SwipeView.RightItems>
+
+                            <Frame Margin="10,5"
+                                   Padding="10"
+                                   CornerRadius="5"
+                                   BackgroundColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource Gray900}}"
+                                   BorderColor="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource Gray600}}">
+                                <Frame.GestureRecognizers>
+                                    <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:TagsViewModel}}, Path=EditTagCommand}"
+                                                          CommandParameter="{Binding .}" />
+                                </Frame.GestureRecognizers>
+                                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+                                    <!-- The tag's colour, shown as the chip it will render as. -->
+                                    <Border Grid.Column="0"
+                                            WidthRequest="28"
+                                            HeightRequest="28"
+                                            Padding="0"
+                                            StrokeThickness="0"
+                                            VerticalOptions="Center"
+                                            BackgroundColor="{Binding Color, Converter={StaticResource HexToColorConverter}}">
+                                        <Border.StrokeShape>
+                                            <RoundRectangle CornerRadius="14" />
+                                        </Border.StrokeShape>
+                                    </Border>
+
+                                    <StackLayout Grid.Column="1">
+                                        <Label Text="{Binding Name}"
+                                               FontSize="18"
+                                               FontAttributes="Bold"
+                                               TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}" />
+                                        <Label Text="{Binding Items.Count, StringFormat='{0} items'}"
+                                               FontSize="12"
+                                               TextColor="{AppThemeBinding Light={StaticResource Gray500}, Dark={StaticResource Gray400}}" />
+                                    </StackLayout>
+                                </Grid>
+                            </Frame>
+                        </SwipeView>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+        </RefreshView>
+    </Grid>
+
+</ContentPage>

@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Storage.Core.Data;
+using Storage.Core.Models;
 
 namespace Storage.Tests;
 
@@ -13,6 +14,9 @@ public class MigrationTests : IDisposable
 {
     // The schema as it stood before AddTags: Items still has its free-text Tags column.
     private const string BeforeTags = "20260809162515_AddItemQuantity";
+
+    // Tags exist as entities but have no colour yet.
+    private const string BeforeColor = "20260816170538_AddTags";
 
     private readonly SqliteConnection _connection;
     private readonly StorageDbContext _context;
@@ -68,6 +72,26 @@ public class MigrationTests : IDisposable
 
         Assert.Empty(items.Single(i => i.Name == "Winter Coat").Tags);
         Assert.Empty(items.Single(i => i.Name == "Spare Bulbs").Tags);
+    }
+
+    [Fact]
+    public async Task AddTagColorBackfillsExistingTags()
+    {
+        var migrator = _context.GetService<IMigrator>();
+        migrator.Migrate(BeforeColor);
+
+        _context.Database.ExecuteSqlRaw(
+            "INSERT INTO Tags (Name) VALUES ('tools'), ('power'), ('books'), ('winter');");
+
+        migrator.Migrate();
+
+        var colors = await _context.Tags.Select(t => t.Color).ToListAsync();
+
+        Assert.Equal(4, colors.Count);
+        Assert.All(colors, c => Assert.Contains(c, TagPalette.Colors));
+
+        // Spread across the palette rather than every tag landing on the default.
+        Assert.True(colors.Distinct().Count() > 1);
     }
 
     [Fact]

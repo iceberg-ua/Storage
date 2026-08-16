@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:Storage.App.ViewModels"
+             x:Class="Storage.App.Views.EditTagPage"
+             x:DataType="vm:EditTagViewModel"
+             Title="{Binding PageTitle}">
+
+    <!-- Fields scroll; the action buttons stay pinned to the bottom. -->
+    <Grid RowDefinitions="*,Auto">
+
+        <ScrollView Grid.Row="0">
+            <VerticalStackLayout Padding="20" Spacing="15">
+
+                <Label Text="Tag Name" FontSize="16" />
+                <Entry Text="{Binding Name}"
+                       Placeholder="Enter tag name"
+                       MaxLength="50" />
+
+                <Label Text="Colour" FontSize="16" Margin="0,10,0,0" />
+
+                <!-- Fixed palette rather than a free picker: every swatch is dark
+                     enough for white chip text, so tags stay legible by construction. -->
+                <FlexLayout BindableLayout.ItemsSource="{Binding Swatches}"
+                            Wrap="Wrap"
+                            Direction="Row">
+                    <BindableLayout.ItemTemplate>
+                        <DataTemplate x:DataType="vm:PaletteSwatch">
+                            <Border Margin="0,0,12,12"
+                                    WidthRequest="48"
+                                    HeightRequest="48"
+                                    Padding="0"
+                                    StrokeThickness="0"
+                                    Stroke="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}"
+                                    BackgroundColor="{Binding Color, Converter={StaticResource HexToColorConverter}}">
+                                <Border.StrokeShape>
+                                    <RoundRectangle CornerRadius="24" />
+                                </Border.StrokeShape>
+                                <Border.GestureRecognizers>
+                                    <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:EditTagViewModel}}, Path=SelectColorCommand}"
+                                                          CommandParameter="{Binding .}" />
+                                </Border.GestureRecognizers>
+                                <Border.Triggers>
+                                    <DataTrigger TargetType="Border" Binding="{Binding IsSelected}" Value="True">
+                                        <Setter Property="StrokeThickness" Value="4" />
+                                    </DataTrigger>
+                                </Border.Triggers>
+                            </Border>
+                        </DataTemplate>
+                    </BindableLayout.ItemTemplate>
+                </FlexLayout>
+
+            </VerticalStackLayout>
+        </ScrollView>
+
+        <Grid Grid.Row="1"
+              ColumnDefinitions="*,*"
+              ColumnSpacing="10"
+              Padding="20,10">
+            <Button Grid.Column="0"
+                    Text="Cancel"
+                    Command="{Binding CancelCommand}"
+                    BackgroundColor="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource Gray600}}"
+                    TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}" />
+            <Button Grid.Column="1"
+                    Text="Save"
+                    Command="{Binding SaveTagCommand}" />
+        </Grid>
+
+    </Grid>
+
+</ContentPage>

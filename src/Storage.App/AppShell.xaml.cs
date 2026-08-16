@@ -12,6 +12,9 @@ public partial class AppShell : Shell
 		Routing.RegisterRoute("additem", typeof(AddItemPage));
 		Routing.RegisterRoute("addlocation", typeof(AddLocationPage));
 
+		// Pushed with an optional "tagId" to edit an existing tag instead of adding one.
+		Routing.RegisterRoute("edittag", typeof(EditTagPage));
+
 		// Pops back with a "photoFileName" for the edit page to pick up.
 		Routing.RegisterRoute("camera", typeof(CameraPage));
 

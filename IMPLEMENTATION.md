@@ -96,7 +96,23 @@ Linear: VOL-27
 
 **Testing note:** the other fixtures build their schema with `EnsureCreated()`, which reads the model and never runs migration SQL. `MigrationTests` therefore migrates to `AddItemQuantity`, inserts legacy comma-separated rows, then migrates forward — the only way to prove the "no tag data lost" requirement holds.
 
+**Delivered (tag management + colours, follow-on to VOL-29):**
+- `Tags` tab — a third `ShellContent` alongside Locations and Items — listing every tag with its colour swatch and the number of items it is on. Swipe to delete, tap to edit, ➕ to add. Modelled directly on `LocationsPage`
+- `EditTagPage` handles both add and edit, following the `AddLocationViewModel` shape: one ViewModel, optional `tagId` query parameter
+- Renaming onto an existing name is **rejected** with a message rather than merged. `ITagRepository.NameExistsAsync` checks first so the clash reads as a sentence instead of surfacing from the unique index as a `SqliteException`. Merging tags remains out of scope
+- Deleting a tag names the item count in the confirmation — the join-row cascade is otherwise invisible from that screen — and leaves the items themselves untouched
+- `TagPalette` (Storage.Core): ten fixed colours, all dark enough that white chip text clears contrast in both themes. That is why chips carry no luminance calculation and no theme-dependent text colour
+- A new tag gets the next palette colour automatically, whether typed on an item form or added from the Tags tab, so tags are distinguishable with no extra step. `SetItemTagsAsync` walks the index forward per tag created, so two new tags in one save don't share a swatch
+- `AddTagColor` migration backfills existing tags across the palette by `Id % 10` rather than leaving them all default grey. The hex values are written into the migration as literals, not read from `TagPalette` — a migration has to keep producing the same result after the palette is edited
+- Chips are coloured in the item list and on the item form; autocomplete rows show the tag's colour as a dot so a suggestion is recognisable as the chip it will become
+- `AddItemViewModel.ItemTags` holds `Tag` objects rather than strings, since a string carries no colour. A tag typed for the first time gets a detached `Tag` coloured by the same rule the repository will use, so the chip doesn't change colour once saved
+- 8 further tests, including the colour backfill migrating a real legacy database forward
+
+**Palette lives in Storage.Core, not the app.** It is plain string data with no MAUI dependency, and the repository needs it to assign colours at creation time.
+
 **Still outstanding in this phase:** bulk operations (move multiple items), settings screen, remaining empty/loading/error-state polish.
+
+**Known cosmetic bug, pre-existing:** `AppShell.xaml` references `folder.png` and `box.png` as tab icons but `Resources/Images` contains only `dotnet_bot.png`. Both tabs render iconless and Glide logs a `FileNotFoundException` per launch. The Tags tab was added without an icon to match. Worth fixing with a real icon set.
 
 **Correction to the Phase 1 entry above:** it lists a tags field on the item form and LIKE-based search across Description + Tags as delivered. Neither was ever in the code — the `Tags` column existed but nothing read or wrote it, and there is no search yet.
 

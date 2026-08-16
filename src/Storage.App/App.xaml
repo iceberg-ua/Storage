@@ -16,6 +16,7 @@
             <converters:IsNotNullConverter x:Key="IsNotNullConverter" />
             <converters:InvertedBoolConverter x:Key="InvertedBoolConverter" />
             <converters:CountToBoolConverter x:Key="CountToBoolConverter" />
+            <converters:HexToColorConverter x:Key="HexToColorConverter" />
         </ResourceDictionary>
     </Application.Resources>
 </Application>
