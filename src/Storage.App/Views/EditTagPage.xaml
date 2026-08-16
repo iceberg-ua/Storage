@@ -50,6 +50,47 @@
                     </BindableLayout.ItemTemplate>
                 </FlexLayout>
 
+                <Button Text="Custom colour…"
+                        Command="{Binding ToggleCustomColorCommand}"
+                        HorizontalOptions="Start"
+                        BackgroundColor="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource Gray600}}"
+                        TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}" />
+
+                <!-- MAUI has no colour picker control, so this is three channels and a
+                     live preview. Any colour is allowed, which is why the preview shows
+                     the name: it is where you see whether the text still reads. -->
+                <VerticalStackLayout Spacing="10" IsVisible="{Binding IsCustomColorVisible}">
+
+                    <Border Padding="16"
+                            StrokeThickness="0"
+                            HorizontalOptions="Start"
+                            BackgroundColor="{Binding SelectedColor, Converter={StaticResource HexToColorConverter}}">
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="18" />
+                        </Border.StrokeShape>
+                        <Label Text="{Binding Name}"
+                               FontSize="14"
+                               TextColor="{Binding SelectedColor, Converter={StaticResource HexToTextColorConverter}}" />
+                    </Border>
+
+                    <Label Text="{Binding SelectedColor}"
+                           FontSize="14"
+                           FontFamily="OpenSansSemibold"
+                           TextColor="{AppThemeBinding Light={StaticResource Gray500}, Dark={StaticResource Gray400}}" />
+
+                    <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="10" RowSpacing="4">
+                        <Label Grid.Row="0" Grid.Column="0" Text="R" VerticalOptions="Center" WidthRequest="20" />
+                        <Slider Grid.Row="0" Grid.Column="1" Minimum="0" Maximum="255" Value="{Binding Red}" />
+
+                        <Label Grid.Row="1" Grid.Column="0" Text="G" VerticalOptions="Center" WidthRequest="20" />
+                        <Slider Grid.Row="1" Grid.Column="1" Minimum="0" Maximum="255" Value="{Binding Green}" />
+
+                        <Label Grid.Row="2" Grid.Column="0" Text="B" VerticalOptions="Center" WidthRequest="20" />
+                        <Slider Grid.Row="2" Grid.Column="1" Minimum="0" Maximum="255" Value="{Binding Blue}" />
+                    </Grid>
+
+                </VerticalStackLayout>
+
             </VerticalStackLayout>
         </ScrollView>
 

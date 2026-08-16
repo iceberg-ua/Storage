@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Collections.Specialized;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Storage.Core.Models;
@@ -14,6 +15,10 @@ namespace Storage.App.ViewModels;
 public partial class AddItemViewModel : ObservableObject, IQueryAttributable
 {
     private const int MaxSuggestions = 5;
+
+    // A product rule, not a schema one: the database is happy to join an item to any
+    // number of tags, but a row in the list only has space for a handful.
+    public const int MaxTagsPerItem = 5;
 
     private readonly IItemRepository _itemRepository;
     private readonly ILocationRepository _locationRepository;
@@ -57,6 +62,12 @@ public partial class AddItemViewModel : ObservableObject, IQueryAttributable
 
     [ObservableProperty]
     private ObservableCollection<Tag> _itemTags = [];
+
+    public bool CanAddMoreTags => ItemTags.Count < MaxTagsPerItem;
+
+    public bool IsAtTagLimit => !CanAddMoreTags;
+
+    public string TagLimitMessage => $"Maximum {MaxTagsPerItem} tags per item";
 
     [ObservableProperty]
     private string _tagInput = string.Empty;
@@ -171,12 +182,33 @@ public partial class AddItemViewModel : ObservableObject, IQueryAttributable
         }
     }
 
+    // The collection is replaced wholesale on load and mutated by the add/remove
+    // commands, so the limit is tracked from the collection itself rather than from
+    // every call site that could change it.
+    partial void OnItemTagsChanged(ObservableCollection<Tag>? oldValue, ObservableCollection<Tag> newValue)
+    {
+        if (oldValue is not null)
+            oldValue.CollectionChanged -= OnItemTagsCollectionChanged;
+
+        newValue.CollectionChanged += OnItemTagsCollectionChanged;
+        NotifyTagLimitChanged();
+    }
+
+    private void OnItemTagsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e) =>
+        NotifyTagLimitChanged();
+
+    private void NotifyTagLimitChanged()
+    {
+        OnPropertyChanged(nameof(CanAddMoreTags));
+        OnPropertyChanged(nameof(IsAtTagLimit));
+    }
+
     // Typing filters the tags already in the database down to what is worth offering.
     partial void OnTagInputChanged(string value)
     {
         var input = value.Trim();
 
-        TagSuggestions = input.Length == 0
+        TagSuggestions = input.Length == 0 || IsAtTagLimit
             ? []
             : new ObservableCollection<Tag>(
                 _allTags
@@ -202,6 +234,15 @@ public partial class AddItemViewModel : ObservableObject, IQueryAttributable
 
         if (!IsAlreadyOnItem(trimmed))
         {
+            // The entry is disabled at the limit, so this is the backstop for the
+            // paths that don't go through it — a suggestion tap, or the pending
+            // input swept up on save.
+            if (IsAtTagLimit)
+            {
+                TagInput = string.Empty;
+                return;
+            }
+
             // Reuse the tag already stored under this name, so the chips can't show
             // "Tools" and "tools" as two different things, and so an existing tag
             // keeps its colour instead of appearing in a new one.

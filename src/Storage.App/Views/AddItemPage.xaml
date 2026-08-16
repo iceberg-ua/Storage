@@ -101,11 +101,11 @@
                                     <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:AddItemViewModel}}, Path=RemoveTagCommand}"
                                                           CommandParameter="{Binding .}" />
                                 </Border.GestureRecognizers>
-                                <!-- White throughout: every palette colour is dark
-                                     enough to carry it in either theme. -->
+                                <!-- Text follows the background: a custom colour can be
+                                     any brightness, so white is not always readable. -->
                                 <Label Text="{Binding Name, StringFormat='{0}  ✕'}"
                                        FontSize="14"
-                                       TextColor="White" />
+                                       TextColor="{Binding Color, Converter={StaticResource HexToTextColorConverter}}" />
                             </Border>
                         </DataTemplate>
                     </BindableLayout.ItemTemplate>
@@ -115,7 +115,13 @@
                        Placeholder="Add a tag"
                        MaxLength="50"
                        ReturnType="Done"
+                       IsEnabled="{Binding CanAddMoreTags}"
                        ReturnCommand="{Binding AddTagCommand}" />
+
+                <Label Text="{Binding TagLimitMessage}"
+                       FontSize="12"
+                       IsVisible="{Binding IsAtTagLimit}"
+                       TextColor="{AppThemeBinding Light={StaticResource Gray500}, Dark={StaticResource Gray400}}" />
 
                 <!-- Autocomplete against tags already in use. A VerticalStackLayout,
                      not a CollectionView: one nested inside this page's ScrollView

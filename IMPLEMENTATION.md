@@ -110,6 +110,13 @@ Linear: VOL-27
 
 **Palette lives in Storage.Core, not the app.** It is plain string data with no MAUI dependency, and the repository needs it to assign colours at creation time.
 
+**Delivered (tag limit + custom colours):**
+- Five tags per item, enforced on the item form: the entry disables at the limit with a hint under it, autocomplete stops offering, and `AddTagName` refuses as a backstop for the paths that skip the entry (a suggestion tap, or pending input swept up on save). `AddItemViewModel.MaxTagsPerItem` is the single place the number lives
+- The limit is a product rule, not a schema one. `SetItemTagsAsync` still accepts any number rather than silently truncating — a repository quietly dropping data is worse than a UI that says no
+- "Custom colour…" on the tag editor opens RGB sliders with a live preview. MAUI has no colour picker control, so this is three channels, a preview chip, and the hex read back. Dragging off a palette colour drops the swatch ring; landing back on one restores it
+- A tag already on a colour outside the palette opens with the custom section expanded, so its value is visible rather than hidden behind a button
+- **`HexToTextColorConverter` is a consequence of custom colours, not a nicety.** The fixed palette guaranteed white chip text was readable because every swatch was dark. Any colour breaks that, so chip text now picks black or white from the background's WCAG relative luminance. The preview chip shows the tag name for exactly this reason — it is where you see whether your colour still reads
+
 **Still outstanding in this phase:** bulk operations (move multiple items), settings screen, remaining empty/loading/error-state polish.
 
 **Known cosmetic bug, pre-existing:** `AppShell.xaml` references `folder.png` and `box.png` as tab icons but `Resources/Images` contains only `dotnet_bot.png`. Both tabs render iconless and Glide logs a `FileNotFoundException` per launch. The Tags tab was added without an icon to match. Worth fixing with a real icon set.

@@ -36,7 +36,26 @@ public partial class EditTagViewModel : ObservableObject, IQueryAttributable
     [ObservableProperty]
     private string _pageTitle = "Add Tag";
 
+    [ObservableProperty]
     private string _selectedColor = TagPalette.Default;
+
+    // The custom section stays closed until asked for, so the common case is still
+    // "tap one of ten swatches" rather than "operate three sliders".
+    [ObservableProperty]
+    private bool _isCustomColorVisible;
+
+    [ObservableProperty]
+    private double _red;
+
+    [ObservableProperty]
+    private double _green;
+
+    [ObservableProperty]
+    private double _blue;
+
+    // Guards the sliders <-> SelectedColor round trip from feeding back on itself,
+    // the same way NumericStepper guards its value/text pair.
+    private bool _syncingColor;
 
     public EditTagViewModel(ITagRepository tagRepository)
     {
@@ -76,31 +95,85 @@ public partial class EditTagViewModel : ObservableObject, IQueryAttributable
             }
 
             Name = tag.Name;
-            _selectedColor = tag.Color;
+            SelectedColor = tag.Color;
         }
         else
         {
             // Start a new tag on the next colour around, matching what typing a tag
             // straight onto an item would have given it.
             var existing = await _tagRepository.GetAllAsync();
-            _selectedColor = TagPalette.ForIndex(existing.Count());
+            SelectedColor = TagPalette.ForIndex(existing.Count());
         }
 
         Swatches = new ObservableCollection<PaletteSwatch>(
-            TagPalette.Colors.Select(c => new PaletteSwatch
-            {
-                Color = c,
-                IsSelected = string.Equals(c, _selectedColor, StringComparison.OrdinalIgnoreCase)
-            }));
+            TagPalette.Colors.Select(c => new PaletteSwatch { Color = c }));
+
+        MarkSelectedSwatch();
+        SyncSlidersFromSelectedColor();
+
+        // A tag already on a colour of its own opens with the custom section showing,
+        // so the current value is visible rather than hidden behind a button.
+        IsCustomColorVisible = !IsPaletteColor(SelectedColor);
     }
 
     [RelayCommand]
     private void SelectColor(PaletteSwatch swatch)
     {
-        _selectedColor = swatch.Color;
+        SelectedColor = swatch.Color;
+        MarkSelectedSwatch();
+        SyncSlidersFromSelectedColor();
+    }
 
-        foreach (var candidate in Swatches)
-            candidate.IsSelected = ReferenceEquals(candidate, swatch);
+    [RelayCommand]
+    private void ToggleCustomColor() => IsCustomColorVisible = !IsCustomColorVisible;
+
+    partial void OnRedChanged(double value) => UpdateColorFromSliders();
+
+    partial void OnGreenChanged(double value) => UpdateColorFromSliders();
+
+    partial void OnBlueChanged(double value) => UpdateColorFromSliders();
+
+    private void UpdateColorFromSliders()
+    {
+        if (_syncingColor)
+            return;
+
+        SelectedColor = $"#{(int)Red:X2}{(int)Green:X2}{(int)Blue:X2}";
+
+        // Dragging off a palette colour drops the ring; landing back on one restores it.
+        MarkSelectedSwatch();
+    }
+
+    private void SyncSlidersFromSelectedColor()
+    {
+        var color = ParseOrDefault(SelectedColor);
+
+        _syncingColor = true;
+        Red = Math.Round(color.Red * 255);
+        Green = Math.Round(color.Green * 255);
+        Blue = Math.Round(color.Blue * 255);
+        _syncingColor = false;
+    }
+
+    private void MarkSelectedSwatch()
+    {
+        foreach (var swatch in Swatches)
+            swatch.IsSelected = string.Equals(swatch.Color, SelectedColor, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsPaletteColor(string hex) =>
+        TagPalette.Colors.Any(c => string.Equals(c, hex, StringComparison.OrdinalIgnoreCase));
+
+    private static Color ParseOrDefault(string hex)
+    {
+        try
+        {
+            return Color.FromArgb(hex);
+        }
+        catch (Exception)
+        {
+            return Color.FromArgb(TagPalette.Default);
+        }
     }
 
     [RelayCommand]
@@ -136,13 +209,13 @@ public partial class EditTagViewModel : ObservableObject, IQueryAttributable
             }
 
             tag.Name = name;
-            tag.Color = _selectedColor;
+            tag.Color = SelectedColor;
 
             await _tagRepository.UpdateAsync(tag);
         }
         else
         {
-            await _tagRepository.AddAsync(name, _selectedColor);
+            await _tagRepository.AddAsync(name, SelectedColor);
         }
 
         await Shell.Current.GoToAsync("..");

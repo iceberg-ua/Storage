@@ -174,7 +174,7 @@
                                                         </Border.StrokeShape>
                                                         <Label Text="{Binding Name}"
                                                                FontSize="11"
-                                                               TextColor="White" />
+                                                               TextColor="{Binding Color, Converter={StaticResource HexToTextColorConverter}}" />
                                                     </Border>
                                                 </DataTemplate>
                                             </BindableLayout.ItemTemplate>
