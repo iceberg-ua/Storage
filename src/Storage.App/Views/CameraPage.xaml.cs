@@ -6,9 +6,24 @@ namespace Storage.App.Views;
 // Deliberately code-behind rather than MVVM: nearly everything here is direct
 // manipulation of the CameraView control and page lifecycle, which a ViewModel
 // would only have to reach back into the view to do.
+//
+// The page itself is transient (see MauiProgram) and Shell's route factory builds a
+// fresh one per navigation, so no state here outlives a visit. The camera *device*
+// does — it is a single-owner OS resource — which is why every start and stop below
+// goes through one gate and why teardown finishes before the handler is dropped.
 public partial class CameraPage : ContentPage
 {
+    /// <summary>Ceiling on the wait for the CameraView's handler. A layout pass takes
+    /// milliseconds; this only exists so a page that will never lay out shows a message
+    /// instead of hanging on a black screen.</summary>
+    private static readonly TimeSpan HandlerWaitTimeout = TimeSpan.FromSeconds(5);
+
     private readonly IPhotoService _photoService;
+
+    // Every transition that binds or unbinds the camera takes this first. Without it
+    // OnAppearing and Window.Resumed — which both fire when Android brings the app
+    // back — can each see _previewRunning still false and bind the camera twice.
+    private readonly SemaphoreSlim _cameraGate = new(1, 1);
 
     // Raw capture bytes, held only between the shutter and Retake/Use photo.
     private byte[]? _pendingCapture;
@@ -32,12 +47,7 @@ public partial class CameraPage : ContentPage
 
         // A camera held by a backgrounded app will not reopen, so track the window
         // and release the preview whenever the app stops.
-        _window = Application.Current?.Windows.FirstOrDefault();
-        if (_window is not null)
-        {
-            _window.Stopped += OnWindowStopped;
-            _window.Resumed += OnWindowResumed;
-        }
+        AttachWindow();
 
         // A capture waiting on Retake/Use photo must survive the page coming back.
         if (ReviewLayer.IsVisible)
@@ -46,24 +56,62 @@ public partial class CameraPage : ContentPage
         await StartAsync();
     }
 
-    protected override void OnDisappearing()
+    protected override async void OnDisappearing()
     {
         base.OnDisappearing();
 
-        if (_window is not null)
+        DetachWindow();
+
+        await StopPreviewAsync();
+
+        if (!_isClosing)
+            return;
+
+        // On the way out for good. Drop the subscriptions before the native view goes,
+        // so a capture callback already in flight cannot land on a dead handler.
+        Camera.MediaCaptured -= OnMediaCaptured;
+        Camera.MediaCaptureFailed -= OnMediaCaptureFailed;
+
+        // StopCameraPreview only *starts* the unbind; it finishes on the platform's own
+        // camera thread. Disconnecting the handler in the same breath disposes the native
+        // view mid-unbind and leaves the device half-released — which the next visit to
+        // this page pays for, not this one. Yield to the dispatcher so the queued native
+        // teardown drains first.
+        await Dispatcher.DispatchAsync(() => { });
+
+        try
         {
-            _window.Stopped -= OnWindowStopped;
-            _window.Resumed -= OnWindowResumed;
-            _window = null;
-        }
-
-        ReleaseCamera();
-
-        // Stopping the preview unbinds the camera; disconnecting the handler makes
-        // sure the native view goes with the page. Only on the way out, though —
-        // a page that merely lost visibility still needs a working handler.
-        if (_isClosing)
             Camera.Handler?.DisconnectHandler();
+        }
+        catch (Exception)
+        {
+            // The handler may already be gone; there is nothing left to release.
+        }
+    }
+
+    private void AttachWindow()
+    {
+        // OnAppearing can run more than once per visit (returning from the gallery
+        // picker, for one), and double subscription means double release.
+        if (_window is not null)
+            return;
+
+        _window = Application.Current?.Windows.FirstOrDefault();
+        if (_window is null)
+            return;
+
+        _window.Stopped += OnWindowStopped;
+        _window.Resumed += OnWindowResumed;
+    }
+
+    private void DetachWindow()
+    {
+        if (_window is null)
+            return;
+
+        _window.Stopped -= OnWindowStopped;
+        _window.Resumed -= OnWindowResumed;
+        _window = null;
     }
 
     // MediaPicker's permission handling came for free; CameraView's does not.
@@ -111,10 +159,100 @@ public partial class CameraPage : ContentPage
         ReviewLayer.IsVisible = false;
         LiveLayer.IsVisible = true;
 
-        if (!_previewRunning)
+        await StartPreviewAsync();
+    }
+
+    private async Task StartPreviewAsync()
+    {
+        await _cameraGate.WaitAsync();
+        try
         {
+            // Re-checked inside the gate: a caller that queued behind a start, or behind
+            // the teardown, must not bind a second session or revive a closing page.
+            if (_previewRunning || _isClosing)
+                return;
+
+            if (!await WaitForHandlerAsync())
+            {
+                ShowMessage(
+                    "The camera did not finish starting up. Go back and try again.",
+                    offerGallery: true);
+                return;
+            }
+
             await Camera.StartCameraPreview(CancellationToken.None);
             _previewRunning = true;
+        }
+        catch (Exception ex)
+        {
+            // A camera the previous owner has not finished releasing lands here. Say so
+            // rather than letting it surface as an unhandled native crash.
+            ShowMessage($"The camera could not be opened.\n\n{ex.Message}", offerGallery: true);
+        }
+        finally
+        {
+            _cameraGate.Release();
+        }
+    }
+
+    // The CameraView lives inside LiveLayer, which starts collapsed, so its handler is
+    // only built once a layout pass has run with the layer visible. Setting IsVisible
+    // merely queues that pass — it has not happened by the time we get here, and the
+    // toolkit throws "Unable to retrieve Handler" if we start the preview first.
+    //
+    // Only the first visit of a session is slow enough to hide this: the permission
+    // prompt and the initial, uncached GetAvailableCameras give the layout pass room to
+    // land. Once both are warm the second visit outruns it, which is exactly why the
+    // failure showed up on the second item and never the first.
+    private async Task<bool> WaitForHandlerAsync()
+    {
+        if (Camera.Handler is not null)
+            return true;
+
+        var handlerReady = new TaskCompletionSource();
+
+        void OnHandlerChanged(object? sender, EventArgs e)
+        {
+            if (Camera.Handler is not null)
+                handlerReady.TrySetResult();
+        }
+
+        Camera.HandlerChanged += OnHandlerChanged;
+        try
+        {
+            // The handler can land between the check above and the subscription.
+            if (Camera.Handler is not null)
+                return true;
+
+            var winner = await Task.WhenAny(handlerReady.Task, Task.Delay(HandlerWaitTimeout));
+            return winner == handlerReady.Task && Camera.Handler is not null;
+        }
+        finally
+        {
+            Camera.HandlerChanged -= OnHandlerChanged;
+        }
+    }
+
+    private async Task StopPreviewAsync()
+    {
+        await _cameraGate.WaitAsync();
+        try
+        {
+            if (!_previewRunning)
+                return;
+
+            // Cleared before the call, not after: if the stop throws, the session is gone
+            // either way and a later start must be allowed to rebind.
+            _previewRunning = false;
+            Camera.StopCameraPreview();
+        }
+        catch (Exception)
+        {
+            // Teardown races with the handler being disconnected; nothing to recover.
+        }
+        finally
+        {
+            _cameraGate.Release();
         }
     }
 
@@ -131,14 +269,28 @@ public partial class CameraPage : ContentPage
 
     private async void OnShutterTapped(object? sender, TappedEventArgs e)
     {
-        if (Camera.IsBusy)
+        // A tap that lands while the page is closing, or after backgrounding released
+        // the preview, would capture against a camera that is no longer bound.
+        if (_isClosing || !_previewRunning || Camera.IsBusy)
             return;
 
-        await Camera.CaptureImage(CancellationToken.None);
+        try
+        {
+            await Camera.CaptureImage(CancellationToken.None);
+        }
+        catch (Exception ex)
+        {
+            ShowMessage($"The camera could not take that photo.\n\n{ex.Message}", offerGallery: true);
+        }
     }
 
     private void OnMediaCaptured(object? sender, MediaCapturedEventArgs e)
     {
+        // Fires on the platform's camera thread, which can outrun a page already on its
+        // way out. Nothing below should touch views that are about to be torn down.
+        if (_isClosing)
+            return;
+
         // The event stream is only valid inside the handler, so copy it out.
         using var buffer = new MemoryStream();
         e.Media.CopyTo(buffer);
@@ -150,6 +302,9 @@ public partial class CameraPage : ContentPage
 
     private void OnMediaCaptureFailed(object? sender, MediaCaptureFailedEventArgs e)
     {
+        if (_isClosing)
+            return;
+
         Dispatcher.Dispatch(() =>
             ShowMessage($"The camera could not take that photo.\n\n{e.FailureReason}", offerGallery: true));
     }
@@ -157,7 +312,7 @@ public partial class CameraPage : ContentPage
     private void ShowReview()
     {
         var bytes = _pendingCapture;
-        if (bytes is null)
+        if (bytes is null || _isClosing)
             return;
 
         ReviewImage.Source = ImageSource.FromStream(() => new MemoryStream(bytes));
@@ -230,8 +385,10 @@ public partial class CameraPage : ContentPage
         if (_isClosing)
             return;
 
+        // Set before the release so anything racing us — a shutter tap, a resume, a
+        // capture callback — sees that this page is done and stays off the camera.
         _isClosing = true;
-        ReleaseCamera();
+        await StopPreviewAsync();
 
         // Shell hands these back to the previous page's IQueryAttributable.
         var parameters = fileName is null
@@ -241,7 +398,7 @@ public partial class CameraPage : ContentPage
         await Shell.Current.GoToAsync("..", parameters);
     }
 
-    private void OnWindowStopped(object? sender, EventArgs e) => ReleaseCamera();
+    private async void OnWindowStopped(object? sender, EventArgs e) => await StopPreviewAsync();
 
     private async void OnWindowResumed(object? sender, EventArgs e)
     {
@@ -249,23 +406,6 @@ public partial class CameraPage : ContentPage
         // backgrounding untouched.
         if (!_isClosing && LiveLayer.IsVisible)
             await ShowLiveAsync();
-    }
-
-    private void ReleaseCamera()
-    {
-        if (!_previewRunning)
-            return;
-
-        _previewRunning = false;
-
-        try
-        {
-            Camera.StopCameraPreview();
-        }
-        catch (Exception)
-        {
-            // Teardown races with the handler being disconnected; nothing to recover.
-        }
     }
 
     private void SetBusy(bool busy)

@@ -13,8 +13,10 @@ public sealed class PhotoService : IPhotoService
     /// 1440 leaves headroom for detail without storing pixels nobody will see.</summary>
     public const int MaxEdgePixels = 1440;
 
-    /// <summary>Target ceiling. Quality 0.75 normally lands at 150–250 KB, so the
-    /// lower rungs of the ladder exist only to stop a pathological input.</summary>
+    /// <summary>Target ceiling. Measured on a Pixel 8 over six real captures, quality
+    /// 0.75 lands at 81–151 KB — worst case under 15% of this ceiling, so every real
+    /// photo so far has been satisfied by the ladder's first rung. The lower rungs
+    /// exist only to stop a pathological input.</summary>
     public const long MaxFileBytes = 1024 * 1024;
 
     /// <summary>
@@ -53,7 +55,7 @@ public sealed class PhotoService : IPhotoService
         using var source = new MemoryStream();
         await imageStream.CopyToAsync(source);
 
-        var (compressed, quality) = await CompressAsync(source);
+        var (compressed, _) = await CompressAsync(source);
 
         try
         {
@@ -64,15 +66,6 @@ public sealed class PhotoService : IPhotoService
             {
                 await compressed.CopyToAsync(file);
             }
-
-#if DEBUG
-            // TEMPORARY (Phase 3 device pass): the ceiling is only unit tested against a
-            // stub encoder, so this reports what the real encoder actually produces.
-            // Remove once the sizes are confirmed on a device.
-            _logger.LogInformation(
-                "Saved photo {FileName}: {Bytes} bytes at quality {Quality}.",
-                fileName, compressed.Length, quality);
-#endif
 
             return fileName;
         }
