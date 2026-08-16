@@ -156,6 +156,29 @@
                                         <Label Text="{Binding CreatedAt, StringFormat='{0:MMM d, yyyy}'}"
                                                FontSize="12"
                                                TextColor="{AppThemeBinding Light={StaticResource Gray400}, Dark={StaticResource Gray500}}" />
+
+                                        <!-- Read-only tag chips; editing them is the item form's job. -->
+                                        <FlexLayout BindableLayout.ItemsSource="{Binding Tags}"
+                                                    Wrap="Wrap"
+                                                    Direction="Row"
+                                                    Margin="0,4,0,0"
+                                                    IsVisible="{Binding Tags.Count, Converter={StaticResource CountToBoolConverter}}">
+                                            <BindableLayout.ItemTemplate>
+                                                <DataTemplate x:DataType="models:Tag">
+                                                    <Border Margin="0,0,6,4"
+                                                            Padding="8,3"
+                                                            StrokeThickness="0"
+                                                            BackgroundColor="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource Gray600}}">
+                                                        <Border.StrokeShape>
+                                                            <RoundRectangle CornerRadius="10" />
+                                                        </Border.StrokeShape>
+                                                        <Label Text="{Binding Name}"
+                                                               FontSize="11"
+                                                               TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}" />
+                                                    </Border>
+                                                </DataTemplate>
+                                            </BindableLayout.ItemTemplate>
+                                        </FlexLayout>
                                     </StackLayout>
 
                                     <Label Grid.Column="2"

@@ -17,6 +17,7 @@ public class ItemRepository : IItemRepository
     {
         return await _context.Items
             .Include(i => i.Location)
+            .Include(i => i.Tags)
             .OrderByDescending(i => i.CreatedAt)
             .ToListAsync();
     }
@@ -25,6 +26,7 @@ public class ItemRepository : IItemRepository
     {
         return await _context.Items
             .Include(i => i.Location)
+            .Include(i => i.Tags)
             .FirstOrDefaultAsync(i => i.Id == id);
     }
 
@@ -32,6 +34,7 @@ public class ItemRepository : IItemRepository
     {
         return await _context.Items
             .Include(i => i.Location)
+            .Include(i => i.Tags)
             .Where(i => i.LocationId == locationId)
             .OrderByDescending(i => i.CreatedAt)
             .ToListAsync();
@@ -47,7 +50,10 @@ public class ItemRepository : IItemRepository
 
     public async Task UpdateAsync(Item item)
     {
-        _context.Items.Update(item);
+        // Marks this row and nothing else. Update() walks the graph, so now that items
+        // carry tags it would mark the tag rows and their join rows modified too —
+        // tag writes belong to ITagRepository.SetItemTagsAsync.
+        _context.Entry(item).State = EntityState.Modified;
         await _context.SaveChangesAsync();
     }
 

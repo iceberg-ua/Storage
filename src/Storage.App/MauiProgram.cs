@@ -34,6 +34,7 @@ public static class MauiProgram
 		// Register repositories
 		builder.Services.AddScoped<IItemRepository, ItemRepository>();
 		builder.Services.AddScoped<ILocationRepository, LocationRepository>();
+		builder.Services.AddScoped<ITagRepository, TagRepository>();
 
 		// Register services
 		builder.Services.AddSingleton<IImageCompressor, MauiImageCompressor>();

@@ -52,7 +52,6 @@ public class RepositoryTests : IDisposable
         {
             Name = "Cordless Drill",
             Description = "Bosch 18V",
-            Tags = "tools, power, bosch",
             PhotoPath = "/photos/drill.jpg",
             LocationId = location.Id
         });
@@ -61,7 +60,6 @@ public class RepositoryTests : IDisposable
 
         Assert.NotNull(fetched);
         Assert.Equal("Cordless Drill", fetched!.Name);
-        Assert.Equal("tools, power, bosch", fetched.Tags);
         Assert.Equal("/photos/drill.jpg", fetched.PhotoPath);
         Assert.NotEqual(default, fetched.CreatedAt);
 

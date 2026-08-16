@@ -78,7 +78,29 @@ Linear: VOL-27
 
 ---
 
-## Phase 5: Tags & Polish — Not Started
+## Phase 5: Tags & Polish — 🚧 Tags done, polish outstanding
+
+**Delivered (VOL-29):**
+- `Tag` entity (Id, Name) replacing the free-text comma-separated `Item.Tags` string. `Item.Tags` is now `ICollection<Tag>`
+- Many-to-many through an `ItemTag` join table with cascade deletes. EF supplies the join itself — nothing hangs off the relationship, so there is no `ItemTag` entity class, only the column names configured in `StorageDbContext`
+- Case-insensitive de-duplication enforced at the database: `Tag.Name` is `COLLATE NOCASE` with a unique index, so "Tools" and "tools" are one row and the casing seen first wins. The repository and ViewModel collapse case-variants the same way, so the UI never shows the two as separate chips
+- `AddTags` migration, hand-ordered so the data migration runs while `Items.Tags` still exists: create `Tags` + unique index → create `ItemTag` → split the old comma-separated values with a recursive CTE (SQLite has no split function) → drop `Items.Tags`. `Down()` folds the assignments back into the column with `group_concat` before dropping the tables
+- The old column was dropped rather than kept as a fallback: `git log -S "Tags" -- src/Storage.App` shows no app code ever wrote to it, so there was no real data to hedge against. The split still runs, for any hand-seeded database
+- `ITagRepository` / `TagRepository`: `GetAllAsync` and `SetItemTagsAsync(itemId, names)`, which resolves each name to an existing row or creates it, in one query for the whole set
+- Tag input on the item edit form: type and press return to add, autocomplete against tags already in use (top 5, filtered as you type), tap a chip to remove. A tag left half-typed in the entry is still committed on save rather than silently dropped
+- Read-only tag chips on each row of the item list
+- `ItemRepository.UpdateAsync` now sets `Entry(item).State = Modified` instead of `Update(item)` — the latter walks the graph, and with tags included it would mark the tag and join rows modified too
+- 11 tests: 8 covering assignment, replacement, case-insensitive de-dup, blank names, and orphan retention; 3 covering the migration itself
+
+**Deliberate behaviour — orphan tags are kept.** A tag left on no item stays in the database and in autocomplete; reuse is the point of the feature, and global rename/merge/delete belongs to the tag management screen, which VOL-29 puts out of scope.
+
+**Testing note:** the other fixtures build their schema with `EnsureCreated()`, which reads the model and never runs migration SQL. `MigrationTests` therefore migrates to `AddItemQuantity`, inserts legacy comma-separated rows, then migrates forward — the only way to prove the "no tag data lost" requirement holds.
+
+**Still outstanding in this phase:** bulk operations (move multiple items), settings screen, remaining empty/loading/error-state polish.
+
+**Correction to the Phase 1 entry above:** it lists a tags field on the item form and LIKE-based search across Description + Tags as delivered. Neither was ever in the code — the `Tags` column existed but nothing read or wrote it, and there is no search yet.
+
+Linear: [VOL-29](https://linear.app/melnyk/issue/VOL-29)
 
 ---
 

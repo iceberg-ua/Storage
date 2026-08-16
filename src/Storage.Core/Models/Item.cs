@@ -6,9 +6,6 @@ public class Item
     public required string Name { get; set; }
     public string? Description { get; set; }
 
-    // Free-text, comma-separated tags
-    public string? Tags { get; set; }
-
     // Path to the item's photo on device storage
     public string? PhotoPath { get; set; }
 
@@ -18,6 +15,7 @@ public class Item
     public DateTime CreatedAt { get; set; }
     public int? LocationId { get; set; }
 
-    // Navigation property
+    // Navigation properties
     public Location? Location { get; set; }
+    public ICollection<Tag> Tags { get; set; } = [];
 }

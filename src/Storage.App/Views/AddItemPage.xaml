@@ -79,6 +79,64 @@
                         ItemDisplayBinding="{Binding Name}"
                         Title="Select a location" />
 
+                <Label Text="Tags (Optional)" FontSize="16" Margin="0,10,0,0" />
+
+                <!-- Assigned tags. FlexLayout wraps onto as many rows as it needs;
+                     tapping a chip removes it. -->
+                <FlexLayout BindableLayout.ItemsSource="{Binding ItemTags}"
+                            Wrap="Wrap"
+                            Direction="Row"
+                            IsVisible="{Binding ItemTags.Count, Converter={StaticResource CountToBoolConverter}}">
+                    <BindableLayout.ItemTemplate>
+                        <DataTemplate x:DataType="x:String">
+                            <Border Margin="0,0,8,8"
+                                    Padding="12,6"
+                                    StrokeThickness="0"
+                                    BackgroundColor="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource Gray600}}">
+                                <Border.StrokeShape>
+                                    <RoundRectangle CornerRadius="16" />
+                                </Border.StrokeShape>
+                                <Border.GestureRecognizers>
+                                    <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:AddItemViewModel}}, Path=RemoveTagCommand}"
+                                                          CommandParameter="{Binding .}" />
+                                </Border.GestureRecognizers>
+                                <Label Text="{Binding ., StringFormat='{0}  ✕'}"
+                                       FontSize="14"
+                                       TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}" />
+                            </Border>
+                        </DataTemplate>
+                    </BindableLayout.ItemTemplate>
+                </FlexLayout>
+
+                <Entry Text="{Binding TagInput}"
+                       Placeholder="Add a tag"
+                       MaxLength="50"
+                       ReturnType="Done"
+                       ReturnCommand="{Binding AddTagCommand}" />
+
+                <!-- Autocomplete against tags already in use. A VerticalStackLayout,
+                     not a CollectionView: one nested inside this page's ScrollView
+                     cannot measure itself and collapses. -->
+                <VerticalStackLayout BindableLayout.ItemsSource="{Binding TagSuggestions}"
+                                     Spacing="1"
+                                     IsVisible="{Binding HasTagSuggestions}">
+                    <BindableLayout.ItemTemplate>
+                        <DataTemplate x:DataType="x:String">
+                            <Border Padding="12,10"
+                                    StrokeThickness="0"
+                                    BackgroundColor="{AppThemeBinding Light={StaticResource Gray100}, Dark={StaticResource Gray900}}">
+                                <Border.GestureRecognizers>
+                                    <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:AddItemViewModel}}, Path=SelectSuggestionCommand}"
+                                                          CommandParameter="{Binding .}" />
+                                </Border.GestureRecognizers>
+                                <Label Text="{Binding .}"
+                                       FontSize="14"
+                                       TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}" />
+                            </Border>
+                        </DataTemplate>
+                    </BindableLayout.ItemTemplate>
+                </VerticalStackLayout>
+
                 <Label Text="Description (Optional)" FontSize="16" Margin="0,10,0,0" />
                 <Editor Text="{Binding Description}"
                         Placeholder="Enter description"

@@ -13,9 +13,16 @@ namespace Storage.App.ViewModels;
 // location when adding (used by the shortcut on the location edit screen).
 public partial class AddItemViewModel : ObservableObject, IQueryAttributable
 {
+    private const int MaxSuggestions = 5;
+
     private readonly IItemRepository _itemRepository;
     private readonly ILocationRepository _locationRepository;
+    private readonly ITagRepository _tagRepository;
     private readonly IPhotoService _photoService;
+
+    // Every tag in the database, for autocomplete and for reusing the casing a tag
+    // was first stored under.
+    private List<string> _allTagNames = [];
 
     private int _itemId;
     private int? _preselectedLocationId;
@@ -49,6 +56,18 @@ public partial class AddItemViewModel : ObservableObject, IQueryAttributable
     private ObservableCollection<StorageLocation> _locations = [];
 
     [ObservableProperty]
+    private ObservableCollection<string> _itemTags = [];
+
+    [ObservableProperty]
+    private string _tagInput = string.Empty;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasTagSuggestions))]
+    private ObservableCollection<string> _tagSuggestions = [];
+
+    public bool HasTagSuggestions => TagSuggestions.Count > 0;
+
+    [ObservableProperty]
     private bool _isEditMode;
 
     [ObservableProperty]
@@ -67,10 +86,12 @@ public partial class AddItemViewModel : ObservableObject, IQueryAttributable
     public AddItemViewModel(
         IItemRepository itemRepository,
         ILocationRepository locationRepository,
+        ITagRepository tagRepository,
         IPhotoService photoService)
     {
         _itemRepository = itemRepository;
         _locationRepository = locationRepository;
+        _tagRepository = tagRepository;
         _photoService = photoService;
     }
 
@@ -122,6 +143,9 @@ public partial class AddItemViewModel : ObservableObject, IQueryAttributable
         var locations = await _locationRepository.GetAllAsync();
         Locations = new ObservableCollection<StorageLocation>(locations);
 
+        var tags = await _tagRepository.GetAllAsync();
+        _allTagNames = tags.Select(t => t.Name).ToList();
+
         if (IsEditMode)
         {
             var item = await _itemRepository.GetByIdAsync(_itemId);
@@ -136,6 +160,7 @@ public partial class AddItemViewModel : ObservableObject, IQueryAttributable
             Description = item.Description ?? string.Empty;
             Quantity = item.Quantity;
             SelectedLocation = Locations.FirstOrDefault(l => l.Id == item.LocationId);
+            ItemTags = new ObservableCollection<string>(item.Tags.Select(t => t.Name).Order());
 
             _savedPhotoFileName = item.PhotoPath;
             PhotoFileName = item.PhotoPath;
@@ -145,6 +170,55 @@ public partial class AddItemViewModel : ObservableObject, IQueryAttributable
             SelectedLocation = Locations.FirstOrDefault(l => l.Id == preselected);
         }
     }
+
+    // Typing filters the tags already in the database down to what is worth offering.
+    partial void OnTagInputChanged(string value)
+    {
+        var input = value.Trim();
+
+        TagSuggestions = input.Length == 0
+            ? []
+            : new ObservableCollection<string>(
+                _allTagNames
+                    .Where(t => t.Contains(input, StringComparison.OrdinalIgnoreCase))
+                    .Where(t => !IsAlreadyOnItem(t))
+                    .Take(MaxSuggestions));
+    }
+
+    [RelayCommand]
+    private void AddTag() => AddTagName(TagInput);
+
+    [RelayCommand]
+    private void SelectSuggestion(string name) => AddTagName(name);
+
+    [RelayCommand]
+    private void RemoveTag(string name) => ItemTags.Remove(name);
+
+    private void AddTagName(string? name)
+    {
+        var trimmed = name?.Trim();
+        if (string.IsNullOrEmpty(trimmed))
+            return;
+
+        if (!IsAlreadyOnItem(trimmed))
+        {
+            // Reuse the casing this tag is already stored under, so the chips can't
+            // show "Tools" and "tools" as if they were two different things.
+            var known = _allTagNames.FirstOrDefault(t => string.Equals(t, trimmed, StringComparison.OrdinalIgnoreCase));
+            ItemTags.Add(known ?? trimmed);
+
+            // A tag typed for the first time is known from here on, so retyping it
+            // in another case during this edit lands on the same casing as well.
+            if (known is null)
+                _allTagNames.Add(trimmed);
+        }
+
+        // Clearing the input also empties the suggestion list, via OnTagInputChanged.
+        TagInput = string.Empty;
+    }
+
+    private bool IsAlreadyOnItem(string name) =>
+        ItemTags.Any(t => string.Equals(t, name, StringComparison.OrdinalIgnoreCase));
 
     [RelayCommand]
     private async Task TakePhotoAsync()
@@ -189,6 +263,12 @@ public partial class AddItemViewModel : ObservableObject, IQueryAttributable
 
         var description = string.IsNullOrWhiteSpace(Description) ? null : Description.Trim();
 
+        // A tag half-typed in the entry counts as intended — saving shouldn't
+        // silently drop it just because return was never pressed.
+        AddTagName(TagInput);
+
+        int savedItemId;
+
         if (IsEditMode)
         {
             var item = await _itemRepository.GetByIdAsync(_itemId);
@@ -206,10 +286,11 @@ public partial class AddItemViewModel : ObservableObject, IQueryAttributable
             item.PhotoPath = PhotoFileName;
 
             await _itemRepository.UpdateAsync(item);
+            savedItemId = item.Id;
         }
         else
         {
-            await _itemRepository.AddAsync(new Item
+            var added = await _itemRepository.AddAsync(new Item
             {
                 Name = Name.Trim(),
                 Description = description,
@@ -217,7 +298,13 @@ public partial class AddItemViewModel : ObservableObject, IQueryAttributable
                 LocationId = SelectedLocation?.Id,
                 PhotoPath = PhotoFileName
             });
+
+            savedItemId = added.Id;
         }
+
+        // Tags are written separately: the new item needs its id first, and the
+        // repository resolves each name to a shared row rather than storing text.
+        await _tagRepository.SetItemTagsAsync(savedItemId, ItemTags);
 
         // Only now is the replaced photo safe to remove.
         if (_savedPhotoFileName is not null && _savedPhotoFileName != PhotoFileName)
