@@ -18,6 +18,7 @@
             <converters:CountToBoolConverter x:Key="CountToBoolConverter" />
             <converters:HexToColorConverter x:Key="HexToColorConverter" />
             <converters:HexToTextColorConverter x:Key="HexToTextColorConverter" />
+            <converters:GreaterThanOneConverter x:Key="GreaterThanOneConverter" />
         </ResourceDictionary>
     </Application.Resources>
 </Application>

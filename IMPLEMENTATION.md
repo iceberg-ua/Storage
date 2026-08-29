@@ -30,7 +30,9 @@ Linear: [VOL-18](https://linear.app/melnyk/issue/VOL-18)
 
 Linear: VOL-20 (Todo)
 
-No implementation work started yet.
+No implementation work started yet, beyond one item pulled forward.
+
+**Landed ahead of the phase (VOL-32):** the item list no longer renders the quantity badge when quantity is 1 — it was noise on the majority of rows, since 1 is the default and says nothing. The badge keeps its current ×N form, and the edit form keeps the stepper visible at every value, because that is where quantity is set. The issue's open question — bare number, badge, or something else, once it only renders for multi-quantity items — is still open and belongs to the design pass; this change only stops it rendering at 1. Implemented ahead of the phase on request rather than waiting for VOL-20.
 
 ---
 

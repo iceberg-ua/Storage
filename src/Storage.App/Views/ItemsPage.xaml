@@ -187,6 +187,7 @@
                                            FontAttributes="Bold"
                                            VerticalOptions="Center"
                                            Margin="10,0,0,0"
+                                           IsVisible="{Binding Quantity, Converter={StaticResource GreaterThanOneConverter}}"
                                            TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}" />
                                 </Grid>
                             </Frame>
