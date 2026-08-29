@@ -7,6 +7,18 @@
              x:DataType="vm:ItemDetailViewModel"
              Title="{Binding Name}">
 
+    <!-- Delete lives in the toolbar, deliberately not in the bottom bar. The edit
+         form's Save button occupies the same slot as a bottom-bar button here, and
+         saving pops straight back to this page - so a second tap, or a double tap on
+         Save, would land on Delete with the page appearing under the user's finger.
+         Up here it shares its position with nothing. -->
+    <ContentPage.ToolbarItems>
+        <ToolbarItem Text="Delete"
+                     Command="{Binding DeleteCommand}"
+                     Order="Primary"
+                     Priority="0" />
+    </ContentPage.ToolbarItems>
+
     <ContentPage.Resources>
         <!-- Every field is a caption over its value, so the page scans as a list of
              answers rather than a wall of labelled rows. -->
@@ -95,21 +107,12 @@
             </VerticalStackLayout>
         </ScrollView>
 
-        <Grid Grid.Row="1"
-              ColumnDefinitions="*,*"
-              ColumnSpacing="10"
-              Padding="20,10">
-            <Button Grid.Column="0"
-                    Text="Edit"
-                    Command="{Binding EditCommand}" />
-            <!-- Same red the list's swipe action used, now behind a confirmation and
-                 a screen. -->
-            <Button Grid.Column="1"
-                    Text="Delete"
-                    Command="{Binding DeleteCommand}"
-                    BackgroundColor="#FF3B30"
-                    TextColor="White" />
-        </Grid>
+        <!-- Edit is the only action down here, so nothing destructive sits where the
+             edit form's Save and Cancel buttons are. -->
+        <Button Grid.Row="1"
+                Text="Edit"
+                Margin="20,10"
+                Command="{Binding EditCommand}" />
 
     </Grid>
 
