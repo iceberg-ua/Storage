@@ -48,6 +48,7 @@ public static class MauiProgram
 		// Register ViewModels
 		builder.Services.AddTransient<ViewModels.ItemsViewModel>();
 		builder.Services.AddTransient<ViewModels.AddItemViewModel>();
+		builder.Services.AddTransient<ViewModels.ItemDetailViewModel>();
 		builder.Services.AddTransient<ViewModels.LocationsViewModel>();
 		builder.Services.AddTransient<ViewModels.AddLocationViewModel>();
 		builder.Services.AddTransient<ViewModels.TagsViewModel>();
@@ -57,6 +58,7 @@ public static class MauiProgram
 		builder.Services.AddTransient<Views.ItemsPage>();
 		builder.Services.AddTransient<Views.LocationItemsPage>();
 		builder.Services.AddTransient<Views.AddItemPage>();
+		builder.Services.AddTransient<Views.ItemDetailPage>();
 		builder.Services.AddTransient<Views.LocationsPage>();
 		builder.Services.AddTransient<Views.AddLocationPage>();
 		builder.Services.AddTransient<Views.TagsPage>();

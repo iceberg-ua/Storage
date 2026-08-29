@@ -12,6 +12,10 @@ public partial class AppShell : Shell
 		Routing.RegisterRoute("additem", typeof(AddItemPage));
 		Routing.RegisterRoute("addlocation", typeof(AddLocationPage));
 
+		// Pushed with an "itemId". Tapping an item in a list opens this read-only view;
+		// the edit form is reached from here, so "additem" is never the tap target.
+		Routing.RegisterRoute("itemdetail", typeof(ItemDetailPage));
+
 		// Pushed with an optional "tagId" to edit an existing tag instead of adding one.
 		Routing.RegisterRoute("edittag", typeof(EditTagPage));
 

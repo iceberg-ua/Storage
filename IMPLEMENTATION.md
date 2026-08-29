@@ -68,6 +68,7 @@ These corrections are recorded in `.claude/CLAUDE.md` so later phase prompts don
 
 **Descoped:**
 - *Photo at full width on the item detail view.* The app has no item detail view — tapping an item in the list opens the edit form directly. Adding one is a navigation decision, not a photo one, so it is out of Phase 3 rather than outstanding in it. The edit form's photo section serves the need.
+  **Since delivered by VOL-33**, which added the detail view this depended on. The photo now sits full width at the top of it.
 
 **Temporary, remove after the device pass:**
 - A `#if DEBUG` log line in `PhotoService.SaveAsync` reporting each saved photo's byte count and the quality rung used, so real encoder output can be read off the log instead of pulled out of app-private storage
@@ -118,6 +119,17 @@ Linear: VOL-27
 - "Custom colour…" on the tag editor opens RGB sliders with a live preview. MAUI has no colour picker control, so this is three channels, a preview chip, and the hex read back. Dragging off a palette colour drops the swatch ring; landing back on one restores it
 - A tag already on a colour outside the palette opens with the custom section expanded, so its value is visible rather than hidden behind a button
 - **`HexToTextColorConverter` is a consequence of custom colours, not a nicety.** The fixed palette guaranteed white chip text was readable because every swatch was dark. Any colour breaks that, so chip text now picks black or white from the background's WCAG relative luminance. The preview chip shows the tag name for exactly this reason — it is where you see whether your colour still reads
+
+**Delivered (VOL-33) — item detail view:**
+- Tapping an item in a list opens a read-only `ItemDetailPage` instead of the edit form. Looking something up is by far the common action; editing is the rare one, and it no longer costs a screen of form controls to read a name
+- The photo sits full width at the top — the Phase 3 scope item that was descoped precisely because no detail view existed. `AspectFit`, not `AspectFill`: a crop can hide the very detail that tells two similar items apart. The band is hidden entirely when there is no photo rather than showing an empty grey rectangle
+- Name, tag chips, quantity, location, description and added-date below it, as caption-over-value pairs. Description and tags hide when empty; location always shows, falling back to "No location", because "where is it" is the question the page exists to answer
+- **Delete moved off the item list onto this page.** The swipe action is gone from `ItemsPage`, so a destructive action is now a tap, a screen, and a confirmation away rather than one stray horizontal drag. `ItemsViewModel` lost its `IPhotoService` dependency with it — the photo cleanup went to `ItemDetailViewModel`
+- Edit navigates to the existing `additem?itemId=` form, and its `GoToAsync("..")` on save pops back to the detail page rather than past it to the list. `ItemDetailPage` reloads on every appearance, with none of the "already loaded" guard the edit form needs — there is nothing in progress here to protect, and re-reading is what makes a save visible the moment the form pops
+- Mirrors the pattern locations already use: tapping a location drills into its contents, and editing lives on the screen you land on
+- **The two navigation paths the issue flagged were re-walked and both hold unchanged.** "Add Item Here" on the location edit screen pushes `additem?locationId=` onto that screen, so its `..` still returns to the location form — no detail page sits in that stack. Adding a new item from a list still returns to the list, since the detail page was never pushed
+
+Linear: [VOL-33](https://linear.app/melnyk/issue/VOL-33)
 
 **Still outstanding in this phase:** bulk operations (move multiple items), settings screen, remaining empty/loading/error-state polish.
 
