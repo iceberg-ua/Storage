@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:Storage.App.ViewModels"
+             xmlns:models="clr-namespace:Storage.Core.Models;assembly=Storage.Core"
+             x:Class="Storage.App.Views.ItemDetailPage"
+             x:DataType="vm:ItemDetailViewModel"
+             Title="{Binding Name}">
+
+    <!-- Delete lives in the toolbar, deliberately not in the bottom bar. The edit
+         form's Save button occupies the same slot as a bottom-bar button here, and
+         saving pops straight back to this page - so a second tap, or a double tap on
+         Save, would land on Delete with the page appearing under the user's finger.
+         Up here it shares its position with nothing. -->
+    <ContentPage.ToolbarItems>
+        <ToolbarItem Text="Delete"
+                     Command="{Binding DeleteCommand}"
+                     Order="Primary"
+                     Priority="0" />
+    </ContentPage.ToolbarItems>
+
+    <ContentPage.Resources>
+        <!-- Every field is a caption over its value, so the page scans as a list of
+             answers rather than a wall of labelled rows. -->
+        <Style x:Key="FieldCaption" TargetType="Label">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Gray500}, Dark={StaticResource Gray400}}" />
+        </Style>
+
+        <Style x:Key="FieldValue" TargetType="Label">
+            <Setter Property="FontSize" Value="16" />
+            <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}" />
+        </Style>
+    </ContentPage.Resources>
+
+    <!-- Details scroll; the actions stay pinned to the bottom, the same shape the
+         edit form uses. -->
+    <Grid RowDefinitions="*,Auto">
+
+        <ScrollView Grid.Row="0">
+            <VerticalStackLayout>
+
+                <!-- Full width and edge to edge: on a detail page the photo is the
+                     fastest way to confirm this is the thing you were looking for.
+                     AspectFit, not AspectFill — a crop can hide the very detail that
+                     tells two similar items apart. Hidden entirely when there is no
+                     photo, rather than leaving a grey band that says nothing. -->
+                <Grid HeightRequest="280"
+                      IsVisible="{Binding HasPhoto}"
+                      BackgroundColor="{AppThemeBinding Light={StaticResource Gray100}, Dark={StaticResource Gray950}}">
+                    <Image Source="{Binding PhotoSource}"
+                           Aspect="AspectFit"
+                           SemanticProperties.Description="{Binding Name, StringFormat='Photo of {0}'}" />
+                </Grid>
+
+                <VerticalStackLayout Padding="20" Spacing="18">
+
+                    <Label Text="{Binding Name}"
+                           FontSize="26"
+                           FontAttributes="Bold"
+                           TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}" />
+
+                    <!-- Read-only chips, same treatment as the list rows. -->
+                    <FlexLayout BindableLayout.ItemsSource="{Binding Tags}"
+                                Wrap="Wrap"
+                                Direction="Row"
+                                IsVisible="{Binding HasTags}">
+                        <BindableLayout.ItemTemplate>
+                            <DataTemplate x:DataType="models:Tag">
+                                <Border Margin="0,0,8,8"
+                                        Padding="12,6"
+                                        StrokeThickness="0"
+                                        BackgroundColor="{Binding Color, Converter={StaticResource HexToColorConverter}}">
+                                    <Border.StrokeShape>
+                                        <RoundRectangle CornerRadius="16" />
+                                    </Border.StrokeShape>
+                                    <Label Text="{Binding Name}"
+                                           FontSize="14"
+                                           TextColor="{Binding Color, Converter={StaticResource HexToTextColorConverter}}" />
+                                </Border>
+                            </DataTemplate>
+                        </BindableLayout.ItemTemplate>
+                    </FlexLayout>
+
+                    <VerticalStackLayout Spacing="2">
+                        <Label Text="Quantity" Style="{StaticResource FieldCaption}" />
+                        <Label Text="{Binding Quantity}" Style="{StaticResource FieldValue}" />
+                    </VerticalStackLayout>
+
+                    <VerticalStackLayout Spacing="2">
+                        <Label Text="Location" Style="{StaticResource FieldCaption}" />
+                        <Label Text="{Binding LocationName}" Style="{StaticResource FieldValue}" />
+                    </VerticalStackLayout>
+
+                    <VerticalStackLayout Spacing="2" IsVisible="{Binding HasDescription}">
+                        <Label Text="Description" Style="{StaticResource FieldCaption}" />
+                        <Label Text="{Binding Description}" Style="{StaticResource FieldValue}" />
+                    </VerticalStackLayout>
+
+                    <VerticalStackLayout Spacing="2">
+                        <Label Text="Added" Style="{StaticResource FieldCaption}" />
+                        <Label Text="{Binding CreatedAt, StringFormat='{0:MMM d, yyyy}'}"
+                               Style="{StaticResource FieldValue}" />
+                    </VerticalStackLayout>
+
+                </VerticalStackLayout>
+            </VerticalStackLayout>
+        </ScrollView>
+
+        <!-- Edit is the only action down here, so nothing destructive sits where the
+             edit form's Save and Cancel buttons are. -->
+        <Button Grid.Row="1"
+                Text="Edit"
+                Margin="20,10"
+                Command="{Binding EditCommand}" />
+
+    </Grid>
+
+</ContentPage>
