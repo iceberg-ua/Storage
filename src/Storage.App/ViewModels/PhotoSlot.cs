@@ -3,9 +3,9 @@ using CommunityToolkit.Mvvm.ComponentModel;
 namespace Storage.App.ViewModels;
 
 /// <summary>
-/// One photo in the edit form's strip. The flags describe the photo's position in the
-/// set, which a photo cannot see for itself — <see cref="AddItemViewModel"/> stamps
-/// them whenever the collection changes.
+/// One photo in the edit form's strip. Being the primary is a fact about position — the
+/// primary is the first of the set — which a photo cannot see for itself, so
+/// <see cref="AddItemViewModel"/> stamps it whenever the collection changes.
 /// </summary>
 public partial class PhotoSlot : ObservableObject
 {
@@ -22,11 +22,10 @@ public partial class PhotoSlot : ObservableObject
     public ImageSource? Source { get; }
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HeartGlyph))]
     private bool _isPrimary;
 
-    [ObservableProperty]
-    private bool _canMoveLeft;
-
-    [ObservableProperty]
-    private bool _canMoveRight;
+    // Filled when this is the one the lists show, hollow otherwise. The glyphs are text,
+    // not emoji, so they take the colour the template gives them in either theme.
+    public string HeartGlyph => IsPrimary ? "♥" : "♡";
 }

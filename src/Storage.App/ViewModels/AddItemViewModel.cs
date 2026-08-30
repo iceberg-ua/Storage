@@ -224,7 +224,7 @@ public partial class AddItemViewModel : ObservableObject, IQueryAttributable
         OnPropertyChanged(nameof(IsAtTagLimit));
     }
 
-    // The same arrangement for photos, which four commands mutate and which are
+    // The same arrangement for photos, which three commands mutate and which are
     // restored wholesale on load and on an abandoned edit.
     partial void OnPhotosChanged(ObservableCollection<PhotoSlot>? oldValue, ObservableCollection<PhotoSlot> newValue)
     {
@@ -244,15 +244,10 @@ public partial class AddItemViewModel : ObservableObject, IQueryAttributable
         OnPropertyChanged(nameof(CanAddMorePhotos));
         OnPropertyChanged(nameof(IsAtPhotoLimit));
 
-        // Which photo is primary, and which way each can move, are facts about
-        // position — restamped here rather than worked out in the template.
+        // Which photo is primary is a fact about position — restamped here rather
+        // than worked out in the template.
         for (var i = 0; i < Photos.Count; i++)
-        {
-            var slot = Photos[i];
-            slot.IsPrimary = i == 0;
-            slot.CanMoveLeft = i > 0;
-            slot.CanMoveRight = i < Photos.Count - 1;
-        }
+            Photos[i].IsPrimary = i == 0;
     }
 
     // Typing filters the tags already in the database down to what is worth offering.
@@ -368,29 +363,14 @@ public partial class AddItemViewModel : ObservableObject, IQueryAttributable
     }
 
     // Promotion, not a flag: the primary is simply the first of the set, so "show this
-    // one in the list" and "put it first" are the same move.
+    // one in the list" and "put it first" are the same move — and hearting a photo is
+    // also how the set is ordered, since it moves that one to the front.
     [RelayCommand]
     private void MakePrimary(PhotoSlot photo)
     {
         var index = Photos.IndexOf(photo);
         if (index > 0)
             Photos.Move(index, 0);
-    }
-
-    [RelayCommand]
-    private void MovePhotoLeft(PhotoSlot photo)
-    {
-        var index = Photos.IndexOf(photo);
-        if (index > 0)
-            Photos.Move(index, index - 1);
-    }
-
-    [RelayCommand]
-    private void MovePhotoRight(PhotoSlot photo)
-    {
-        var index = Photos.IndexOf(photo);
-        if (index >= 0 && index < Photos.Count - 1)
-            Photos.Move(index, index + 1);
     }
 
     [RelayCommand]
