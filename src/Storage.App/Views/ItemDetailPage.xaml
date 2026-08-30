@@ -7,18 +7,6 @@
              x:DataType="vm:ItemDetailViewModel"
              Title="{Binding Name}">
 
-    <!-- Delete lives in the toolbar, deliberately not in the bottom bar. The edit
-         form's Save button occupies the same slot as a bottom-bar button here, and
-         saving pops straight back to this page - so a second tap, or a double tap on
-         Save, would land on Delete with the page appearing under the user's finger.
-         Up here it shares its position with nothing. -->
-    <ContentPage.ToolbarItems>
-        <ToolbarItem Text="Delete"
-                     Command="{Binding DeleteCommand}"
-                     Order="Primary"
-                     Priority="0" />
-    </ContentPage.ToolbarItems>
-
     <ContentPage.Resources>
         <!-- Every field is a caption over its value, so the page scans as a list of
              answers rather than a wall of labelled rows. -->
@@ -33,11 +21,9 @@
         </Style>
     </ContentPage.Resources>
 
-    <!-- Details scroll; the actions stay pinned to the bottom, the same shape the
-         edit form uses. -->
-    <Grid RowDefinitions="*,Auto">
+    <Grid>
 
-        <ScrollView Grid.Row="0">
+        <ScrollView>
             <VerticalStackLayout>
 
                 <!-- Full width and edge to edge: on a detail page the photo is the
@@ -86,10 +72,37 @@
 
                 <VerticalStackLayout Padding="20" Spacing="18">
 
-                    <Label Text="{Binding Name}"
-                           FontSize="26"
-                           FontAttributes="Bold"
-                           TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}" />
+                    <!-- Both actions are icon buttons beside the name, not a bottom
+                         bar. The edit form's Cancel and Save occupy both bottom slots,
+                         and either one pops straight back to this page — so a button
+                         down here arrives under the finger that just tapped, which is
+                         how Delete used to catch a double tap on Save. Up beside the
+                         name neither shares a position with anything. -->
+                    <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+                        <Label Grid.Column="0"
+                               Text="{Binding Name}"
+                               FontSize="26"
+                               FontAttributes="Bold"
+                               VerticalOptions="Center"
+                               TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}" />
+
+                        <Button Grid.Column="1"
+                                Text="✏️"
+                                Style="{StaticResource IconButton}"
+                                Command="{Binding EditCommand}"
+                                SemanticProperties.Description="Edit item"
+                                ToolTipProperties.Text="Edit item" />
+
+                        <!-- The delete red the swipe actions already use, so destructive
+                             means the same colour everywhere in the app. -->
+                        <Button Grid.Column="2"
+                                Text="🗑️"
+                                Style="{StaticResource IconButton}"
+                                Command="{Binding DeleteCommand}"
+                                BackgroundColor="#FF3B30"
+                                SemanticProperties.Description="Delete item"
+                                ToolTipProperties.Text="Delete item" />
+                    </Grid>
 
                     <!-- Read-only chips, same treatment as the list rows. -->
                     <FlexLayout BindableLayout.ItemsSource="{Binding Tags}"
@@ -137,13 +150,6 @@
                 </VerticalStackLayout>
             </VerticalStackLayout>
         </ScrollView>
-
-        <!-- Edit is the only action down here, so nothing destructive sits where the
-             edit form's Save and Cancel buttons are. -->
-        <Button Grid.Row="1"
-                Text="Edit"
-                Margin="20,10"
-                Command="{Binding EditCommand}" />
 
     </Grid>
 
