@@ -92,6 +92,12 @@ public sealed class PhotoService : IPhotoService
         return Task.CompletedTask;
     }
 
+    public async Task DeleteAllAsync(IEnumerable<string> fileNames)
+    {
+        foreach (var fileName in fileNames)
+            await DeleteAsync(fileName);
+    }
+
     public Task<int> CleanupOrphansAsync(IEnumerable<string> knownFileNames)
     {
         if (!Directory.Exists(_photosDirectory))

@@ -46,11 +46,32 @@
                      tells two similar items apart. Hidden entirely when there is no
                      photo, rather than leaving a grey band that says nothing. -->
                 <Grid HeightRequest="280"
-                      IsVisible="{Binding HasPhoto}"
+                      IsVisible="{Binding HasPhotos}"
                       BackgroundColor="{AppThemeBinding Light={StaticResource Gray100}, Dark={StaticResource Gray950}}">
-                    <Image Source="{Binding PhotoSource}"
-                           Aspect="AspectFit"
-                           SemanticProperties.Description="{Binding Name, StringFormat='Photo of {0}'}" />
+
+                    <!-- Swipe for the rest of the set, starting on the primary. Its
+                         scroll is horizontal, so it does not fight the page's own. -->
+                    <CarouselView ItemsSource="{Binding Photos}"
+                                  IndicatorView="PhotoIndicator"
+                                  Loop="False"
+                                  HorizontalScrollBarVisibility="Never">
+                        <CarouselView.ItemTemplate>
+                            <DataTemplate x:DataType="models:ItemPhoto">
+                                <Image Source="{Binding FileName, Converter={StaticResource PhotoSourceConverter}}"
+                                       Aspect="AspectFit"
+                                       SemanticProperties.Description="{Binding Source={RelativeSource AncestorType={x:Type vm:ItemDetailViewModel}}, Path=Name, StringFormat='Photo of {0}'}" />
+                            </DataTemplate>
+                        </CarouselView.ItemTemplate>
+                    </CarouselView>
+
+                    <!-- Dots earn their space only once there is a second photo. -->
+                    <IndicatorView x:Name="PhotoIndicator"
+                                   IsVisible="{Binding HasMultiplePhotos}"
+                                   HorizontalOptions="Center"
+                                   VerticalOptions="End"
+                                   Margin="0,0,0,10"
+                                   IndicatorColor="{AppThemeBinding Light={StaticResource Gray300}, Dark={StaticResource Gray600}}"
+                                   SelectedIndicatorColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
                 </Grid>
 
                 <VerticalStackLayout Padding="20" Spacing="18">

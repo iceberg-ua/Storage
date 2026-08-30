@@ -50,15 +50,17 @@ public partial class ItemDetailViewModel : ObservableObject, IQueryAttributable
 
     public bool HasTags => Tags.Count > 0;
 
+    // In display order, primary first — the one the list row showed, so the page
+    // opens on the photo the user tapped.
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HasPhoto))]
-    [NotifyPropertyChangedFor(nameof(PhotoSource))]
-    private string? _photoFileName;
+    [NotifyPropertyChangedFor(nameof(HasPhotos))]
+    [NotifyPropertyChangedFor(nameof(HasMultiplePhotos))]
+    private ObservableCollection<ItemPhoto> _photos = [];
 
-    public bool HasPhoto => !string.IsNullOrEmpty(PhotoFileName);
+    public bool HasPhotos => Photos.Count > 0;
 
-    public ImageSource? PhotoSource =>
-        _photoService.GetFullPath(PhotoFileName) is string path ? ImageSource.FromFile(path) : null;
+    // The page dots only earn their space once there is a second photo to swipe to.
+    public bool HasMultiplePhotos => Photos.Count > 1;
 
     public ItemDetailViewModel(IItemRepository itemRepository, IPhotoService photoService)
     {
@@ -98,7 +100,7 @@ public partial class ItemDetailViewModel : ObservableObject, IQueryAttributable
         Quantity = item.Quantity;
         LocationName = item.Location?.Name ?? NoLocationText;
         CreatedAt = item.CreatedAt;
-        PhotoFileName = item.PhotoPath;
+        Photos = new ObservableCollection<ItemPhoto>(item.Photos.OrderBy(p => p.SortOrder));
         Tags = new ObservableCollection<Tag>(item.Tags.OrderBy(t => t.Name));
     }
 
@@ -120,8 +122,12 @@ public partial class ItemDetailViewModel : ObservableObject, IQueryAttributable
         if (!confirm)
             return;
 
+        // Read before the delete: the rows go with the item by cascade, and the
+        // files they name are ours to remove once that write has succeeded.
+        var fileNames = Photos.Select(p => p.FileName).ToList();
+
         await _itemRepository.DeleteAsync(_itemId);
-        await _photoService.DeleteAsync(PhotoFileName);
+        await _photoService.DeleteAllAsync(fileNames);
 
         _isDeleted = true;
 

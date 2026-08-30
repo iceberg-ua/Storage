@@ -44,15 +44,15 @@ Ran ahead of Phase 2 rather than after it. Prerequisite for Phase 4 (AI recognit
 - `IPhotoService` / `PhotoService` (Storage.Core/Services): save, gallery import, path resolution, delete, orphan cleanup. Base directory is a constructor parameter, so it is testable against a temp folder
 - Compression pipeline: downsize to 1440px on the longest edge, JPEG at quality 0.75, stepping down through 0.65 / 0.55 / 0.45 until the file is under the 1 MB ceiling. An exhausted ladder stores the smallest candidate and logs a warning — never throws away the capture
 - EXIF orientation is baked into the saved pixels on Android (`ExifInterface` read, `Matrix` rotate/flip before encoding), so a photo that the camera tagged as rotated is upright everywhere, not just in the review step
-- Photos stored at `{AppDataDirectory}/photos/{guid:N}.jpg`; `Item.PhotoPath` holds the bare filename and is resolved at read time
+- Photos stored at `{AppDataDirectory}/photos/{guid:N}.jpg`; `Item.PhotoPath` holds the bare filename and is resolved at read time. **Superseded by VOL-31** — the filename now lives on `ItemPhoto.FileName`
 - In-app camera page (`CameraPage`) using `CommunityToolkit.Maui.Camera`: live preview, rear camera by default, shutter, cancel, and a review step with Retake / Use photo
 - Manual `CAMERA` permission handling, distinguishing granted / denied / permanently denied (the last offers `AppInfo.ShowSettingsUI()`); `CAMERA` declared in the Android manifest with `android.hardware.camera` marked not required
 - Camera released on `OnDisappearing` and whenever the app's window stops, and restarted on resume
 - No-camera-hardware fallback: the page says so and offers the gallery instead of a dead preview
-- Photo section on the item edit page: placeholder with Take photo / Choose from gallery, or a 120x120 rounded thumbnail with Replace / Remove
+- Photo section on the item edit page: placeholder with Take photo / Choose from gallery, or a 120x120 rounded thumbnail with Replace / Remove. **Superseded by VOL-31**, which replaced it with a strip
 - Staged-photo reconciliation runs from the edit page's `OnDisappearing`, gated on a committed flag, so Cancel / hardware back / gesture back / Shell's back arrow — and any exit route added later — are all covered by construction rather than each remembering to clean up. Pushing the camera page on top does not trigger it
 - 48x48 thumbnail in the item list with a neutral placeholder, sized so rows do not shift between the two states
-- Photo file deleted when its item is deleted; `CleanupOrphansAsync` runs once at startup against the set of `PhotoPath` values in the DB, returns how many it removed, and logs both success and failure instead of swallowing them
+- Photo file deleted when its item is deleted; `CleanupOrphansAsync` runs once at startup against the set of `PhotoPath` values in the DB, returns how many it removed, and logs both success and failure instead of swallowing them. **VOL-31** points it at `ItemPhotos.FileName`
 - The sweep spares any file written in the last 5 minutes (`PhotoService.OrphanGracePeriod`). A staged capture is in no item yet, so it is indistinguishable from an orphan, and the sweep runs unawaited at launch where it can overlap one — the grace period stops it deleting a photo the user is still holding. A genuine orphan comes from an earlier session and is never that new
 - 13 xUnit tests for `PhotoService` covering unique bare filenames, the size ceiling, the quality ladder including exhaustion, forward-only source streams, idempotent delete, and orphan cleanup
 
@@ -70,10 +70,27 @@ These corrections are recorded in `.claude/CLAUDE.md` so later phase prompts don
 - *Photo at full width on the item detail view.* The app has no item detail view — tapping an item in the list opens the edit form directly. Adding one is a navigation decision, not a photo one, so it is out of Phase 3 rather than outstanding in it. The edit form's photo section serves the need.
   **Since delivered by VOL-33**, which added the detail view this depended on. The photo now sits full width at the top of it.
 
+**Delivered (VOL-31) — multiple photos per item, superseding the single `PhotoPath`:**
+- `ItemPhoto` entity (Id, ItemId, FileName, SortOrder), cascade-deleted with its item. `Item.PhotoPath` is gone; `Item.Photos` replaces it and `Item.PrimaryPhotoFileName` is computed from the set rather than stored, so the primary cannot drift out of step with the photos it is drawn from
+- `AddItemPhotos` migration, hand-ordered the way `AddTags` was: create the table and index → copy every non-blank `PhotoPath` into an `ItemPhoto` row at `SortOrder` 0 → drop the column. A whitespace-only path is "no photo", not a row naming a file that isn't there. `Down()` writes the primary back into a restored column before dropping the table — the rest cannot survive a single column, and their files are left for the downgraded app's own sweep
+- Order is part of the read: the repository uses `Include(i => i.Photos.OrderBy(p => p.SortOrder))`, so no caller has to sort before deciding which photo is the primary
+- `IItemRepository.SetItemPhotosAsync(itemId, fileNames)` mirrors `SetItemTagsAsync`: the order passed in is the order stored, blanks and repeats dropped, the whole set rewritten rather than diffed. It touches no files — only the caller knows the write committed
+- Edit form photo strip: a horizontal scroller of 110px tiles, each with a remove ✕, two arrows to step it earlier or later, and a tap to promote it. The primary is simply the first of the set, so choosing it and ordering the set are one gesture. The add tile at the end of the strip doubles as the empty state, so there is no separate placeholder layout
+- Reordering is by arrows rather than drag-and-drop: a draggable strip inside the form's own `ScrollView` fights it for the gesture
+- Ten photos per item (`AddItemViewModel.MaxPhotosPerItem`) — a product rule like the five-tag limit. The add controls disable at the limit, and `AddPhotoAsync` deletes a file that arrives past it rather than leaking it
+- Detail page shows the set in a `CarouselView` with page dots, opening on the primary. The dots only render once there is a second photo to reach
+- Reconciliation now works over sets. Every file the edit wrote is tracked whether it is still on screen or not, so a save deletes what the item no longer references and an abandoned edit deletes everything it wrote. A photo removed from the strip stays on disk until the edit resolves — a removal that is then cancelled has to be able to put it back
+- The gallery picker now sets the same "covered, not left" flag as the camera round-trip, and clears it itself rather than in `LoadAsync`. The system picker covers the page too, and a covered page is not always distinguishable from a left one
+- `IPhotoService.DeleteAllAsync` for the set-shaped deletions — an item's whole set, or the files an edit dropped. Named apart from `DeleteAsync` so that passing a literal null stays unambiguous
+- The startup sweep reads `ItemPhotos.FileName` instead of `Items.PhotoPath`: an item's non-primary photos are referenced just as firmly as its first
+- 10 further tests — photo ordering, set replacement and renumbering, blanks and repeats, the cascade on item delete, the bulk delete, and three on the migration itself (every photo moved, the column dropped, the primary restored by `Down()`)
+
+**Not changed:** the camera page still hands back one photo per visit, so several photos is several trips. Same shape as before, and out of this issue's scope.
+
 **Temporary, remove after the device pass:**
 - A `#if DEBUG` log line in `PhotoService.SaveAsync` reporting each saved photo's byte count and the quality rung used, so real encoder output can be read off the log instead of pulled out of app-private storage
 
-Linear: VOL-27
+Linear: VOL-27, [VOL-31](https://linear.app/melnyk/issue/VOL-31)
 
 ---
 

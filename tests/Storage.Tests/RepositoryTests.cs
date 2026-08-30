@@ -52,15 +52,16 @@ public class RepositoryTests : IDisposable
         {
             Name = "Cordless Drill",
             Description = "Bosch 18V",
-            PhotoPath = "/photos/drill.jpg",
             LocationId = location.Id
         });
+
+        await itemRepo.SetItemPhotosAsync(item.Id, ["drill.jpg"]);
 
         var fetched = await itemRepo.GetByIdAsync(item.Id);
 
         Assert.NotNull(fetched);
         Assert.Equal("Cordless Drill", fetched!.Name);
-        Assert.Equal("/photos/drill.jpg", fetched.PhotoPath);
+        Assert.Equal("drill.jpg", fetched.PrimaryPhotoFileName);
         Assert.NotEqual(default, fetched.CreatedAt);
 
         // Navigation property resolves the referenced location
@@ -150,6 +151,100 @@ public class RepositoryTests : IDisposable
 
         Assert.NotNull(fetched);
         Assert.Equal("Wine Cellar", fetched!.Name);
+    }
+
+    [Fact]
+    public async Task SetItemPhotosStoresThemInTheGivenOrderWithTheFirstAsPrimary()
+    {
+        var itemRepo = new ItemRepository(_context);
+
+        var item = await itemRepo.AddAsync(new Item { Name = "Cordless Drill" });
+
+        await itemRepo.SetItemPhotosAsync(item.Id, ["front.jpg", "back.jpg", "serial.jpg"]);
+
+        _context.ChangeTracker.Clear();
+        var fetched = await itemRepo.GetByIdAsync(item.Id);
+
+        Assert.NotNull(fetched);
+        Assert.Equal(["front.jpg", "back.jpg", "serial.jpg"], fetched!.Photos.Select(p => p.FileName));
+        Assert.Equal([0, 1, 2], fetched.Photos.Select(p => p.SortOrder));
+
+        // The thumbnail the list shows is the first of the set, not whichever row
+        // happens to come back first.
+        Assert.Equal("front.jpg", fetched.PrimaryPhotoFileName);
+    }
+
+    [Fact]
+    public async Task GetAllReturnsPhotosInSortOrder()
+    {
+        var itemRepo = new ItemRepository(_context);
+
+        var item = await itemRepo.AddAsync(new Item { Name = "Cordless Drill" });
+        await itemRepo.SetItemPhotosAsync(item.Id, ["front.jpg", "back.jpg"]);
+
+        // Rewritten so the rows land in the table in the opposite order to the one
+        // they should come back in — otherwise insertion order would pass for sorting.
+        await itemRepo.SetItemPhotosAsync(item.Id, ["back.jpg", "front.jpg"]);
+
+        _context.ChangeTracker.Clear();
+        var fetched = (await itemRepo.GetAllAsync()).Single();
+
+        Assert.Equal(["back.jpg", "front.jpg"], fetched.Photos.Select(p => p.FileName));
+        Assert.Equal("back.jpg", fetched.PrimaryPhotoFileName);
+    }
+
+    [Fact]
+    public async Task SetItemPhotosReplacesTheWholeSetAndRenumbersIt()
+    {
+        var itemRepo = new ItemRepository(_context);
+
+        var item = await itemRepo.AddAsync(new Item { Name = "Cordless Drill" });
+        await itemRepo.SetItemPhotosAsync(item.Id, ["front.jpg", "back.jpg", "serial.jpg"]);
+
+        // The middle one removed and the survivors swapped.
+        await itemRepo.SetItemPhotosAsync(item.Id, ["serial.jpg", "front.jpg"]);
+
+        _context.ChangeTracker.Clear();
+        var fetched = await itemRepo.GetByIdAsync(item.Id);
+
+        Assert.NotNull(fetched);
+        Assert.Equal(["serial.jpg", "front.jpg"], fetched!.Photos.Select(p => p.FileName));
+
+        // Nothing left behind by the rows that went, and no gap in the order.
+        Assert.Equal([0, 1], fetched.Photos.Select(p => p.SortOrder));
+        Assert.Equal(2, await _context.ItemPhotos.CountAsync());
+    }
+
+    [Fact]
+    public async Task SetItemPhotosDropsBlanksAndRepeats()
+    {
+        var itemRepo = new ItemRepository(_context);
+
+        var item = await itemRepo.AddAsync(new Item { Name = "Cordless Drill" });
+
+        await itemRepo.SetItemPhotosAsync(item.Id, ["front.jpg", "  ", "front.jpg", "back.jpg", ""]);
+
+        _context.ChangeTracker.Clear();
+        var fetched = await itemRepo.GetByIdAsync(item.Id);
+
+        // A blank names no file, and the same file twice is one photo shown twice.
+        Assert.NotNull(fetched);
+        Assert.Equal(["front.jpg", "back.jpg"], fetched!.Photos.Select(p => p.FileName));
+    }
+
+    [Fact]
+    public async Task DeletingAnItemDeletesItsPhotoRows()
+    {
+        var itemRepo = new ItemRepository(_context);
+
+        var item = await itemRepo.AddAsync(new Item { Name = "Cordless Drill" });
+        await itemRepo.SetItemPhotosAsync(item.Id, ["front.jpg", "back.jpg"]);
+
+        await itemRepo.DeleteAsync(item.Id);
+
+        // The files themselves are the caller's to remove; the rows go by cascade,
+        // which is what keeps the orphan sweep's "referenced" set honest.
+        Assert.Empty(await _context.ItemPhotos.ToListAsync());
     }
 
     public void Dispose()

@@ -53,8 +53,8 @@ public class PhotoServiceTests : IDisposable
 
         foreach (var fileName in new[] { first, second })
         {
-            // Item.PhotoPath must stay a filename — a stored path would break the
-            // moment the OS moves the app's data directory.
+            // ItemPhoto.FileName must stay a filename — a stored path would break
+            // the moment the OS moves the app's data directory.
             Assert.DoesNotContain(Path.DirectorySeparatorChar, fileName);
             Assert.DoesNotContain(Path.AltDirectorySeparatorChar, fileName);
             Assert.EndsWith(".jpg", fileName);
@@ -154,6 +154,33 @@ public class PhotoServiceTests : IDisposable
         await _service.DeleteAsync(fileName);
         await _service.DeleteAsync("never-existed.jpg");
         await _service.DeleteAsync(null);
+    }
+
+    [Fact]
+    public async Task DeleteAllRemovesEveryNamedPhoto()
+    {
+        var first = await _service.SaveAsync(SourceImage());
+        var second = await _service.SaveAsync(SourceImage());
+        var kept = await _service.SaveAsync(SourceImage());
+
+        await _service.DeleteAllAsync([first, second]);
+
+        Assert.False(File.Exists(Path.Combine(_photosDirectory, first)));
+        Assert.False(File.Exists(Path.Combine(_photosDirectory, second)));
+        Assert.True(File.Exists(Path.Combine(_photosDirectory, kept)));
+    }
+
+    [Fact]
+    public async Task DeleteAllSkipsWhatIsAlreadyGoneAndKeepsGoing()
+    {
+        var fileName = await _service.SaveAsync(SourceImage());
+
+        // An edit that drops several photos can name one that is already gone; that
+        // must not stop the rest of the set being cleaned up.
+        await _service.DeleteAllAsync(["never-existed.jpg", "   ", fileName]);
+
+        Assert.False(File.Exists(Path.Combine(_photosDirectory, fileName)));
+        Assert.Empty(Directory.GetFiles(_photosDirectory));
     }
 
     [Fact]

@@ -45,9 +45,10 @@ public partial class App : Application
 			using var scope = _serviceProvider.CreateScope();
 			var dbContext = scope.ServiceProvider.GetRequiredService<StorageDbContext>();
 
-			var referenced = await dbContext.Items
-				.Where(i => i.PhotoPath != null)
-				.Select(i => i.PhotoPath!)
+			// Every photo row, not one per item: an item's non-primary photos are
+			// referenced just as firmly as its first one.
+			var referenced = await dbContext.ItemPhotos
+				.Select(p => p.FileName)
 				.ToListAsync();
 
 			var photoService = _serviceProvider.GetRequiredService<IPhotoService>();

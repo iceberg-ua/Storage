@@ -20,12 +20,12 @@ public partial class AddItemPage : ContentPage
     }
 
     // Every way out of this page ends here — Cancel, hardware back, the gesture, and
-    // Shell's own back arrow — so this is the one place a staged photo has to be
+    // Shell's own back arrow — so this is the one place staged photos have to be
     // reconciled. The ViewModel ignores the call when the page is merely being covered
-    // by the camera page.
+    // by the camera page or the system gallery picker.
     protected override async void OnDisappearing()
     {
         base.OnDisappearing();
-        await _viewModel.ReconcilePhotoOnLeaveAsync();
+        await _viewModel.ReconcilePhotosOnLeaveAsync();
     }
 }

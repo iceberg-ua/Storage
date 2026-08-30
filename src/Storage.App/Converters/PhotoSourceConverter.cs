@@ -3,7 +3,7 @@ using Storage.Core.Services;
 
 namespace Storage.App.Converters;
 
-// Item.PhotoPath is a bare filename, so the list and detail templates need the
+// A photo is stored as a bare filename, so the list and detail templates need the
 // service to turn it into something an Image can load. Registered as an app-level
 // resource in App.xaml.cs because it has a dependency and XAML can't inject one.
 public class PhotoSourceConverter : IValueConverter

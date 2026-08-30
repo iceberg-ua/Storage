@@ -14,57 +14,140 @@
         <ScrollView Grid.Row="0">
             <VerticalStackLayout Padding="20" Spacing="15">
 
-                <!-- Photo. Empty state is a tappable placeholder; filled state is a
-                     thumbnail with the two actions that apply to it. -->
-                <Label Text="Photo" FontSize="16" />
+                <!-- Photos, in the order they will be shown; the first is the primary,
+                     the one the item list uses as its thumbnail. The strip scrolls
+                     sideways because ten thumbnails do not fit across a phone. -->
+                <Label Text="Photos" FontSize="16" />
 
-                <HorizontalStackLayout Spacing="15" IsVisible="{Binding HasPhoto}">
-                    <Border WidthRequest="120"
-                            HeightRequest="120"
-                            Padding="0"
-                            StrokeThickness="0">
-                        <Border.StrokeShape>
-                            <RoundRectangle CornerRadius="10" />
-                        </Border.StrokeShape>
-                        <Image Source="{Binding PhotoSource}" Aspect="AspectFill" />
-                    </Border>
+                <ScrollView Orientation="Horizontal" HorizontalScrollBarVisibility="Never">
+                    <HorizontalStackLayout Spacing="10">
 
-                    <VerticalStackLayout Spacing="10" VerticalOptions="Center">
-                        <Button Text="Replace" Command="{Binding TakePhotoCommand}" />
-                        <Button Text="Remove"
-                                Command="{Binding RemovePhotoCommand}"
-                                BackgroundColor="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource Gray600}}"
-                                TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}" />
-                    </VerticalStackLayout>
+                        <HorizontalStackLayout BindableLayout.ItemsSource="{Binding Photos}" Spacing="10">
+                            <BindableLayout.ItemTemplate>
+                                <DataTemplate x:DataType="vm:PhotoSlot">
+                                    <VerticalStackLayout Spacing="4">
+
+                                        <Grid WidthRequest="110" HeightRequest="110">
+                                            <Border Padding="0" StrokeThickness="0">
+                                                <Border.StrokeShape>
+                                                    <RoundRectangle CornerRadius="10" />
+                                                </Border.StrokeShape>
+                                                <!-- Tapping a photo promotes it: the
+                                                     primary is just the first of the set. -->
+                                                <Border.GestureRecognizers>
+                                                    <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:AddItemViewModel}}, Path=MakePrimaryCommand}"
+                                                                          CommandParameter="{Binding .}" />
+                                                </Border.GestureRecognizers>
+                                                <Image Source="{Binding Source}" Aspect="AspectFill" />
+                                            </Border>
+
+                                            <!-- Names the photo the list will show, and
+                                                 by moving when another is tapped, says
+                                                 how that choice is made. -->
+                                            <Border IsVisible="{Binding IsPrimary}"
+                                                    Margin="4"
+                                                    Padding="6,2"
+                                                    VerticalOptions="End"
+                                                    HorizontalOptions="Start"
+                                                    StrokeThickness="0"
+                                                    BackgroundColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}">
+                                                <Border.StrokeShape>
+                                                    <RoundRectangle CornerRadius="8" />
+                                                </Border.StrokeShape>
+                                                <Label Text="★ Primary"
+                                                       FontSize="10"
+                                                       TextColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource PrimaryDarkText}}" />
+                                            </Border>
+
+                                            <Border WidthRequest="28"
+                                                    HeightRequest="28"
+                                                    Margin="4"
+                                                    Padding="0"
+                                                    VerticalOptions="Start"
+                                                    HorizontalOptions="End"
+                                                    StrokeThickness="0"
+                                                    BackgroundColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource Gray600}}">
+                                                <Border.StrokeShape>
+                                                    <RoundRectangle CornerRadius="14" />
+                                                </Border.StrokeShape>
+                                                <Border.GestureRecognizers>
+                                                    <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:AddItemViewModel}}, Path=RemovePhotoCommand}"
+                                                                          CommandParameter="{Binding .}" />
+                                                </Border.GestureRecognizers>
+                                                <Label Text="✕"
+                                                       FontSize="14"
+                                                       TextColor="{StaticResource White}"
+                                                       HorizontalOptions="Center"
+                                                       VerticalOptions="Center"
+                                                       SemanticProperties.Description="Remove this photo" />
+                                            </Border>
+                                        </Grid>
+
+                                        <!-- Step reordering rather than drag-and-drop:
+                                             a draggable strip inside this page's own
+                                             ScrollView fights it for the gesture. -->
+                                        <Grid ColumnDefinitions="*,*" ColumnSpacing="4">
+                                            <Button Grid.Column="0"
+                                                    Text="◀"
+                                                    Style="{StaticResource IconButton}"
+                                                    FontSize="14"
+                                                    IsEnabled="{Binding CanMoveLeft}"
+                                                    SemanticProperties.Description="Move this photo earlier"
+                                                    Command="{Binding Source={RelativeSource AncestorType={x:Type vm:AddItemViewModel}}, Path=MovePhotoLeftCommand}"
+                                                    CommandParameter="{Binding .}" />
+                                            <Button Grid.Column="1"
+                                                    Text="▶"
+                                                    Style="{StaticResource IconButton}"
+                                                    FontSize="14"
+                                                    IsEnabled="{Binding CanMoveRight}"
+                                                    SemanticProperties.Description="Move this photo later"
+                                                    Command="{Binding Source={RelativeSource AncestorType={x:Type vm:AddItemViewModel}}, Path=MovePhotoRightCommand}"
+                                                    CommandParameter="{Binding .}" />
+                                        </Grid>
+                                    </VerticalStackLayout>
+                                </DataTemplate>
+                            </BindableLayout.ItemTemplate>
+                        </HorizontalStackLayout>
+
+                        <!-- Doubles as the empty state: with no photos yet, this tile
+                             is the whole strip. -->
+                        <Border WidthRequest="110"
+                                HeightRequest="110"
+                                Padding="0"
+                                VerticalOptions="Start"
+                                IsVisible="{Binding CanAddMorePhotos}"
+                                BackgroundColor="{AppThemeBinding Light={StaticResource Gray100}, Dark={StaticResource Gray600}}"
+                                Stroke="{AppThemeBinding Light={StaticResource Gray300}, Dark={StaticResource Gray500}}">
+                            <Border.StrokeShape>
+                                <RoundRectangle CornerRadius="10" />
+                            </Border.StrokeShape>
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer Command="{Binding TakePhotoCommand}" />
+                            </Border.GestureRecognizers>
+                            <Label Text="📷"
+                                   FontSize="36"
+                                   HorizontalOptions="Center"
+                                   VerticalOptions="Center"
+                                   SemanticProperties.Description="Add a photo" />
+                        </Border>
+                    </HorizontalStackLayout>
+                </ScrollView>
+
+                <HorizontalStackLayout Spacing="10">
+                    <Button Text="Take photo"
+                            Command="{Binding TakePhotoCommand}"
+                            IsEnabled="{Binding CanAddMorePhotos}" />
+                    <Button Text="Choose from gallery"
+                            Command="{Binding ChooseFromGalleryCommand}"
+                            IsEnabled="{Binding CanAddMorePhotos}"
+                            BackgroundColor="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource Gray600}}"
+                            TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}" />
                 </HorizontalStackLayout>
 
-                <HorizontalStackLayout Spacing="15" IsVisible="{Binding HasPhoto, Converter={StaticResource InvertedBoolConverter}}">
-                    <Border WidthRequest="120"
-                            HeightRequest="120"
-                            Padding="0"
-                            BackgroundColor="{AppThemeBinding Light={StaticResource Gray100}, Dark={StaticResource Gray600}}"
-                            Stroke="{AppThemeBinding Light={StaticResource Gray300}, Dark={StaticResource Gray500}}">
-                        <Border.StrokeShape>
-                            <RoundRectangle CornerRadius="10" />
-                        </Border.StrokeShape>
-                        <Border.GestureRecognizers>
-                            <TapGestureRecognizer Command="{Binding TakePhotoCommand}" />
-                        </Border.GestureRecognizers>
-                        <Label Text="📷"
-                               FontSize="36"
-                               HorizontalOptions="Center"
-                               VerticalOptions="Center"
-                               SemanticProperties.Description="No photo yet" />
-                    </Border>
-
-                    <VerticalStackLayout Spacing="10" VerticalOptions="Center">
-                        <Button Text="Take photo" Command="{Binding TakePhotoCommand}" />
-                        <Button Text="Choose from gallery"
-                                Command="{Binding ChooseFromGalleryCommand}"
-                                BackgroundColor="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource Gray600}}"
-                                TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}" />
-                    </VerticalStackLayout>
-                </HorizontalStackLayout>
+                <Label Text="{Binding PhotoLimitMessage}"
+                       FontSize="12"
+                       IsVisible="{Binding IsAtPhotoLimit}"
+                       TextColor="{AppThemeBinding Light={StaticResource Gray500}, Dark={StaticResource Gray400}}" />
 
                 <Label Text="Item Name" FontSize="16" Margin="0,10,0,0" />
                 <Entry Text="{Binding Name}"

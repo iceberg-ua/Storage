@@ -20,6 +20,10 @@ public partial class AddItemViewModel : ObservableObject, IQueryAttributable
     // number of tags, but a row in the list only has space for a handful.
     public const int MaxTagsPerItem = 5;
 
+    // Also a product rule. Ten is enough to show an item from every side and catch its
+    // label, and it keeps one item's share of device storage bounded.
+    public const int MaxPhotosPerItem = 10;
+
     private readonly IItemRepository _itemRepository;
     private readonly ILocationRepository _locationRepository;
     private readonly ITagRepository _tagRepository;
@@ -33,16 +37,21 @@ public partial class AddItemViewModel : ObservableObject, IQueryAttributable
     private int? _preselectedLocationId;
     private bool _isLoaded;
 
-    // What the DB holds right now. Anything else in PhotoFileName is uncommitted,
-    // which is what tells us which file to delete on save and which on the way out.
-    private string? _savedPhotoFileName;
+    // What the DB holds right now, in order. Anything in Photos that is not in here is
+    // uncommitted, which is what tells us which files to delete on save.
+    private List<string> _savedPhotoFileNames = [];
+
+    // Every file this edit has written, whether it is still in Photos or not: a photo
+    // that was taken and then removed has already cost a file on disk.
+    private readonly HashSet<string> _stagedPhotoFileNames = new(StringComparer.OrdinalIgnoreCase);
+
     private string? _capturedPhotoFileName;
 
     // Reconciliation runs when the page is left, not from any one exit handler, so
     // every route out is covered by construction. These two say when "left" is real:
-    // the page also disappears when the camera page is pushed on top of it, and there
-    // is nothing to discard once a save has committed.
-    private bool _isAwaitingCamera;
+    // the page also disappears when a photo source is put on top of it, and there is
+    // nothing to discard once a save has committed.
+    private bool _isAwaitingPhotoSource;
     private bool _isCommitted;
 
     [ObservableProperty]
@@ -84,15 +93,18 @@ public partial class AddItemViewModel : ObservableObject, IQueryAttributable
     [ObservableProperty]
     private string _pageTitle = "Add Item";
 
+    // The photo strip, in display order. The first is the primary — the one the item
+    // list shows — so ordering the set and choosing the primary are one gesture.
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HasPhoto))]
-    [NotifyPropertyChangedFor(nameof(PhotoSource))]
-    private string? _photoFileName;
+    private ObservableCollection<PhotoSlot> _photos = [];
 
-    public bool HasPhoto => !string.IsNullOrEmpty(PhotoFileName);
+    public bool HasPhotos => Photos.Count > 0;
 
-    public ImageSource? PhotoSource =>
-        _photoService.GetFullPath(PhotoFileName) is string path ? ImageSource.FromFile(path) : null;
+    public bool CanAddMorePhotos => Photos.Count < MaxPhotosPerItem;
+
+    public bool IsAtPhotoLimit => !CanAddMorePhotos;
+
+    public string PhotoLimitMessage => $"Maximum {MaxPhotosPerItem} photos per item";
 
     public AddItemViewModel(
         IItemRepository itemRepository,
@@ -121,7 +133,7 @@ public partial class AddItemViewModel : ObservableObject, IQueryAttributable
             _preselectedLocationId = parsedLocationId;
         }
 
-        // Handed back by the camera page. Applied in LoadAsync so the swap can be
+        // Handed back by the camera page. Applied in LoadAsync so the add can be
         // awaited — this method can't be.
         if (query.TryGetValue("photoFileName", out var photoFileName) &&
             Convert.ToString(photoFileName) is { Length: > 0 } capturedFileName)
@@ -137,12 +149,12 @@ public partial class AddItemViewModel : ObservableObject, IQueryAttributable
     private async Task LoadAsync()
     {
         // We are back on this page, so the camera round-trip is over either way.
-        _isAwaitingCamera = false;
+        _isAwaitingPhotoSource = false;
 
         if (_capturedPhotoFileName is string captured)
         {
             _capturedPhotoFileName = null;
-            await SetPendingPhotoAsync(captured);
+            await AddPhotoAsync(captured);
         }
 
         // OnAppearing fires again when a pushed page is popped — don't discard edits in progress.
@@ -173,8 +185,8 @@ public partial class AddItemViewModel : ObservableObject, IQueryAttributable
             SelectedLocation = Locations.FirstOrDefault(l => l.Id == item.LocationId);
             ItemTags = new ObservableCollection<Tag>(item.Tags.OrderBy(t => t.Name));
 
-            _savedPhotoFileName = item.PhotoPath;
-            PhotoFileName = item.PhotoPath;
+            _savedPhotoFileNames = item.Photos.OrderBy(p => p.SortOrder).Select(p => p.FileName).ToList();
+            ResetPhotosTo(_savedPhotoFileNames);
         }
         else if (_preselectedLocationId is int preselected)
         {
@@ -201,6 +213,37 @@ public partial class AddItemViewModel : ObservableObject, IQueryAttributable
     {
         OnPropertyChanged(nameof(CanAddMoreTags));
         OnPropertyChanged(nameof(IsAtTagLimit));
+    }
+
+    // The same arrangement for photos, which four commands mutate and which are
+    // restored wholesale on load and on an abandoned edit.
+    partial void OnPhotosChanged(ObservableCollection<PhotoSlot>? oldValue, ObservableCollection<PhotoSlot> newValue)
+    {
+        if (oldValue is not null)
+            oldValue.CollectionChanged -= OnPhotosCollectionChanged;
+
+        newValue.CollectionChanged += OnPhotosCollectionChanged;
+        NotifyPhotosChanged();
+    }
+
+    private void OnPhotosCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e) =>
+        NotifyPhotosChanged();
+
+    private void NotifyPhotosChanged()
+    {
+        OnPropertyChanged(nameof(HasPhotos));
+        OnPropertyChanged(nameof(CanAddMorePhotos));
+        OnPropertyChanged(nameof(IsAtPhotoLimit));
+
+        // Which photo is primary, and which way each can move, are facts about
+        // position — restamped here rather than worked out in the template.
+        for (var i = 0; i < Photos.Count; i++)
+        {
+            var slot = Photos[i];
+            slot.IsPrimary = i == 0;
+            slot.CanMoveLeft = i > 0;
+            slot.CanMoveRight = i < Photos.Count - 1;
+        }
     }
 
     // Typing filters the tags already in the database down to what is worth offering.
@@ -273,30 +316,72 @@ public partial class AddItemViewModel : ObservableObject, IQueryAttributable
     [RelayCommand]
     private async Task TakePhotoAsync()
     {
+        if (IsAtPhotoLimit)
+            return;
+
         // The page is about to disappear because it is being covered, not left.
-        _isAwaitingCamera = true;
+        _isAwaitingPhotoSource = true;
         await Shell.Current.GoToAsync("camera");
     }
 
     [RelayCommand]
     private async Task ChooseFromGalleryAsync()
     {
+        if (IsAtPhotoLimit)
+            return;
+
+        // The system picker covers the page too, and a covered page is not always
+        // distinguishable from a left one. Cleared here rather than in LoadAsync,
+        // because a page that was only covered may never come back through it.
+        _isAwaitingPhotoSource = true;
         try
         {
             var fileName = await _photoService.PickFromGalleryAsync();
             if (fileName is not null)
-                await SetPendingPhotoAsync(fileName);
+                await AddPhotoAsync(fileName);
         }
         catch (Exception ex)
         {
             await Shell.Current.DisplayAlertAsync("Error", $"That image could not be imported.\n\n{ex.Message}", "OK");
         }
+        finally
+        {
+            _isAwaitingPhotoSource = false;
+        }
     }
 
     [RelayCommand]
-    private async Task RemovePhotoAsync()
+    private void RemovePhoto(PhotoSlot photo)
     {
-        await SetPendingPhotoAsync(null);
+        // The file stays on disk until the edit is resolved: a removal that is then
+        // cancelled has to be able to put the photo back.
+        Photos.Remove(photo);
+    }
+
+    // Promotion, not a flag: the primary is simply the first of the set, so "show this
+    // one in the list" and "put it first" are the same move.
+    [RelayCommand]
+    private void MakePrimary(PhotoSlot photo)
+    {
+        var index = Photos.IndexOf(photo);
+        if (index > 0)
+            Photos.Move(index, 0);
+    }
+
+    [RelayCommand]
+    private void MovePhotoLeft(PhotoSlot photo)
+    {
+        var index = Photos.IndexOf(photo);
+        if (index > 0)
+            Photos.Move(index, index - 1);
+    }
+
+    [RelayCommand]
+    private void MovePhotoRight(PhotoSlot photo)
+    {
+        var index = Photos.IndexOf(photo);
+        if (index >= 0 && index < Photos.Count - 1)
+            Photos.Move(index, index + 1);
     }
 
     [RelayCommand]
@@ -317,6 +402,8 @@ public partial class AddItemViewModel : ObservableObject, IQueryAttributable
         // silently drop it just because return was never pressed.
         AddTagName(TagInput);
 
+        var photoFileNames = Photos.Select(p => p.FileName).ToList();
+
         int savedItemId;
 
         if (IsEditMode)
@@ -333,7 +420,6 @@ public partial class AddItemViewModel : ObservableObject, IQueryAttributable
             item.Description = description;
             item.Quantity = Quantity;
             item.LocationId = SelectedLocation?.Id;
-            item.PhotoPath = PhotoFileName;
 
             await _itemRepository.UpdateAsync(item);
             savedItemId = item.Id;
@@ -345,8 +431,7 @@ public partial class AddItemViewModel : ObservableObject, IQueryAttributable
                 Name = Name.Trim(),
                 Description = description,
                 Quantity = Quantity,
-                LocationId = SelectedLocation?.Id,
-                PhotoPath = PhotoFileName
+                LocationId = SelectedLocation?.Id
             });
 
             savedItemId = added.Id;
@@ -356,11 +441,20 @@ public partial class AddItemViewModel : ObservableObject, IQueryAttributable
         // repository resolves each name to a shared row rather than storing text.
         await _tagRepository.SetItemTagsAsync(savedItemId, ItemTags.Select(t => t.Name));
 
-        // Only now is the replaced photo safe to remove.
-        if (_savedPhotoFileName is not null && _savedPhotoFileName != PhotoFileName)
-            await _photoService.DeleteAsync(_savedPhotoFileName);
+        // Photos too, for the first of those reasons, and because their order is a
+        // property of the set rather than of any one row.
+        await _itemRepository.SetItemPhotosAsync(savedItemId, photoFileNames);
 
-        _savedPhotoFileName = PhotoFileName;
+        // Only now are the dropped files safe to remove: everything this edit started
+        // with or wrote, that the item no longer references.
+        await _photoService.DeleteAllAsync(
+            _savedPhotoFileNames
+                .Concat(_stagedPhotoFileNames)
+                .Except(photoFileNames, StringComparer.OrdinalIgnoreCase)
+                .ToList());
+
+        _savedPhotoFileNames = photoFileNames;
+        _stagedPhotoFileNames.Clear();
         _isCommitted = true;
 
         await Shell.Current.GoToAsync("..");
@@ -369,7 +463,7 @@ public partial class AddItemViewModel : ObservableObject, IQueryAttributable
     [RelayCommand]
     private async Task CancelAsync()
     {
-        // Just navigate. The photo is reconciled on the way out, so this handler does
+        // Just navigate. Photos are reconciled on the way out, so this handler does
         // not have to remember to — and neither does any exit route added later.
         await Shell.Current.GoToAsync("..");
     }
@@ -378,24 +472,41 @@ public partial class AddItemViewModel : ObservableObject, IQueryAttributable
     /// Called when the page is leaving. Anything captured during this edit and never
     /// saved is an orphan from here on.
     /// </summary>
-    public async Task ReconcilePhotoOnLeaveAsync()
+    public async Task ReconcilePhotosOnLeaveAsync()
     {
-        if (_isAwaitingCamera || _isCommitted)
+        if (_isAwaitingPhotoSource || _isCommitted)
             return;
 
-        if (PhotoFileName is not null && PhotoFileName != _savedPhotoFileName)
-            await _photoService.DeleteAsync(PhotoFileName);
+        // Nothing was committed, so every file this edit wrote goes — including the
+        // ones still on screen, which the item never actually gained.
+        await _photoService.DeleteAllAsync(
+            _stagedPhotoFileNames
+                .Except(_savedPhotoFileNames, StringComparer.OrdinalIgnoreCase)
+                .ToList());
 
-        PhotoFileName = _savedPhotoFileName;
+        _stagedPhotoFileNames.Clear();
+        ResetPhotosTo(_savedPhotoFileNames);
     }
 
-    // Swapping the pending photo drops the file it replaces, unless that file is
-    // the one already stored against the item — that one only goes on a save.
-    private async Task SetPendingPhotoAsync(string? fileName)
+    private async Task AddPhotoAsync(string fileName)
     {
-        if (PhotoFileName is not null && PhotoFileName != _savedPhotoFileName)
-            await _photoService.DeleteAsync(PhotoFileName);
+        if (IsAtPhotoLimit)
+        {
+            // Every control that leads here is disabled at the limit, so this is the
+            // backstop for a file that arrived anyway — and it is already written, so
+            // dropping it on the floor would leak it until the next launch sweep.
+            await _photoService.DeleteAsync(fileName);
+            await Shell.Current.DisplayAlertAsync("Too many photos", PhotoLimitMessage, "OK");
+            return;
+        }
 
-        PhotoFileName = fileName;
+        _stagedPhotoFileNames.Add(fileName);
+        Photos.Add(CreateSlot(fileName));
     }
+
+    private void ResetPhotosTo(IEnumerable<string> fileNames) =>
+        Photos = new ObservableCollection<PhotoSlot>(fileNames.Select(CreateSlot));
+
+    private PhotoSlot CreateSlot(string fileName) =>
+        new(fileName, _photoService.GetFullPath(fileName) is string path ? ImageSource.FromFile(path) : null);
 }

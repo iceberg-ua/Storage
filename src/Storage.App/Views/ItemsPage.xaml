@@ -111,9 +111,9 @@
                                                FontSize="20"
                                                HorizontalOptions="Center"
                                                VerticalOptions="Center" />
-                                        <Image Source="{Binding PhotoPath, Converter={StaticResource PhotoSourceConverter}}"
+                                        <Image Source="{Binding PrimaryPhotoFileName, Converter={StaticResource PhotoSourceConverter}}"
                                                Aspect="AspectFill"
-                                               IsVisible="{Binding PhotoPath, Converter={StaticResource IsNotNullConverter}}" />
+                                               IsVisible="{Binding PrimaryPhotoFileName, Converter={StaticResource IsNotNullConverter}}" />
                                     </Grid>
                                 </Border>
 

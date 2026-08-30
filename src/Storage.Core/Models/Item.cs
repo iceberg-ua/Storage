@@ -6,9 +6,6 @@ public class Item
     public required string Name { get; set; }
     public string? Description { get; set; }
 
-    // Path to the item's photo on device storage
-    public string? PhotoPath { get; set; }
-
     // How many of this item are stored; always at least 1
     public int Quantity { get; set; } = 1;
 
@@ -18,4 +15,13 @@ public class Item
     // Navigation properties
     public Location? Location { get; set; }
     public ICollection<Tag> Tags { get; set; } = [];
+    public ICollection<ItemPhoto> Photos { get; set; } = [];
+
+    /// <summary>
+    /// Filename of the photo that stands for the item — the list thumbnail. Null when
+    /// the item has no photos. Computed rather than stored so the primary can never
+    /// drift out of step with the set it is meant to be a member of.
+    /// </summary>
+    public string? PrimaryPhotoFileName =>
+        Photos.OrderBy(p => p.SortOrder).FirstOrDefault()?.FileName;
 }

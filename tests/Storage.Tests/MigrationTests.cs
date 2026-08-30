@@ -8,8 +8,8 @@ using Storage.Core.Models;
 namespace Storage.Tests;
 
 // The other test fixtures build their schema with EnsureCreated(), which reads the
-// model and never runs a line of migration SQL. The AddTags data migration — the part
-// that must not lose anyone's tags — can only be checked by actually migrating.
+// model and never runs a line of migration SQL. The data migrations — the parts that
+// must not lose anyone's tags or photos — can only be checked by actually migrating.
 public class MigrationTests : IDisposable
 {
     // The schema as it stood before AddTags: Items still has its free-text Tags column.
@@ -17,6 +17,9 @@ public class MigrationTests : IDisposable
 
     // Tags exist as entities but have no colour yet.
     private const string BeforeColor = "20260816170538_AddTags";
+
+    // The last schema with one photo per item, held in Items.PhotoPath.
+    private const string BeforePhotos = "20260816180839_AddTagColor";
 
     private readonly SqliteConnection _connection;
     private readonly StorageDbContext _context;
@@ -122,6 +125,84 @@ public class MigrationTests : IDisposable
 
         Assert.NotNull(restored);
         Assert.Equal(["power", "tools"], restored!.Split(", ").Order());
+    }
+
+    [Fact]
+    public async Task AddItemPhotosMovesEveryPhotoIntoItsOwnRow()
+    {
+        var migrator = _context.GetService<IMigrator>();
+        migrator.Migrate(BeforePhotos);
+
+        _context.Database.ExecuteSqlRaw(
+            """
+            INSERT INTO Items (Name, PhotoPath, Quantity, CreatedAt) VALUES
+                ('Cordless Drill', 'drill.jpg', 1, datetime('now')),
+                ('Circular Saw',   'saw.jpg',   1, datetime('now')),
+                ('Winter Coat',    NULL,        1, datetime('now')),
+                ('Spare Bulbs',    '   ',       1, datetime('now'));
+            """);
+
+        migrator.Migrate();
+
+        var items = await _context.Items
+            .Include(i => i.Photos)
+            .OrderBy(i => i.Name)
+            .ToListAsync();
+
+        // The photo an item had is still its photo, and is now the primary.
+        var drill = items.Single(i => i.Name == "Cordless Drill");
+        var photo = Assert.Single(drill.Photos);
+        Assert.Equal("drill.jpg", photo.FileName);
+        Assert.Equal(0, photo.SortOrder);
+        Assert.Equal("drill.jpg", drill.PrimaryPhotoFileName);
+
+        Assert.Equal("saw.jpg", items.Single(i => i.Name == "Circular Saw").PrimaryPhotoFileName);
+
+        // Nothing was invented for the items that had no photo. A whitespace-only
+        // path is one of those: FileName is NOT NULL, and a row naming no file would
+        // show as a broken thumbnail forever.
+        Assert.Empty(items.Single(i => i.Name == "Winter Coat").Photos);
+        Assert.Empty(items.Single(i => i.Name == "Spare Bulbs").Photos);
+
+        // Nothing that was on an item before is unreferenced after — the guarantee
+        // the whole migration exists to keep.
+        var referenced = await _context.ItemPhotos.Select(p => p.FileName).ToListAsync();
+        Assert.Equal(["drill.jpg", "saw.jpg"], referenced.Order());
+    }
+
+    [Fact]
+    public void AddItemPhotosDropsThePhotoPathColumn()
+    {
+        _context.Database.Migrate();
+
+        Assert.DoesNotContain("PhotoPath", GetColumns("Items"));
+    }
+
+    [Fact]
+    public void AddItemPhotosDownRestoresThePrimaryPhoto()
+    {
+        var migrator = _context.GetService<IMigrator>();
+        migrator.Migrate();
+
+        // Inserted with the primary second, so an ordering bug can't pass by luck.
+        _context.Database.ExecuteSqlRaw(
+            """
+            INSERT INTO Items (Name, Quantity, CreatedAt) VALUES ('Drill', 1, datetime('now'));
+            INSERT INTO ItemPhotos (ItemId, FileName, SortOrder)
+            SELECT Id, 'second.jpg', 1 FROM Items WHERE Name = 'Drill'
+            UNION ALL
+            SELECT Id, 'primary.jpg', 0 FROM Items WHERE Name = 'Drill';
+            """);
+
+        migrator.Migrate(BeforePhotos);
+
+        Assert.Contains("PhotoPath", GetColumns("Items"));
+
+        using var command = _connection.CreateCommand();
+        command.CommandText = "SELECT PhotoPath FROM Items WHERE Name = 'Drill'";
+
+        // One column holds one photo, so the primary is the one that survives.
+        Assert.Equal("primary.jpg", (string?)command.ExecuteScalar());
     }
 
     private List<string> GetColumns(string table)
