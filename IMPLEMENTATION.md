@@ -85,6 +85,8 @@ These corrections are recorded in `.claude/CLAUDE.md` so later phase prompts don
 - The startup sweep reads `ItemPhotos.FileName` instead of `Items.PhotoPath`: an item's non-primary photos are referenced just as firmly as its first
 - 10 further tests — photo ordering, set replacement and renumbering, blanks and repeats, the cascade on item delete, the bulk delete, and three on the migration itself (every photo moved, the column dropped, the primary restored by `Down()`)
 
+**Found on the emulator, not in review — the collections are now assigned in the constructor.** `[ObservableProperty]` field initializers write the backing field directly, so the generated setter never runs and the first collection is never handed to `OnPhotosChanged`, which is where the `CollectionChanged` subscription is made. The edit form replaces the collection on load and so was fine; on a *new* item nothing ever did, and the strip showed no primary badge and two dead reorder arrows. `ItemTags` had the same latent hole — the tag limit hint and disabled entry never appeared on a new item either — and is assigned the same way now.
+
 **Not changed:** the camera page still hands back one photo per visit, so several photos is several trips. Same shape as before, and out of this issue's scope.
 
 **Temporary, remove after the device pass:**

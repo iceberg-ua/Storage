@@ -64,14 +64,24 @@
                         </CarouselView.ItemTemplate>
                     </CarouselView>
 
-                    <!-- Dots earn their space only once there is a second photo. -->
-                    <IndicatorView x:Name="PhotoIndicator"
-                                   IsVisible="{Binding HasMultiplePhotos}"
-                                   HorizontalOptions="Center"
-                                   VerticalOptions="End"
-                                   Margin="0,0,0,10"
-                                   IndicatorColor="{AppThemeBinding Light={StaticResource Gray300}, Dark={StaticResource Gray600}}"
-                                   SelectedIndicatorColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
+                    <!-- Dots earn their space only once there is a second photo. They sit
+                         over the photo, which can be any colour in either theme, so they
+                         carry their own scrim and are white on it rather than taking a
+                         theme colour that a pale photo would swallow. -->
+                    <Border IsVisible="{Binding HasMultiplePhotos}"
+                            HorizontalOptions="Center"
+                            VerticalOptions="End"
+                            Margin="0,0,0,10"
+                            Padding="10,5"
+                            StrokeThickness="0"
+                            BackgroundColor="#66000000">
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="12" />
+                        </Border.StrokeShape>
+                        <IndicatorView x:Name="PhotoIndicator"
+                                       IndicatorColor="#80FFFFFF"
+                                       SelectedIndicatorColor="White" />
+                    </Border>
                 </Grid>
 
                 <VerticalStackLayout Padding="20" Spacing="18">

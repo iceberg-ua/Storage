@@ -116,6 +116,15 @@ public partial class AddItemViewModel : ObservableObject, IQueryAttributable
         _locationRepository = locationRepository;
         _tagRepository = tagRepository;
         _photoService = photoService;
+
+        // Reassigned through the properties on purpose. A field initializer writes the
+        // backing field directly, so the generated setter never runs and the collection
+        // it created is never handed to OnPhotosChanged / OnItemTagsChanged — which is
+        // where the CollectionChanged subscriptions are made. On the edit form the load
+        // replaces both collections and hides that; on a *new* item nothing ever does,
+        // and the strip would show no primary badge and two dead reorder arrows.
+        Photos = [];
+        ItemTags = [];
     }
 
     // Shell calls this on the page's BindingContext before the page appears.
