@@ -45,6 +45,55 @@ public class ItemRepository : IItemRepository
             .ToListAsync();
     }
 
+    public async Task<IEnumerable<Item>> SearchAsync(string? query, SearchScope scope, int? locationId = null)
+    {
+        // Same shape as GetAllAsync, so a search result row renders exactly like a
+        // browsed one — thumbnail, location and tag chips all present.
+        var items = _context.Items
+            .Include(i => i.Location)
+            .Include(i => i.Tags)
+            .Include(i => i.Photos.OrderBy(p => p.SortOrder))
+            .AsQueryable();
+
+        if (locationId is int id)
+            items = items.Where(i => i.LocationId == id);
+
+        var term = query?.Trim();
+
+        // An empty box is not "match nothing", it is "no filter at all".
+        if (!string.IsNullOrEmpty(term))
+        {
+            var pattern = LikePattern.Contains(term);
+
+            // UnicodeLower on both sides: the column is folded per row by the SQLite
+            // function, the term is already folded here by the same .NET rules.
+            items = scope switch
+            {
+                SearchScope.Name => items.Where(i =>
+                    EF.Functions.Like(StorageDbContext.UnicodeLower(i.Name)!, pattern, LikePattern.Escape)),
+
+                SearchScope.Description => items.Where(i =>
+                    i.Description != null &&
+                    EF.Functions.Like(StorageDbContext.UnicodeLower(i.Description)!, pattern, LikePattern.Escape)),
+
+                SearchScope.Tags => items.Where(i =>
+                    i.Tags.Any(t => EF.Functions.Like(StorageDbContext.UnicodeLower(t.Name)!, pattern, LikePattern.Escape))),
+
+                // One OR'd predicate rather than three unioned queries, so an item
+                // matching on both its name and a tag still comes back exactly once.
+                _ => items.Where(i =>
+                    EF.Functions.Like(StorageDbContext.UnicodeLower(i.Name)!, pattern, LikePattern.Escape) ||
+                    (i.Description != null &&
+                     EF.Functions.Like(StorageDbContext.UnicodeLower(i.Description)!, pattern, LikePattern.Escape)) ||
+                    i.Tags.Any(t => EF.Functions.Like(StorageDbContext.UnicodeLower(t.Name)!, pattern, LikePattern.Escape)))
+            };
+        }
+
+        return await items
+            .OrderByDescending(i => i.CreatedAt)
+            .ToListAsync();
+    }
+
     public async Task<Item> AddAsync(Item item)
     {
         item.CreatedAt = DateTime.UtcNow;

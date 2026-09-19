@@ -15,9 +15,27 @@ public class StorageDbContext : DbContext
     public DbSet<Location> Locations => Set<Location>();
     public DbSet<Tag> Tags => Set<Tag>();
 
+    /// <summary>
+    /// Name of the SQLite scalar function registered by <see cref="UnicodeLowerInterceptor"/>.
+    /// </summary>
+    public const string UnicodeLowerFunction = "unicode_lower";
+
+    /// <summary>
+    /// Folds a string to lower case using .NET's Unicode rules. Only callable inside a
+    /// LINQ query — it is translated to the SQL function of the same name, never run.
+    /// </summary>
+    public static string? UnicodeLower(string? value) =>
+        throw new NotSupportedException($"{nameof(UnicodeLower)} is only usable in a LINQ query.");
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+
+        // Maps the C# stub above onto the connection-level function, so a query can say
+        // UnicodeLower(x) and get case folding that works outside the ASCII range.
+        modelBuilder
+            .HasDbFunction(typeof(StorageDbContext).GetMethod(nameof(UnicodeLower))!)
+            .HasName(UnicodeLowerFunction);
 
         // Configure Item entity
         modelBuilder.Entity<Item>(entity =>

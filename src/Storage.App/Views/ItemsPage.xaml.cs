@@ -16,6 +16,6 @@ public partial class ItemsPage : ContentPage
     protected override async void OnAppearing()
     {
         base.OnAppearing();
-        await _viewModel.LoadItemsCommand.ExecuteAsync(null);
+        await _viewModel.RefreshCommand.ExecuteAsync(null);
     }
 }

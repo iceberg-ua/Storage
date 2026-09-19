@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:Storage.App.ViewModels"
              xmlns:models="clr-namespace:Storage.Core.Models;assembly=Storage.Core"
+             xmlns:repos="clr-namespace:Storage.Core.Repositories;assembly=Storage.Core"
              x:Class="Storage.App.Views.ItemsPage"
              x:DataType="vm:ItemsViewModel"
              Title="{Binding PageTitle}">
@@ -11,6 +12,14 @@
         <!-- Tabs sit flush against each other to read as one strip. -->
         <Style x:Key="TabButton" TargetType="Button">
             <Setter Property="CornerRadius" Value="0" />
+        </Style>
+
+        <!-- Same flush strip, sized down: these sit inside the search toolbar, where
+             four segments have to share a phone's width. -->
+        <Style x:Key="ScopeSegment" TargetType="Button" BasedOn="{StaticResource TabButton}">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Padding" Value="2,0" />
+            <Setter Property="HeightRequest" Value="32" />
         </Style>
     </ContentPage.Resources>
 
@@ -33,44 +42,112 @@
                     ToolTipProperties.Text="Add item" />
         </HorizontalStackLayout>
 
-        <!-- Tab strip: shown only when this location actually has children. -->
-        <Grid Grid.Row="1"
-              ColumnDefinitions="*,*"
-              Margin="10,0,10,10"
-              IsVisible="{Binding ShowTabStrip}">
-            <Button Grid.Column="0"
-                    Text="Items"
-                    Style="{StaticResource TabButton}"
-                    Command="{Binding SelectItemsTabCommand}">
-                <Button.Triggers>
-                    <DataTrigger TargetType="Button" Binding="{Binding IsItemsTabSelected}" Value="False">
-                        <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource Gray600}}" />
-                        <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}" />
-                    </DataTrigger>
-                </Button.Triggers>
-            </Button>
-            <Button Grid.Column="1"
-                    Text="Locations"
-                    Style="{StaticResource TabButton}"
-                    Command="{Binding SelectChildLocationsTabCommand}">
-                <Button.Triggers>
-                    <DataTrigger TargetType="Button" Binding="{Binding IsChildLocationsTabSelected}" Value="False">
-                        <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource Gray600}}" />
-                        <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}" />
-                    </DataTrigger>
-                </Button.Triggers>
-            </Button>
-        </Grid>
+        <!-- Search toolbar. The scope controls live here rather than behind a menu:
+             which field is being searched changes what the results mean, so it has to
+             be readable at a glance while typing. -->
+        <VerticalStackLayout Grid.Row="1" Margin="10,0,10,8" Spacing="6">
+            <SearchBar Placeholder="{Binding SearchPlaceholder}"
+                       Text="{Binding SearchText, Mode=TwoWay}"
+                       SemanticProperties.Description="Search" />
+
+            <!-- What to search, and how far. Toggles rather than segments: each is
+                 an on/off choice with a plain default (this location, items). -->
+            <VerticalStackLayout Spacing="2" Margin="2,2,2,0">
+                <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding IsLocationView}">
+                    <Label Grid.Column="0"
+                           Text="Search everywhere"
+                           FontSize="13"
+                           VerticalOptions="Center"
+                           TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}" />
+                    <Switch Grid.Column="1"
+                            IsToggled="{Binding SearchEverywhere, Mode=TwoWay}"
+                            SemanticProperties.Description="Search the whole inventory instead of this location" />
+                </Grid>
+
+                <Grid ColumnDefinitions="*,Auto">
+                    <Label Grid.Column="0"
+                           Text="Search locations"
+                           FontSize="13"
+                           VerticalOptions="Center"
+                           TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}" />
+                    <Switch Grid.Column="1"
+                            IsToggled="{Binding SearchLocations, Mode=TwoWay}"
+                            SemanticProperties.Description="Search locations instead of items" />
+                </Grid>
+            </VerticalStackLayout>
+
+            <!-- Which field to match. Hidden while searching locations: a location
+                 has nothing but a name, so there would be only one thing to pick. It
+                 sits below the toggles because it is the part that comes and goes —
+                 above them, its appearing shifted the toggles under the user's finger. -->
+            <Grid ColumnDefinitions="*,*,*,*" IsVisible="{Binding ShowFieldScope}">
+                <Button Grid.Column="0"
+                        Text="Everything"
+                        Style="{StaticResource ScopeSegment}"
+                        Command="{Binding SetScopeCommand}"
+                        CommandParameter="{x:Static repos:SearchScope.Everything}">
+                    <Button.Triggers>
+                        <DataTrigger TargetType="Button" Binding="{Binding IsEverythingScope}" Value="False">
+                            <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource Gray600}}" />
+                            <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}" />
+                        </DataTrigger>
+                    </Button.Triggers>
+                </Button>
+                <Button Grid.Column="1"
+                        Text="Name"
+                        Style="{StaticResource ScopeSegment}"
+                        Command="{Binding SetScopeCommand}"
+                        CommandParameter="{x:Static repos:SearchScope.Name}">
+                    <Button.Triggers>
+                        <DataTrigger TargetType="Button" Binding="{Binding IsNameScope}" Value="False">
+                            <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource Gray600}}" />
+                            <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}" />
+                        </DataTrigger>
+                    </Button.Triggers>
+                </Button>
+                <Button Grid.Column="2"
+                        Text="Description"
+                        Style="{StaticResource ScopeSegment}"
+                        Command="{Binding SetScopeCommand}"
+                        CommandParameter="{x:Static repos:SearchScope.Description}">
+                    <Button.Triggers>
+                        <DataTrigger TargetType="Button" Binding="{Binding IsDescriptionScope}" Value="False">
+                            <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource Gray600}}" />
+                            <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}" />
+                        </DataTrigger>
+                    </Button.Triggers>
+                </Button>
+                <Button Grid.Column="3"
+                        Text="Tags"
+                        Style="{StaticResource ScopeSegment}"
+                        Command="{Binding SetScopeCommand}"
+                        CommandParameter="{x:Static repos:SearchScope.Tags}">
+                    <Button.Triggers>
+                        <DataTrigger TargetType="Button" Binding="{Binding IsTagsScope}" Value="False">
+                            <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource Gray600}}" />
+                            <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}" />
+                        </DataTrigger>
+                    </Button.Triggers>
+                </Button>
+            </Grid>
+
+            <!-- Only while searching: a browsed list does not need counting. -->
+            <Label Text="{Binding ResultSummary}"
+                   FontSize="12"
+                   Margin="2,0,0,0"
+                   IsVisible="{Binding IsSearchActive}"
+                   TextColor="{AppThemeBinding Light={StaticResource Gray500}, Dark={StaticResource Gray400}}" />
+        </VerticalStackLayout>
 
         <!-- Items List -->
         <RefreshView Grid.Row="2"
-                     IsVisible="{Binding IsItemsTabSelected}"
+                     IsVisible="{Binding ShowItemList}"
                      IsRefreshing="{Binding IsLoading}"
-                     Command="{Binding LoadItemsCommand}">
+                     Command="{Binding RefreshCommand}">
             <CollectionView ItemsSource="{Binding Items}">
                 <CollectionView.EmptyView>
                     <StackLayout Padding="20" VerticalOptions="CenterAndExpand" HorizontalOptions="CenterAndExpand">
-                        <Label Text="📦 No items yet"
+                        <Label Text="{Binding EmptyTitle}"
                                FontSize="24"
                                HorizontalTextAlignment="Center"
                                TextColor="{AppThemeBinding Light={StaticResource Gray500}, Dark={StaticResource Gray300}}" />
@@ -173,10 +250,24 @@
             </CollectionView>
         </RefreshView>
 
-        <!-- Child locations of the location being viewed -->
+        <!-- Locations: this location's children when browsing, matches when searching -->
         <CollectionView Grid.Row="2"
                         ItemsSource="{Binding ChildLocations}"
-                        IsVisible="{Binding IsChildLocationsTabSelected}">
+                        IsVisible="{Binding ShowLocationList}">
+            <CollectionView.EmptyView>
+                <StackLayout Padding="20" VerticalOptions="CenterAndExpand" HorizontalOptions="CenterAndExpand">
+                    <Label Text="{Binding EmptyTitle}"
+                           FontSize="24"
+                           HorizontalTextAlignment="Center"
+                           TextColor="{AppThemeBinding Light={StaticResource Gray500}, Dark={StaticResource Gray300}}" />
+                    <Label Text="{Binding EmptyMessage}"
+                           FontSize="16"
+                           HorizontalTextAlignment="Center"
+                           TextColor="{AppThemeBinding Light={StaticResource Gray400}, Dark={StaticResource Gray400}}"
+                           Margin="0,10,0,0" />
+                </StackLayout>
+            </CollectionView.EmptyView>
+
             <CollectionView.ItemTemplate>
                 <DataTemplate x:DataType="models:Location">
                     <Frame Margin="10,5"
@@ -188,10 +279,18 @@
                             <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:ItemsViewModel}}, Path=OpenChildLocationCommand}"
                                                   CommandParameter="{Binding .}" />
                         </Frame.GestureRecognizers>
-                        <Label Text="{Binding Name}"
-                               FontSize="18"
-                               FontAttributes="Bold"
-                               TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}" />
+                        <StackLayout>
+                            <Label Text="{Binding Name}"
+                                   FontSize="18"
+                                   FontAttributes="Bold"
+                                   TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}" />
+                            <!-- A global location search can return two shelves with
+                                 the same name, so say which one this is. -->
+                            <Label Text="{Binding Parent.Name, StringFormat='Parent: {0}'}"
+                                   FontSize="12"
+                                   IsVisible="{Binding Parent, Converter={StaticResource IsNotNullConverter}}"
+                                   TextColor="{AppThemeBinding Light={StaticResource Gray500}, Dark={StaticResource Gray400}}" />
+                        </StackLayout>
                     </Frame>
                 </DataTemplate>
             </CollectionView.ItemTemplate>
