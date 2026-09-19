@@ -6,13 +6,13 @@ Storage is a local-first mobile inventory app built with .NET MAUI. The user is 
 
 ## Communication Style
 
-- Be direct and concise â€” skip unnecessary preambles
+- Be direct and concise — skip unnecessary preambles
 - Explain mobile-specific concepts when they appear (lifecycle, permissions, platform differences)
-- Don't over-explain C# basics â€” the user knows the language
+- Don't over-explain C# basics — the user knows the language
 - When introducing new concepts, give a one-sentence explanation, then show code
 
 ## Important
-- Follow the phases in PHASES.md document
+- Phases, scope and build status all live in Linear (project "Storage", `VOL-*` issues) — there is no phases or status document in the repo
 
 ## Code Guidelines
 
@@ -40,8 +40,8 @@ Storage is a local-first mobile inventory app built with .NET MAUI. The user is 
 
 ## Technical Constraints to Remember
 
-- Everything must work offline â€” no cloud dependencies
-- SQLite is the database â€” use EF Core
+- Everything must work offline — no cloud dependencies
+- SQLite is the database — use EF Core
 - Target Android first, iOS second
 - AI features use ML.NET or ONNX Runtime
 - Camera handling via MAUI Community Toolkit
