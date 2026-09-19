@@ -10,7 +10,7 @@ Storage helps you catalog and find items in your home by combining photos, manua
 
 - **.NET MAUI** - Cross-platform mobile framework (Android-first, iOS second)
 - **SQLite + EF Core** - Local database for offline-first storage
-- **MAUI Community Toolkit** - Camera integration
+- **CommunityToolkit.Maui.Camera** - In-app camera. This is the only toolkit package referenced; the main `CommunityToolkit.Maui` package is not used
 - **ML.NET / ONNX Runtime** - On-device AI for image recognition (post-MVP)
 - **C# 12+** - Modern language features (records, pattern matching, file-scoped namespaces)
 
@@ -21,25 +21,28 @@ Storage helps you catalog and find items in your home by combining photos, manua
 - **Dependency injection** - Built-in MAUI container
 - **Local-first** - All data stored on device, no cloud sync
 
-## Features (MVP)
+## Features (Delivered)
 
-- 🏷️ Free-text tags and descriptions
+- 🏷️ Tags as first-class entities - many-to-many, autocomplete on the item form, a Tags tab for managing them, and a colour per tag
 - 🗂️ Location organization, flat or nested
-- 🔍 Search by tag/description
 - ✏️ Add/edit items and locations, with quantity stepper
+- 📋 Read-only item detail view, with the photo at full width and Edit/Delete on the page
 - 📸 Photo capture and attachment to items — **Android only for now**; iOS is deferred
+- 🖼️ Multiple photos per item, with a chosen primary
 
 ## Features (In Progress / Planned)
 
 - 🤖 AI-powered category suggestion from photos (Phase 4)
-- 🖼️ Multiple photos per item
-- 💾 Export/import for data backup
+- 🔍 Search by name, description, or tags (Phase 5)
+- 💾 Export/import for data backup (Phase 6)
 
 ## Development Phases
 
-See [PHASES.md](PHASES.md) for detailed implementation roadmap and [IMPLEMENTATION.md](IMPLEMENTATION.md) for current build status.
+The phase roadmap and current build status both live in [Linear](https://linear.app/melnyk/project/storage-25af39369510) — phases are defined there, not in this repo.
 
-Current status: **Phase 1 (MVP) and Phase 3 (Photo Capture) complete** — Phase 2 (Design & Visual Identity) next.
+Current status: **Phases 1 (MVP) and 3 (Photo Capture) complete.** Phase 5 is partly done —
+tags are delivered, search and polish are outstanding. Phase 2 (Design & Visual Identity) is
+next; VOL-32 was pulled forward from it. Linear has the per-issue detail.
 
 ### Photo capture is Android-only
 
@@ -52,7 +55,8 @@ work on an iOS build until that is done.
 
 ### Prerequisites
 
-- .NET 8 SDK or later
+- .NET 10 SDK
+- The MAUI workload (`dotnet workload install maui`)
 - Visual Studio 2022 or JetBrains Rider
 - Android SDK (for Android development)
 - Xcode (for iOS development, macOS only)
@@ -68,22 +72,47 @@ cd Storage
 dotnet restore
 
 # Run on Android
-dotnet build -t:Run -f net8.0-android
+dotnet build src/Storage.App/Storage.App.csproj -t:Run -f net10.0-android
 
 # Run on iOS (macOS only)
-dotnet build -t:Run -f net8.0-ios
+dotnet build src/Storage.App/Storage.App.csproj -t:Run -f net10.0-ios
+
+# Run the tests
+dotnet test tests/Storage.Tests/Storage.Tests.csproj
 ```
+
+The app also declares `net10.0-maccatalyst`, and `net10.0-windows10.0.19041.0` when building on Windows.
+
+### A note on the pinned MAUI version
+
+`Storage.App.csproj` pins `<MauiVersion>10.0.60</MauiVersion>`. The camera package needs
+Microsoft.Maui.Controls 10.0.60 or newer, while the newest MAUI workload manifest still
+pins 10.0.20 — without the pin, the restore fails with `NU1605`. MAUI 10.0.x services
+through NuGet ahead of the workload manifest, so this is the supported way to consume it
+rather than a workaround. The csproj comment on the property has the full explanation.
 
 ## Project Structure
 
 ```
 Storage/
-├── Models/          # Data models (Item, Location, etc.)
-├── ViewModels/      # MVVM view models
-├── Views/           # MAUI pages and UI
-├── Services/        # Business logic and data access
-├── Data/            # EF Core DbContext and repositories
-└── Resources/       # Images, fonts, app resources
+├── src/
+│   ├── Storage.App/       # MAUI app - UI, ViewModels, platform-bound services
+│   │   ├── Controls/      # Custom controls
+│   │   ├── Converters/    # XAML value converters
+│   │   ├── Platforms/     # Android, iOS, MacCatalyst, Windows heads
+│   │   ├── Properties/    # Launch settings
+│   │   ├── Resources/     # Images, fonts, styles, app icon, splash
+│   │   ├── Services/      # Platform implementations of the Core interfaces
+│   │   ├── ViewModels/    # MVVM view models
+│   │   └── Views/         # MAUI pages
+│   └── Storage.Core/      # Platform-agnostic domain - no MAUI dependency
+│       ├── Data/          # EF Core DbContext
+│       ├── Migrations/    # EF Core migrations
+│       ├── Models/        # Item, ItemPhoto, Location, Tag
+│       ├── Repositories/  # Repository-pattern data access
+│       └── Services/      # PhotoService and its platform seams
+└── tests/
+    └── Storage.Tests/     # xUnit tests for Storage.Core
 ```
 
 ## Contributing
