@@ -46,6 +46,32 @@ public class LocationRepository : ILocationRepository
             .ToListAsync();
     }
 
+    public async Task<IEnumerable<Location>> SearchAsync(string? query, int? parentId = null)
+    {
+        var locations = _context.Locations
+            .Include(l => l.Parent)
+            .AsQueryable();
+
+        if (parentId is int id)
+            locations = locations.Where(l => l.ParentId == id);
+
+        var term = query?.Trim();
+
+        if (!string.IsNullOrEmpty(term))
+        {
+            // A location has only a name, so there is nothing here matching the item
+            // search's field scope — that strip is hidden while this runs.
+            var pattern = LikePattern.Contains(term);
+
+            locations = locations.Where(l =>
+                EF.Functions.Like(StorageDbContext.UnicodeLower(l.Name)!, pattern, LikePattern.Escape));
+        }
+
+        return await locations
+            .OrderBy(l => l.Name)
+            .ToListAsync();
+    }
+
     public async Task<Location> AddAsync(Location location)
     {
         _context.Locations.Add(location);

@@ -1,27 +1,20 @@
-using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using Storage.Core.Models;
 using Storage.Core.Repositories;
-using StorageLocation = Storage.Core.Models.Location;
 
 namespace Storage.App.ViewModels;
 
 // Backs the "Items" tab and, when Shell passes a "locationId", the same page scoped
-// to a single location (pushed from the Locations list). In the scoped view the page
-// gains a second tab listing that location's child locations.
+// to a single location (pushed from the Locations list). Everything to do with the
+// list itself — searching it, browsing it, what it shows when empty — lives in
+// Search, which the Locations page composes the same way.
 public partial class ItemsViewModel : ObservableObject, IQueryAttributable
 {
-    private readonly IItemRepository _itemRepository;
     private readonly ILocationRepository _locationRepository;
 
     private int? _locationId;
 
-    [ObservableProperty]
-    private ObservableCollection<Item> _items = [];
-
-    [ObservableProperty]
-    private ObservableCollection<StorageLocation> _childLocations = [];
+    public SearchViewModel Search { get; }
 
     [ObservableProperty]
     private bool _isLoading;
@@ -29,28 +22,15 @@ public partial class ItemsViewModel : ObservableObject, IQueryAttributable
     [ObservableProperty]
     private bool _isLocationView;
 
-    // The strip only earns its space once there is a second tab worth switching to.
-    [ObservableProperty]
-    private bool _showTabStrip;
-
     [ObservableProperty]
     private string _pageTitle = "My Items";
-
-    [ObservableProperty]
-    private string _emptyMessage = "Tap ➕ to get started";
-
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsChildLocationsTabSelected))]
-    private bool _isItemsTabSelected = true;
-
-    public bool IsChildLocationsTabSelected => !IsItemsTabSelected;
 
     public ItemsViewModel(
         IItemRepository itemRepository,
         ILocationRepository locationRepository)
     {
-        _itemRepository = itemRepository;
         _locationRepository = locationRepository;
+        Search = new SearchViewModel(itemRepository, locationRepository);
     }
 
     // Shell calls this on the page's BindingContext before the page appears.
@@ -63,13 +43,11 @@ public partial class ItemsViewModel : ObservableObject, IQueryAttributable
         }
 
         IsLocationView = _locationId is not null;
-
-        if (IsLocationView)
-            EmptyMessage = "Tap ➕ to store something here";
+        Search.ScopeTo(_locationId);
     }
 
     [RelayCommand]
-    private async Task LoadItemsAsync()
+    private async Task RefreshAsync()
     {
         IsLoading = true;
         try
@@ -80,37 +58,15 @@ public partial class ItemsViewModel : ObservableObject, IQueryAttributable
                 // is reflected when we come back to this page.
                 var location = await _locationRepository.GetByIdAsync(id);
                 PageTitle = location?.Name ?? "Location";
-
-                var items = await _itemRepository.GetByLocationIdAsync(id);
-                Items = new ObservableCollection<Item>(items);
-
-                var children = await _locationRepository.GetChildrenAsync(id);
-                ChildLocations = new ObservableCollection<StorageLocation>(children);
-
-                ShowTabStrip = ChildLocations.Count > 0;
-
-                // Without the strip there is no control to switch back, so the
-                // items list has to be the one on show.
-                if (!ShowTabStrip)
-                    IsItemsTabSelected = true;
             }
-            else
-            {
-                var items = await _itemRepository.GetAllAsync();
-                Items = new ObservableCollection<Item>(items);
-            }
+
+            await Search.LoadAsync();
         }
         finally
         {
             IsLoading = false;
         }
     }
-
-    [RelayCommand]
-    private void SelectItemsTab() => IsItemsTabSelected = true;
-
-    [RelayCommand]
-    private void SelectChildLocationsTab() => IsItemsTabSelected = false;
 
     [RelayCommand]
     private async Task NavigateToAddItemAsync()
@@ -127,20 +83,5 @@ public partial class ItemsViewModel : ObservableObject, IQueryAttributable
             return;
 
         await Shell.Current.GoToAsync($"addlocation?locationId={id}");
-    }
-
-    // Drill further down the hierarchy into a child location.
-    [RelayCommand]
-    private async Task OpenChildLocationAsync(StorageLocation location)
-    {
-        await Shell.Current.GoToAsync($"locationitems?locationId={location.Id}");
-    }
-
-    // Tapping an item opens it for reading. Editing and deleting live on that screen,
-    // mirroring how tapping a location drills into it rather than opening its form.
-    [RelayCommand]
-    private async Task OpenItemAsync(Item item)
-    {
-        await Shell.Current.GoToAsync($"itemdetail?itemId={item.Id}");
     }
 }

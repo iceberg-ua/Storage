@@ -29,7 +29,11 @@ public static class MauiProgram
 		// Configure SQLite database
 		var dbPath = Path.Combine(FileSystem.AppDataDirectory, "storage.db");
 		builder.Services.AddDbContext<StorageDbContext>(options =>
-			options.UseSqlite($"Data Source={dbPath}"));
+			options
+				.UseSqlite($"Data Source={dbPath}")
+				// Gives every connection the unicode_lower function that search relies
+				// on to ignore case outside the ASCII range.
+				.AddInterceptors(new UnicodeLowerInterceptor()));
 
 		// Register repositories
 		builder.Services.AddScoped<IItemRepository, ItemRepository>();
