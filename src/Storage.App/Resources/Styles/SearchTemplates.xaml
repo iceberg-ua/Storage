@@ -47,8 +47,12 @@
                            FontSize="18"
                            FontAttributes="Bold"
                            TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}" />
+                    <!-- A preview, not the full text: capped so a long description
+                         cannot stretch the card. The detail page shows all of it. -->
                     <Label Text="{Binding Description}"
                            FontSize="14"
+                           MaxLines="1"
+                           LineBreakMode="TailTruncation"
                            TextColor="{AppThemeBinding Light={StaticResource Gray500}, Dark={StaticResource Gray300}}"
                            IsVisible="{Binding Description, Converter={StaticResource IsNotNullConverter}}" />
                     <Label Text="{Binding Location.Name, StringFormat='Location: {0}'}"
