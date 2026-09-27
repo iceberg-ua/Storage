@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Storage.App.Converters;
+using Storage.App.Services;
 using Storage.Core.Data;
 using Storage.Core.Services;
 
@@ -33,7 +34,7 @@ public partial class App : Application
 
 	protected override Window CreateWindow(IActivationState? activationState)
 	{
-		return new Window(new AppShell());
+		return new Window(new AppShell(_serviceProvider.GetRequiredService<LocationContext>()));
 	}
 
 	private async Task CleanupOrphanPhotosAsync()

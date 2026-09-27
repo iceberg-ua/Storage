@@ -1,18 +1,17 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Storage.App.Services;
 using Storage.Core.Repositories;
 
 namespace Storage.App.ViewModels;
 
-// Backs the "Items" tab and, when Shell passes a "locationId", the same page scoped
-// to a single location (pushed from the Locations list). Everything to do with the
-// list itself — searching it, browsing it, what it shows when empty — lives in
-// Search, which the Locations page composes the same way.
-public partial class ItemsViewModel : ObservableObject, IQueryAttributable
+// Backs the "Items" tab: everything at the top level, or what is stored in the current
+// location once one is opened. Everything to do with the list itself — searching it,
+// browsing it, what it shows when empty — lives in Search, which the Locations page
+// composes the same way.
+public partial class ItemsViewModel : ObservableObject
 {
-    private readonly ILocationRepository _locationRepository;
-
-    private int? _locationId;
+    public LocationContext Context { get; }
 
     public SearchViewModel Search { get; }
 
@@ -22,44 +21,47 @@ public partial class ItemsViewModel : ObservableObject, IQueryAttributable
     [ObservableProperty]
     private bool _isLocationView;
 
-    [ObservableProperty]
-    private string _pageTitle = "My Items";
-
     public ItemsViewModel(
         IItemRepository itemRepository,
-        ILocationRepository locationRepository)
+        ILocationRepository locationRepository,
+        LocationContext locationContext)
     {
-        _locationRepository = locationRepository;
-        Search = new SearchViewModel(itemRepository, locationRepository);
+        Context = locationContext;
+        Search = new SearchViewModel(itemRepository, locationRepository, locationContext);
     }
 
-    // Shell calls this on the page's BindingContext before the page appears.
-    public void ApplyQueryAttributes(IDictionary<string, object> query)
+    // Followed only while the page is on screen: the context is a singleton, so a
+    // subscription left in place would keep this view model alive for good. A tab
+    // that was hidden when the path changed catches up in RefreshAsync on appearing.
+    public void Attach()
     {
-        if (query.TryGetValue("locationId", out var locationId) &&
-            int.TryParse(Convert.ToString(locationId), out var parsedLocationId))
-        {
-            _locationId = parsedLocationId;
-        }
-
-        IsLocationView = _locationId is not null;
-        Search.ScopeTo(_locationId);
+        Context.Changed -= OnContextChanged;
+        Context.Changed += OnContextChanged;
     }
+
+    public void Detach() => Context.Changed -= OnContextChanged;
+
+    private async void OnContextChanged(object? sender, EventArgs e) => await LoadAsync();
 
     [RelayCommand]
     private async Task RefreshAsync()
     {
+        // Picks up a rename, move or delete of the current location made on the edit
+        // screen; if that moved the user, Changed has already reloaded the list.
+        var before = Context.CurrentId;
+        await Context.RefreshAsync();
+
+        if (Context.CurrentId == before)
+            await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
         IsLoading = true;
         try
         {
-            if (_locationId is int id)
-            {
-                // Re-read the location each time so a rename made on the edit screen
-                // is reflected when we come back to this page.
-                var location = await _locationRepository.GetByIdAsync(id);
-                PageTitle = location?.Name ?? "Location";
-            }
-
+            IsLocationView = Context.IsInside;
+            Search.ScopeTo(Context.CurrentId);
             await Search.LoadAsync();
         }
         finally
@@ -71,15 +73,15 @@ public partial class ItemsViewModel : ObservableObject, IQueryAttributable
     [RelayCommand]
     private async Task NavigateToAddItemAsync()
     {
-        // In a location view, new items belong to that location by default.
-        var route = _locationId is int id ? $"additem?locationId={id}" : "additem";
+        // Inside a location, new items belong to it by default.
+        var route = Context.CurrentId is int id ? $"additem?locationId={id}" : "additem";
         await Shell.Current.GoToAsync(route);
     }
 
     [RelayCommand]
     private async Task EditLocationAsync()
     {
-        if (_locationId is not int id)
+        if (Context.CurrentId is not int id)
             return;
 
         await Shell.Current.GoToAsync($"addlocation?locationId={id}");

@@ -5,10 +5,15 @@
              xmlns:views="clr-namespace:Storage.App.Views"
              x:Class="Storage.App.Views.ItemsPage"
              x:DataType="vm:ItemsViewModel"
-             Title="{Binding PageTitle}">
+             Title="My Items">
 
-    <Grid RowDefinitions="Auto,Auto,*">
-        <!-- Header. "Edit location" only applies when scoped to a single location. -->
+    <Shell.TitleView>
+        <views:LocationTitleView RootTitle="My Items"
+                                 BindingContext="{Binding Context}" />
+    </Shell.TitleView>
+
+    <Grid RowDefinitions="Auto,Auto,Auto,*">
+        <!-- Header. "Edit location" only applies inside a location. -->
         <HorizontalStackLayout Grid.Row="0"
                                Margin="10"
                                Spacing="10"
@@ -31,12 +36,16 @@
                     ToolTipProperties.Text="Add item" />
         </HorizontalStackLayout>
 
+        <!-- Its own row: a path three levels deep needs the full width. -->
+        <views:LocationPathBar Grid.Row="1"
+                               BindingContext="{Binding Context}" />
+
         <views:SearchToolbar x:Name="Toolbar"
-                             Grid.Row="1"
+                             Grid.Row="2"
                              BindingContext="{Binding Search}" />
 
         <!-- Items: everything here when browsing, the matches when searching. -->
-        <RefreshView Grid.Row="2"
+        <RefreshView Grid.Row="3"
                      BindingContext="{Binding Search}"
                      IsVisible="{Binding ShowItemList}"
                      IsRefreshing="{Binding Source={RelativeSource AncestorType={x:Type vm:ItemsViewModel}}, Path=IsLoading}"
@@ -47,7 +56,7 @@
         </RefreshView>
 
         <!-- Locations: this location's children when browsing, the matches when searching. -->
-        <CollectionView Grid.Row="2"
+        <CollectionView Grid.Row="3"
                         BindingContext="{Binding Search}"
                         ItemsSource="{Binding Locations}"
                         IsVisible="{Binding ShowLocationList}"

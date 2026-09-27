@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:services="clr-namespace:Storage.App.Services"
+             xmlns:models="clr-namespace:Storage.Core.Models;assembly=Storage.Core"
+             x:Class="Storage.App.Views.LocationPathBar"
+             x:DataType="services:LocationContext"
+             IsVisible="{Binding IsInside}">
+
+    <ContentView.Resources>
+        <Style x:Key="Segment" TargetType="Label">
+            <Setter Property="FontSize" Value="15" />
+            <Setter Property="VerticalOptions" Value="Center" />
+            <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource White}}" />
+        </Style>
+        <Style x:Key="Separator" TargetType="Label">
+            <Setter Property="FontSize" Value="15" />
+            <Setter Property="VerticalOptions" Value="Center" />
+            <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Gray500}, Dark={StaticResource Gray400}}" />
+        </Style>
+    </ContentView.Resources>
+
+    <!-- Where the user is: each segment jumps to that level, the home icon to the top.
+         (Up one level is the back arrow in the title.) A deep path scrolls sideways
+         rather than wrapping and pushing the list down. -->
+    <Grid Padding="14,0,14,8">
+        <ScrollView Orientation="Horizontal"
+                    HorizontalScrollBarVisibility="Never"
+                    VerticalOptions="Center">
+            <HorizontalStackLayout Spacing="6">
+                <Label Text="🏠"
+                       Style="{StaticResource Segment}"
+                       SemanticProperties.Description="All locations">
+                    <Label.GestureRecognizers>
+                        <TapGestureRecognizer Command="{Binding LeaveCommand}" />
+                    </Label.GestureRecognizers>
+                </Label>
+
+                <HorizontalStackLayout Spacing="6" BindableLayout.ItemsSource="{Binding Path}">
+                    <BindableLayout.ItemTemplate>
+                        <DataTemplate x:DataType="models:Location">
+                            <HorizontalStackLayout Spacing="6">
+                                <Label Text="›" Style="{StaticResource Separator}" />
+                                <Label Text="{Binding Name}" Style="{StaticResource Segment}">
+                                    <Label.GestureRecognizers>
+                                        <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type services:LocationContext}}, Path=JumpToCommand}"
+                                                              CommandParameter="{Binding .}" />
+                                    </Label.GestureRecognizers>
+                                </Label>
+                            </HorizontalStackLayout>
+                        </DataTemplate>
+                    </BindableLayout.ItemTemplate>
+                </HorizontalStackLayout>
+            </HorizontalStackLayout>
+        </ScrollView>
+    </Grid>
+
+</ContentView>
