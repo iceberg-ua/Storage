@@ -26,6 +26,13 @@ public partial class ItemsPage : ContentPage
     protected override async void OnAppearing()
     {
         base.OnAppearing();
+        _viewModel.Attach();
         await _viewModel.RefreshCommand.ExecuteAsync(null);
+    }
+
+    protected override void OnDisappearing()
+    {
+        base.OnDisappearing();
+        _viewModel.Detach();
     }
 }

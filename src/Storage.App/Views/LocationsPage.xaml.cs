@@ -24,6 +24,13 @@ public partial class LocationsPage : ContentPage
     protected override async void OnAppearing()
     {
         base.OnAppearing();
+        _viewModel.Attach();
         await _viewModel.LoadLocationsCommand.ExecuteAsync(null);
+    }
+
+    protected override void OnDisappearing()
+    {
+        base.OnDisappearing();
+        _viewModel.Detach();
     }
 }

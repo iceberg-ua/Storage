@@ -32,9 +32,19 @@ public partial class LocationsViewModel : ObservableObject
         // Locations first, since that is what this page is for; the toggle still
         // reaches items without leaving the page.
         Search = new SearchViewModel(itemRepository, locationRepository, locationContext, locationsByDefault: true);
-
-        Context.Changed += async (_, _) => await LoadAsync();
     }
+
+    // Same as the Items tab: follow the context only while on screen, so the singleton
+    // does not keep this view model alive.
+    public void Attach()
+    {
+        Context.Changed -= OnContextChanged;
+        Context.Changed += OnContextChanged;
+    }
+
+    public void Detach() => Context.Changed -= OnContextChanged;
+
+    private async void OnContextChanged(object? sender, EventArgs e) => await LoadAsync();
 
     [RelayCommand]
     private async Task LoadLocationsAsync()

@@ -57,7 +57,12 @@ public class LocationRepository : ILocationRepository
         // rather than walking forever.
         while (next is int current && visited.Add(current))
         {
-            var location = await _context.Locations.FirstOrDefaultAsync(l => l.Id == current);
+            // Untracked: the caller may hold this repository for the app's lifetime, and
+            // a tracked query would hand back the instance cached on the first read,
+            // missing a rename or move saved through another context since.
+            var location = await _context.Locations
+                .AsNoTracking()
+                .FirstOrDefaultAsync(l => l.Id == current);
             if (location is null)
                 break;
 

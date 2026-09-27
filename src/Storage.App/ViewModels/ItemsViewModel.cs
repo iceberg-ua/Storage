@@ -28,11 +28,20 @@ public partial class ItemsViewModel : ObservableObject
     {
         Context = locationContext;
         Search = new SearchViewModel(itemRepository, locationRepository, locationContext);
-
-        // Walking the path from the other tab or the Back button changes what this list
-        // should hold even while it is not on screen.
-        Context.Changed += async (_, _) => await LoadAsync();
     }
+
+    // Followed only while the page is on screen: the context is a singleton, so a
+    // subscription left in place would keep this view model alive for good. A tab
+    // that was hidden when the path changed catches up in RefreshAsync on appearing.
+    public void Attach()
+    {
+        Context.Changed -= OnContextChanged;
+        Context.Changed += OnContextChanged;
+    }
+
+    public void Detach() => Context.Changed -= OnContextChanged;
+
+    private async void OnContextChanged(object? sender, EventArgs e) => await LoadAsync();
 
     [RelayCommand]
     private async Task RefreshAsync()
