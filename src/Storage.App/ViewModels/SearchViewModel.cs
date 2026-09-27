@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Storage.App.Services;
 using Storage.Core.Models;
 using Storage.Core.Repositories;
 using StorageLocation = Storage.Core.Models.Location;
@@ -21,6 +22,7 @@ public partial class SearchViewModel : ObservableObject
 {
     private readonly IItemRepository _itemRepository;
     private readonly ILocationRepository _locationRepository;
+    private readonly LocationContext _locationContext;
     private readonly SearchDebounce _debounce = new();
     private readonly bool _locationsByDefault;
 
@@ -34,10 +36,12 @@ public partial class SearchViewModel : ObservableObject
     public SearchViewModel(
         IItemRepository itemRepository,
         ILocationRepository locationRepository,
+        LocationContext locationContext,
         bool locationsByDefault = false)
     {
         _itemRepository = itemRepository;
         _locationRepository = locationRepository;
+        _locationContext = locationContext;
         _locationsByDefault = locationsByDefault;
         _searchLocations = locationsByDefault;
     }
@@ -149,7 +153,11 @@ public partial class SearchViewModel : ObservableObject
 
         if (SearchLocations)
         {
-            var found = await _locationRepository.SearchAsync(term, within);
+            // Browsing the top level lists only top-level locations: anything nested is
+            // reached by opening its parent. A search still looks through all of them.
+            var found = term.Length == 0 && within is null
+                ? await _locationRepository.GetRootLocationsAsync()
+                : await _locationRepository.SearchAsync(term, within);
             Locations = new ObservableCollection<StorageLocation>(found);
             ResultCount = Locations.Count;
         }
@@ -255,7 +263,12 @@ public partial class SearchViewModel : ObservableObject
     private async Task OpenItemAsync(Item item) =>
         await Shell.Current.GoToAsync($"itemdetail?itemId={item.Id}");
 
+    // Opening a location shows what is stored in it, so the bar moves to Items; the
+    // Locations tab then lists what is nested inside it.
     [RelayCommand]
-    private async Task OpenLocationAsync(StorageLocation location) =>
-        await Shell.Current.GoToAsync($"locationitems?locationId={location.Id}");
+    private async Task OpenLocationAsync(StorageLocation location)
+    {
+        await _locationContext.EnterAsync(location.Id);
+        await Shell.Current.GoToAsync("//items");
+    }
 }

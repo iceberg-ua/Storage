@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:services="clr-namespace:Storage.App.Services"
+             x:Class="Storage.App.Views.LocationTitleView"
+             x:Name="Root"
+             x:DataType="services:LocationContext">
+
+    <ContentView.Resources>
+        <Style x:Key="TitleText" TargetType="Label">
+            <Setter Property="FontSize" Value="20" />
+            <Setter Property="FontAttributes" Value="Bold" />
+            <Setter Property="LineBreakMode" Value="TailTruncation" />
+            <Setter Property="VerticalOptions" Value="Center" />
+            <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Black}, Dark={StaticResource SecondaryDarkText}}" />
+        </Style>
+    </ContentView.Resources>
+
+    <!-- The nav bar's own title, replaced so it can carry a back arrow on a tab's root
+         page, where Shell draws none: inside a location it reads "← Shelf A", the way
+         a pushed page would; at the top it is just the tab's name. -->
+    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+        <Button Grid.Column="0"
+                Text="←"
+                IsVisible="{Binding IsInside}"
+                BackgroundColor="Transparent"
+                TextColor="{AppThemeBinding Light={StaticResource Black}, Dark={StaticResource SecondaryDarkText}}"
+                FontSize="24"
+                WidthRequest="44"
+                HeightRequest="44"
+                Padding="0"
+                VerticalOptions="Center"
+                Command="{Binding BackCommand}"
+                SemanticProperties.Description="Up one level"
+                ToolTipProperties.Text="Up one level" />
+
+        <Label Grid.Column="1"
+               Text="{Binding Current.Name}"
+               IsVisible="{Binding IsInside}"
+               Style="{StaticResource TitleText}" />
+        <Label Grid.Column="1"
+               Text="{Binding RootTitle, Source={x:Reference Root}}"
+               IsVisible="{Binding IsAtTop}"
+               Style="{StaticResource TitleText}" />
+    </Grid>
+
+</ContentView>

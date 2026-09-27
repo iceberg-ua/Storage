@@ -10,6 +10,12 @@ public interface ILocationRepository
     Task<IEnumerable<Location>> GetChildrenAsync(int parentId);
 
     /// <summary>
+    /// The chain from the top-level location down to <paramref name="id"/>, inclusive,
+    /// root first. Empty when the location does not exist.
+    /// </summary>
+    Task<IReadOnlyList<Location>> GetPathAsync(int id);
+
+    /// <summary>
     /// Locations whose name contains <paramref name="query"/>, matched
     /// case-insensitively in any language and partially. A blank query means "no
     /// filter". Pass <paramref name="parentId"/> to search only that location's

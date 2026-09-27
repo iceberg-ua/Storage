@@ -154,6 +154,47 @@ public class RepositoryTests : IDisposable
     }
 
     [Fact]
+    public async Task GetPathReturnsTheChainRootFirst()
+    {
+        var locationRepo = new LocationRepository(_context);
+
+        var garage = await locationRepo.AddAsync(new Location { Name = "Garage" });
+        var shelf = await locationRepo.AddAsync(new Location { Name = "Shelf A", ParentId = garage.Id });
+        var box = await locationRepo.AddAsync(new Location { Name = "Box 1", ParentId = shelf.Id });
+
+        _context.ChangeTracker.Clear();
+        var path = await locationRepo.GetPathAsync(box.Id);
+
+        Assert.Equal(["Garage", "Shelf A", "Box 1"], path.Select(l => l.Name));
+    }
+
+    [Fact]
+    public async Task GetPathOfAMissingLocationIsEmpty()
+    {
+        var locationRepo = new LocationRepository(_context);
+
+        Assert.Empty(await locationRepo.GetPathAsync(999));
+    }
+
+    [Fact]
+    public async Task GetPathStopsAtACycle()
+    {
+        var locationRepo = new LocationRepository(_context);
+
+        var a = await locationRepo.AddAsync(new Location { Name = "A" });
+        var b = await locationRepo.AddAsync(new Location { Name = "B", ParentId = a.Id });
+
+        // The edit form allows this: A moved under its own child.
+        a.ParentId = b.Id;
+        await locationRepo.UpdateAsync(a);
+
+        _context.ChangeTracker.Clear();
+        var path = await locationRepo.GetPathAsync(b.Id);
+
+        Assert.Equal(["A", "B"], path.Select(l => l.Name));
+    }
+
+    [Fact]
     public async Task SetItemPhotosStoresThemInTheGivenOrderWithTheFirstAsPrimary()
     {
         var itemRepo = new ItemRepository(_context);

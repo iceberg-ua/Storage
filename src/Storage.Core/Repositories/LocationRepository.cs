@@ -46,6 +46,29 @@ public class LocationRepository : ILocationRepository
             .ToListAsync();
     }
 
+    public async Task<IReadOnlyList<Location>> GetPathAsync(int id)
+    {
+        var path = new List<Location>();
+        var visited = new HashSet<int>();
+        int? next = id;
+
+        // The edit form only stops a location from being its own parent, not from
+        // being its grandparent's, so a cycle is possible — stop at the first repeat
+        // rather than walking forever.
+        while (next is int current && visited.Add(current))
+        {
+            var location = await _context.Locations.FirstOrDefaultAsync(l => l.Id == current);
+            if (location is null)
+                break;
+
+            path.Add(location);
+            next = location.ParentId;
+        }
+
+        path.Reverse();
+        return path;
+    }
+
     public async Task<IEnumerable<Location>> SearchAsync(string? query, int? parentId = null)
     {
         var locations = _context.Locations

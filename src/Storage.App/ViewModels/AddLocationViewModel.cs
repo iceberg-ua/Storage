@@ -7,12 +7,14 @@ using StorageLocation = Storage.Core.Models.Location;
 namespace Storage.App.ViewModels;
 
 // Backs both "add" and "edit" for a location. Shell passes an optional "locationId"
-// query parameter to edit an existing location.
+// query parameter to edit an existing location, or a "parentId" to preselect where a
+// new one goes.
 public partial class AddLocationViewModel : ObservableObject, IQueryAttributable
 {
     private readonly ILocationRepository _locationRepository;
 
     private int _locationId;
+    private int? _parentId;
     private bool _isLoaded;
 
     [ObservableProperty]
@@ -42,6 +44,12 @@ public partial class AddLocationViewModel : ObservableObject, IQueryAttributable
             int.TryParse(Convert.ToString(locationId), out var parsedLocationId))
         {
             _locationId = parsedLocationId;
+        }
+
+        if (query.TryGetValue("parentId", out var parentId) &&
+            int.TryParse(Convert.ToString(parentId), out var parsedParentId))
+        {
+            _parentId = parsedParentId;
         }
 
         IsEditMode = _locationId != 0;
@@ -75,6 +83,10 @@ public partial class AddLocationViewModel : ObservableObject, IQueryAttributable
 
             Name = location.Name;
             ParentLocation = AvailableParents.FirstOrDefault(l => l.Id == location.ParentId);
+        }
+        else if (_parentId is int parent)
+        {
+            ParentLocation = AvailableParents.FirstOrDefault(l => l.Id == parent);
         }
     }
 
