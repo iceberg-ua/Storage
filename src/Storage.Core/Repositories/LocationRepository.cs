@@ -52,9 +52,8 @@ public class LocationRepository : ILocationRepository
         var visited = new HashSet<int>();
         int? next = id;
 
-        // The edit form only stops a location from being its own parent, not from
-        // being its grandparent's, so a cycle is possible — stop at the first repeat
-        // rather than walking forever.
+        // Saves now reject a cycle, but ones written before that check may still be in
+        // the database — stop at the first repeat rather than walking forever.
         while (next is int current && visited.Add(current))
         {
             // Untracked: the caller may hold this repository for the app's lifetime, and
@@ -72,6 +71,35 @@ public class LocationRepository : ILocationRepository
 
         path.Reverse();
         return path;
+    }
+
+    public async Task<IReadOnlySet<int>> GetDescendantIdsAsync(int id)
+    {
+        // One query for the whole tree, walked in memory: the app holds a few hundred
+        // locations at most, and this avoids a round trip per level.
+        var links = await _context.Locations
+            .AsNoTracking()
+            .Where(l => l.ParentId != null)
+            .Select(l => new { l.Id, ParentId = l.ParentId!.Value })
+            .ToListAsync();
+
+        var childrenOf = links.ToLookup(l => l.ParentId, l => l.Id);
+
+        var descendants = new HashSet<int>();
+        var pending = new Stack<int>([id]);
+
+        // A cycle saved before the update check existed would loop back here, so the
+        // set doubles as the visited list.
+        while (pending.TryPop(out var current))
+        {
+            foreach (var child in childrenOf[current])
+            {
+                if (child != id && descendants.Add(child))
+                    pending.Push(child);
+            }
+        }
+
+        return descendants;
     }
 
     public async Task<IEnumerable<Location>> SearchAsync(string? query, int? parentId = null)
@@ -109,6 +137,13 @@ public class LocationRepository : ILocationRepository
 
     public async Task UpdateAsync(Location location)
     {
+        if (location.ParentId is int parentId &&
+            (parentId == location.Id || (await GetDescendantIdsAsync(location.Id)).Contains(parentId)))
+        {
+            throw new InvalidOperationException(
+                $"Location {location.Id} can't be moved under itself or one of its own descendants.");
+        }
+
         _context.Locations.Update(location);
         await _context.SaveChangesAsync();
     }

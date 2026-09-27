@@ -67,9 +67,13 @@ public partial class AddLocationViewModel : ObservableObject, IQueryAttributable
 
         var locations = await _locationRepository.GetAllAsync();
 
-        // A location can't be its own parent.
+        // A location can't be its own parent, nor sit inside something stored in it.
+        var descendantIds = IsEditMode
+            ? await _locationRepository.GetDescendantIdsAsync(_locationId)
+            : new HashSet<int>();
+
         AvailableParents = new ObservableCollection<StorageLocation>(
-            locations.Where(l => l.Id != _locationId));
+            locations.Where(l => l.Id != _locationId && !descendantIds.Contains(l.Id)));
 
         if (IsEditMode)
         {
@@ -106,6 +110,15 @@ public partial class AddLocationViewModel : ObservableObject, IQueryAttributable
             {
                 await Shell.Current.DisplayAlertAsync("Error", "This location no longer exists", "OK");
                 await Shell.Current.GoToAsync("..");
+                return;
+            }
+
+            // The picker already hides these, but the tree may have changed since it loaded.
+            if (ParentLocation is { } parent &&
+                (await _locationRepository.GetDescendantIdsAsync(_locationId)).Contains(parent.Id))
+            {
+                await Shell.Current.DisplayAlertAsync(
+                    "Error", $"{parent.Name} is inside {location.Name}, so it can't be its parent", "OK");
                 return;
             }
 

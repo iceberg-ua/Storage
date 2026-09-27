@@ -16,6 +16,13 @@ public interface ILocationRepository
     Task<IReadOnlyList<Location>> GetPathAsync(int id);
 
     /// <summary>
+    /// Ids of every location nested under <paramref name="id"/>, at any depth, not
+    /// including <paramref name="id"/> itself. These are the parents a location can't
+    /// be moved under.
+    /// </summary>
+    Task<IReadOnlySet<int>> GetDescendantIdsAsync(int id);
+
+    /// <summary>
     /// Locations whose name contains <paramref name="query"/>, matched
     /// case-insensitively in any language and partially. A blank query means "no
     /// filter". Pass <paramref name="parentId"/> to search only that location's
@@ -24,6 +31,9 @@ public interface ILocationRepository
     Task<IEnumerable<Location>> SearchAsync(string? query, int? parentId = null);
 
     Task<Location> AddAsync(Location location);
+    /// <exception cref="InvalidOperationException">
+    /// The location's parent is itself or one of its own descendants.
+    /// </exception>
     Task UpdateAsync(Location location);
     Task DeleteAsync(int id);
 }
