@@ -207,14 +207,107 @@ public class RepositoryTests : IDisposable
         var a = await locationRepo.AddAsync(new Location { Name = "A" });
         var b = await locationRepo.AddAsync(new Location { Name = "B", ParentId = a.Id });
 
-        // The edit form allows this: A moved under its own child.
-        a.ParentId = b.Id;
-        await locationRepo.UpdateAsync(a);
-
-        _context.ChangeTracker.Clear();
+        // A moved under its own child.
+        await CreateCycleAsync(a, b);
         var path = await locationRepo.GetPathAsync(b.Id);
 
         Assert.Equal(["A", "B"], path.Select(l => l.Name));
+    }
+
+    [Fact]
+    public async Task GetDescendantIdsReturnsEveryLevelButNotSiblingsOrItself()
+    {
+        var locationRepo = new LocationRepository(_context);
+
+        var garage = await locationRepo.AddAsync(new Location { Name = "Garage" });
+        var shelf = await locationRepo.AddAsync(new Location { Name = "Shelf A", ParentId = garage.Id });
+        var box = await locationRepo.AddAsync(new Location { Name = "Box 1", ParentId = shelf.Id });
+        var bin = await locationRepo.AddAsync(new Location { Name = "Bin", ParentId = garage.Id });
+        await locationRepo.AddAsync(new Location { Name = "Attic" });
+
+        var descendants = await locationRepo.GetDescendantIdsAsync(garage.Id);
+
+        Assert.Equal([shelf.Id, box.Id, bin.Id], descendants.Order());
+        Assert.Empty(await locationRepo.GetDescendantIdsAsync(box.Id));
+    }
+
+    [Fact]
+    public async Task GetDescendantIdsStopsAtACycle()
+    {
+        var locationRepo = new LocationRepository(_context);
+
+        var a = await locationRepo.AddAsync(new Location { Name = "A" });
+        var b = await locationRepo.AddAsync(new Location { Name = "B", ParentId = a.Id });
+
+        await CreateCycleAsync(a, b);
+
+        Assert.Equal([b.Id], await locationRepo.GetDescendantIdsAsync(a.Id));
+    }
+
+    [Fact]
+    public async Task UpdateRejectsMovingALocationUnderItsOwnDescendant()
+    {
+        var locationRepo = new LocationRepository(_context);
+
+        var garage = await locationRepo.AddAsync(new Location { Name = "Garage" });
+        var shelf = await locationRepo.AddAsync(new Location { Name = "Shelf A", ParentId = garage.Id });
+        var box = await locationRepo.AddAsync(new Location { Name = "Box 1", ParentId = shelf.Id });
+
+        garage.Name = "Big Garage";
+        garage.ParentId = box.Id;
+        await Assert.ThrowsAsync<InvalidOperationException>(() => locationRepo.UpdateAsync(garage));
+
+        // The context outlives the refused update, as the app's does: an unrelated
+        // save afterwards must not write the refused change.
+        await locationRepo.AddAsync(new Location { Name = "Attic" });
+
+        var stored = await _context.Locations.AsNoTracking().SingleAsync(l => l.Id == garage.Id);
+        Assert.Null(stored.ParentId);
+        Assert.Equal("Garage", stored.Name);
+    }
+
+    [Fact]
+    public async Task UpdateRejectsMakingALocationItsOwnParent()
+    {
+        var locationRepo = new LocationRepository(_context);
+
+        var garage = await locationRepo.AddAsync(new Location { Name = "Garage" });
+
+        garage.ParentId = garage.Id;
+        await Assert.ThrowsAsync<InvalidOperationException>(() => locationRepo.UpdateAsync(garage));
+
+        await locationRepo.AddAsync(new Location { Name = "Attic" });
+
+        var stored = await _context.Locations.AsNoTracking().SingleAsync(l => l.Id == garage.Id);
+        Assert.Null(stored.ParentId);
+    }
+
+    [Fact]
+    public async Task UpdateAllowsMovingALocationUnderASibling()
+    {
+        var locationRepo = new LocationRepository(_context);
+
+        var garage = await locationRepo.AddAsync(new Location { Name = "Garage" });
+        var shelf = await locationRepo.AddAsync(new Location { Name = "Shelf A", ParentId = garage.Id });
+        var bin = await locationRepo.AddAsync(new Location { Name = "Bin", ParentId = garage.Id });
+
+        bin.ParentId = shelf.Id;
+        await locationRepo.UpdateAsync(bin);
+
+        _context.ChangeTracker.Clear();
+        var path = await locationRepo.GetPathAsync(bin.Id);
+        Assert.Equal(["Garage", "Shelf A", "Bin"], path.Select(l => l.Name));
+    }
+
+    // Writes a loop straight to the table, bypassing UpdateAsync's check — the state a
+    // database saved before that check existed can be in.
+    private async Task CreateCycleAsync(Location child, Location parent)
+    {
+        await _context.Locations
+            .Where(l => l.Id == child.Id)
+            .ExecuteUpdateAsync(s => s.SetProperty(l => l.ParentId, parent.Id));
+
+        _context.ChangeTracker.Clear();
     }
 
     [Fact]
