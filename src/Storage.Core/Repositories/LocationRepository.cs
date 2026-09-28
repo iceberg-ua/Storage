@@ -140,6 +140,16 @@ public class LocationRepository : ILocationRepository
         if (location.ParentId is int parentId &&
             (parentId == location.Id || (await GetDescendantIdsAsync(location.Id)).Contains(parentId)))
         {
+            // The caller usually edited an entity this context tracks, and the context
+            // lives as long as the app — left pending, the next SaveChanges anywhere
+            // would write the loop anyway. Put it back as it was loaded.
+            var entry = _context.Entry(location);
+            if (entry.State != EntityState.Detached)
+            {
+                entry.CurrentValues.SetValues(entry.OriginalValues);
+                entry.State = EntityState.Unchanged;
+            }
+
             throw new InvalidOperationException(
                 $"Location {location.Id} can't be moved under itself or one of its own descendants.");
         }

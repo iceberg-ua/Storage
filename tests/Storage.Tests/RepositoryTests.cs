@@ -253,12 +253,17 @@ public class RepositoryTests : IDisposable
         var shelf = await locationRepo.AddAsync(new Location { Name = "Shelf A", ParentId = garage.Id });
         var box = await locationRepo.AddAsync(new Location { Name = "Box 1", ParentId = shelf.Id });
 
+        garage.Name = "Big Garage";
         garage.ParentId = box.Id;
         await Assert.ThrowsAsync<InvalidOperationException>(() => locationRepo.UpdateAsync(garage));
 
-        _context.ChangeTracker.Clear();
-        var fetched = await locationRepo.GetByIdAsync(garage.Id);
-        Assert.Null(fetched!.ParentId);
+        // The context outlives the refused update, as the app's does: an unrelated
+        // save afterwards must not write the refused change.
+        await locationRepo.AddAsync(new Location { Name = "Attic" });
+
+        var stored = await _context.Locations.AsNoTracking().SingleAsync(l => l.Id == garage.Id);
+        Assert.Null(stored.ParentId);
+        Assert.Equal("Garage", stored.Name);
     }
 
     [Fact]
@@ -270,6 +275,11 @@ public class RepositoryTests : IDisposable
 
         garage.ParentId = garage.Id;
         await Assert.ThrowsAsync<InvalidOperationException>(() => locationRepo.UpdateAsync(garage));
+
+        await locationRepo.AddAsync(new Location { Name = "Attic" });
+
+        var stored = await _context.Locations.AsNoTracking().SingleAsync(l => l.Id == garage.Id);
+        Assert.Null(stored.ParentId);
     }
 
     [Fact]

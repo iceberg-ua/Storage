@@ -125,7 +125,17 @@ public partial class AddLocationViewModel : ObservableObject, IQueryAttributable
             location.Name = Name.Trim();
             location.ParentId = ParentLocation?.Id;
 
-            await _locationRepository.UpdateAsync(location);
+            try
+            {
+                await _locationRepository.UpdateAsync(location);
+            }
+            catch (InvalidOperationException)
+            {
+                // The tree changed between the check above and the save.
+                await Shell.Current.DisplayAlertAsync(
+                    "Error", $"{ParentLocation!.Name} is inside {Name.Trim()}, so it can't be its parent", "OK");
+                return;
+            }
         }
         else
         {
