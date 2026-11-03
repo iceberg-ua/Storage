@@ -113,15 +113,6 @@ public partial class AddLocationViewModel : ObservableObject, IQueryAttributable
                 return;
             }
 
-            // The picker already hides these, but the tree may have changed since it loaded.
-            if (ParentLocation is { } parent &&
-                (await _locationRepository.GetDescendantIdsAsync(_locationId)).Contains(parent.Id))
-            {
-                await Shell.Current.DisplayAlertAsync(
-                    "Error", $"{parent.Name} is inside {location.Name}, so it can't be its parent", "OK");
-                return;
-            }
-
             location.Name = Name.Trim();
             location.ParentId = ParentLocation?.Id;
 
@@ -129,11 +120,11 @@ public partial class AddLocationViewModel : ObservableObject, IQueryAttributable
             {
                 await _locationRepository.UpdateAsync(location);
             }
-            catch (InvalidOperationException)
+            catch (LocationCycleException) when (ParentLocation is { } parent)
             {
-                // The tree changed between the check above and the save.
+                // The picker hides descendants, but the tree may have changed since it loaded.
                 await Shell.Current.DisplayAlertAsync(
-                    "Error", $"{ParentLocation!.Name} is inside {Name.Trim()}, so it can't be its parent", "OK");
+                    "Error", $"{parent.Name} is inside {Name.Trim()}, so it can't be its parent", "OK");
                 return;
             }
         }
