@@ -115,8 +115,8 @@ public class LocationRepository : ILocationRepository
 
         if (!string.IsNullOrEmpty(term))
         {
-            // A location has only a name, so there is nothing here matching the item
-            // search's field scope — that strip is hidden while this runs.
+            // Locations are matched on name only, so there is nothing here matching the
+            // item search's field scope — that strip is hidden while this runs.
             var pattern = LikePattern.Contains(term);
 
             locations = locations.Where(l =>

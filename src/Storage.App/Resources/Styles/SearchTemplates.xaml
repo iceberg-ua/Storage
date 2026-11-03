@@ -114,6 +114,13 @@
                        FontSize="18"
                        FontAttributes="Bold"
                        TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}" />
+                <!-- One line, as on the item card; the edit form shows all of it. -->
+                <Label Text="{Binding Description}"
+                       FontSize="14"
+                       MaxLines="1"
+                       LineBreakMode="TailTruncation"
+                       TextColor="{AppThemeBinding Light={StaticResource Gray500}, Dark={StaticResource Gray300}}"
+                       IsVisible="{Binding Description, Converter={StaticResource IsNotNullConverter}}" />
                 <!-- A search across the whole tree can return two shelves with the same
                      name, so say which one this is. -->
                 <Label Text="{Binding Parent.Name, StringFormat='Parent: {0}'}"
@@ -158,6 +165,12 @@
                            FontSize="18"
                            FontAttributes="Bold"
                            TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}" />
+                    <Label Text="{Binding Description}"
+                           FontSize="14"
+                           MaxLines="1"
+                           LineBreakMode="TailTruncation"
+                           TextColor="{AppThemeBinding Light={StaticResource Gray500}, Dark={StaticResource Gray300}}"
+                           IsVisible="{Binding Description, Converter={StaticResource IsNotNullConverter}}" />
                     <Label Text="{Binding Parent.Name, StringFormat='Parent: {0}'}"
                            FontSize="12"
                            IsVisible="{Binding Parent, Converter={StaticResource IsNotNullConverter}}"

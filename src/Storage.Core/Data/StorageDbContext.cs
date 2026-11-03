@@ -102,6 +102,7 @@ public class StorageDbContext : DbContext
         {
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Name).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.Description).HasMaxLength(1000);
 
             entity.HasOne(e => e.Parent)
                 .WithMany(l => l.Children)

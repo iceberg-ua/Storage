@@ -154,6 +154,30 @@ public class RepositoryTests : IDisposable
     }
 
     [Fact]
+    public async Task LocationDescriptionIsSavedChangedAndCleared()
+    {
+        var locationRepo = new LocationRepository(_context);
+
+        var location = await locationRepo.AddAsync(
+            new Location { Name = "Cellar", Description = "Behind the stairs" });
+
+        _context.ChangeTracker.Clear();
+        var fetched = await locationRepo.GetByIdAsync(location.Id);
+        Assert.Equal("Behind the stairs", fetched!.Description);
+
+        fetched.Description = "Left of the boiler";
+        await locationRepo.UpdateAsync(fetched);
+        _context.ChangeTracker.Clear();
+        Assert.Equal("Left of the boiler", (await locationRepo.GetByIdAsync(location.Id))!.Description);
+
+        fetched = await locationRepo.GetByIdAsync(location.Id);
+        fetched!.Description = null;
+        await locationRepo.UpdateAsync(fetched);
+        _context.ChangeTracker.Clear();
+        Assert.Null((await locationRepo.GetByIdAsync(location.Id))!.Description);
+    }
+
+    [Fact]
     public async Task GetPathReturnsTheChainRootFirst()
     {
         var locationRepo = new LocationRepository(_context);

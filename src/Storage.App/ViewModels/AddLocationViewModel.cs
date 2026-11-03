@@ -21,6 +21,9 @@ public partial class AddLocationViewModel : ObservableObject, IQueryAttributable
     private string _name = string.Empty;
 
     [ObservableProperty]
+    private string _description = string.Empty;
+
+    [ObservableProperty]
     private StorageLocation? _parentLocation;
 
     [ObservableProperty]
@@ -86,6 +89,7 @@ public partial class AddLocationViewModel : ObservableObject, IQueryAttributable
             }
 
             Name = location.Name;
+            Description = location.Description ?? string.Empty;
             ParentLocation = AvailableParents.FirstOrDefault(l => l.Id == location.ParentId);
         }
         else if (_parentId is int parent)
@@ -103,6 +107,8 @@ public partial class AddLocationViewModel : ObservableObject, IQueryAttributable
             return;
         }
 
+        var description = string.IsNullOrWhiteSpace(Description) ? null : Description.Trim();
+
         if (IsEditMode)
         {
             var location = await _locationRepository.GetByIdAsync(_locationId);
@@ -114,6 +120,7 @@ public partial class AddLocationViewModel : ObservableObject, IQueryAttributable
             }
 
             location.Name = Name.Trim();
+            location.Description = description;
             location.ParentId = ParentLocation?.Id;
 
             try
@@ -133,6 +140,7 @@ public partial class AddLocationViewModel : ObservableObject, IQueryAttributable
             await _locationRepository.AddAsync(new StorageLocation
             {
                 Name = Name.Trim(),
+                Description = description,
                 ParentId = ParentLocation?.Id
             });
         }

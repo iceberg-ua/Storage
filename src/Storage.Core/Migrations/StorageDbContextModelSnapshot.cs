@@ -95,6 +95,10 @@ namespace Storage.Core.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("Description")
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(100)
