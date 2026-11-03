@@ -255,7 +255,8 @@ public class RepositoryTests : IDisposable
 
         garage.Name = "Big Garage";
         garage.ParentId = box.Id;
-        await Assert.ThrowsAsync<InvalidOperationException>(() => locationRepo.UpdateAsync(garage));
+        var refused = await Assert.ThrowsAsync<LocationCycleException>(() => locationRepo.UpdateAsync(garage));
+        Assert.Equal((garage.Id, box.Id), (refused.LocationId, refused.ParentId));
 
         // The context outlives the refused update, as the app's does: an unrelated
         // save afterwards must not write the refused change.
@@ -274,7 +275,7 @@ public class RepositoryTests : IDisposable
         var garage = await locationRepo.AddAsync(new Location { Name = "Garage" });
 
         garage.ParentId = garage.Id;
-        await Assert.ThrowsAsync<InvalidOperationException>(() => locationRepo.UpdateAsync(garage));
+        await Assert.ThrowsAsync<LocationCycleException>(() => locationRepo.UpdateAsync(garage));
 
         await locationRepo.AddAsync(new Location { Name = "Attic" });
 

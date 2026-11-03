@@ -150,8 +150,7 @@ public class LocationRepository : ILocationRepository
                 entry.State = EntityState.Unchanged;
             }
 
-            throw new InvalidOperationException(
-                $"Location {location.Id} can't be moved under itself or one of its own descendants.");
+            throw new LocationCycleException(location.Id, parentId);
         }
 
         _context.Locations.Update(location);
