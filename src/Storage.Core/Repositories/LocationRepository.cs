@@ -115,12 +115,14 @@ public class LocationRepository : ILocationRepository
 
         if (!string.IsNullOrEmpty(term))
         {
-            // A location has only a name, so there is nothing here matching the item
-            // search's field scope — that strip is hidden while this runs.
+            // A location has only a name and a description, both always searched, so
+            // there is nothing here for the item search's field scope — that strip is
+            // hidden while this runs.
             var pattern = LikePattern.Contains(term);
 
             locations = locations.Where(l =>
-                EF.Functions.Like(StorageDbContext.UnicodeLower(l.Name)!, pattern, LikePattern.Escape));
+                EF.Functions.Like(StorageDbContext.UnicodeLower(l.Name)!, pattern, LikePattern.Escape) ||
+                EF.Functions.Like(StorageDbContext.UnicodeLower(l.Description)!, pattern, LikePattern.Escape));
         }
 
         return await locations
@@ -137,24 +139,26 @@ public class LocationRepository : ILocationRepository
 
     public async Task UpdateAsync(Location location)
     {
+        // The caller usually edited an entity this context tracks, and the context lives
+        // as long as the app. A refused or failed change left pending would be written,
+        // or fail again, at the next SaveChanges anywhere, so both paths discard it.
         if (location.ParentId is int parentId &&
             (parentId == location.Id || (await GetDescendantIdsAsync(location.Id)).Contains(parentId)))
         {
-            // The caller usually edited an entity this context tracks, and the context
-            // lives as long as the app — left pending, the next SaveChanges anywhere
-            // would write the loop anyway. Put it back as it was loaded.
-            var entry = _context.Entry(location);
-            if (entry.State != EntityState.Detached)
-            {
-                entry.CurrentValues.SetValues(entry.OriginalValues);
-                entry.State = EntityState.Unchanged;
-            }
-
+            _context.DiscardChanges();
             throw new LocationCycleException(location.Id, parentId);
         }
 
         _context.Locations.Update(location);
-        await _context.SaveChangesAsync();
+        try
+        {
+            await _context.SaveChangesAsync();
+        }
+        catch
+        {
+            _context.DiscardChanges();
+            throw;
+        }
     }
 
     public async Task DeleteAsync(int id)

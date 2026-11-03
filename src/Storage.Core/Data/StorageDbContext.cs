@@ -27,6 +27,32 @@ public class StorageDbContext : DbContext
     public static string? UnicodeLower(string? value) =>
         throw new NotSupportedException($"{nameof(UnicodeLower)} is only usable in a LINQ query.");
 
+    /// <summary>
+    /// Undoes every change not yet saved: edited entities go back to the values they
+    /// were loaded with, added ones are dropped, deleted ones are kept. Repositories
+    /// save straight away, so anything still pending after a refused or failed save
+    /// belongs to that save.
+    /// </summary>
+    public void DiscardChanges()
+    {
+        foreach (var entry in ChangeTracker.Entries().ToList())
+        {
+            switch (entry.State)
+            {
+                case EntityState.Added:
+                    entry.State = EntityState.Detached;
+                    break;
+                case EntityState.Modified:
+                    entry.CurrentValues.SetValues(entry.OriginalValues);
+                    entry.State = EntityState.Unchanged;
+                    break;
+                case EntityState.Deleted:
+                    entry.State = EntityState.Unchanged;
+                    break;
+            }
+        }
+    }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -102,6 +128,7 @@ public class StorageDbContext : DbContext
         {
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Name).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.Description).HasMaxLength(1000);
 
             entity.HasOne(e => e.Parent)
                 .WithMany(l => l.Children)

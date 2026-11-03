@@ -23,7 +23,7 @@ public interface ILocationRepository
     Task<IReadOnlySet<int>> GetDescendantIdsAsync(int id);
 
     /// <summary>
-    /// Locations whose name contains <paramref name="query"/>, matched
+    /// Locations whose name or description contains <paramref name="query"/>, matched
     /// case-insensitively in any language and partially. A blank query means "no
     /// filter". Pass <paramref name="parentId"/> to search only that location's
     /// children, or null to search every location.

@@ -238,9 +238,10 @@ public class ItemSearchTests : IDisposable
 
     // --- Location search ----------------------------------------------------
 
-    private async Task<Location> SeedLocationAsync(string name, int? parentId = null)
+    private async Task<Location> SeedLocationAsync(
+        string name, int? parentId = null, string? description = null)
     {
-        var location = new Location { Name = name, ParentId = parentId };
+        var location = new Location { Name = name, ParentId = parentId, Description = description };
         _context.Locations.Add(location);
         await _context.SaveChangesAsync();
         return location;
@@ -256,6 +257,19 @@ public class ItemSearchTests : IDisposable
         var results = await locations.SearchAsync("gara");
 
         Assert.Equal(["Garage"], results.Select(l => l.Name));
+    }
+
+    [Fact]
+    public async Task LocationSearchMatchesTheDescriptionToo()
+    {
+        var locations = new LocationRepository(_context);
+        await SeedLocationAsync("Cellar", description: "Spare tyres behind the BOILER");
+        await SeedLocationAsync("Boiler room");
+        await SeedLocationAsync("Attic");
+
+        var results = await locations.SearchAsync("boiler");
+
+        Assert.Equal(["Boiler room", "Cellar"], results.Select(l => l.Name));
     }
 
     [Theory]
