@@ -154,6 +154,28 @@ public class RepositoryTests : IDisposable
     }
 
     [Fact]
+    public async Task FailedLocationUpdateDoesNotBlockLaterSaves()
+    {
+        var locationRepo = new LocationRepository(_context);
+
+        var cellar = await locationRepo.AddAsync(new Location { Name = "Cellar" });
+
+        // The row goes behind EF's back, so the update below matches nothing.
+        await _context.Locations.Where(l => l.Id == cellar.Id).ExecuteDeleteAsync();
+
+        cellar.Name = "Wine Cellar";
+        cellar.Description = "Left of the boiler";
+        await Assert.ThrowsAsync<DbUpdateConcurrencyException>(() => locationRepo.UpdateAsync(cellar));
+
+        // Left pending, the failed change would be retried here and throw again.
+        await locationRepo.AddAsync(new Location { Name = "Attic" });
+
+        Assert.Equal("Cellar", cellar.Name);
+        Assert.Null(cellar.Description);
+        Assert.Equal(["Attic"], _context.Locations.AsNoTracking().Select(l => l.Name));
+    }
+
+    [Fact]
     public async Task LocationDescriptionIsSavedChangedAndCleared()
     {
         var locationRepo = new LocationRepository(_context);

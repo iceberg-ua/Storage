@@ -38,6 +38,7 @@ A simple mobile app that makes cataloging possessions effortless:
 
 ### Location System
 - Locations support nesting (flat or hierarchical, e.g. "Garage" → "Shelf 2")
+- Optional location description, previewed on one line in lists and matched by location search
 - Assign item to a location
 - Add an item directly from a location's edit screen
 - Location-based grouping in item list

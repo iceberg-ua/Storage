@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:Storage.App.ViewModels"
+             xmlns:models="clr-namespace:Storage.Core.Models;assembly=Storage.Core"
+             x:Class="Storage.App.Views.LocationCard"
+             x:DataType="models:Location">
+
+    <Frame Margin="10,5"
+           Padding="10"
+           CornerRadius="5"
+           BackgroundColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource Gray900}}"
+           BorderColor="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource Gray600}}">
+        <Frame.GestureRecognizers>
+            <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:SearchViewModel}}, Path=OpenLocationCommand}"
+                                  CommandParameter="{Binding .}" />
+        </Frame.GestureRecognizers>
+        <StackLayout>
+            <Label Text="{Binding Name}"
+                   FontSize="18"
+                   FontAttributes="Bold"
+                   TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}" />
+            <!-- One line, as on the item card; the edit form shows all of it. -->
+            <Label Text="{Binding Description}"
+                   FontSize="14"
+                   MaxLines="1"
+                   LineBreakMode="TailTruncation"
+                   TextColor="{AppThemeBinding Light={StaticResource Gray500}, Dark={StaticResource Gray300}}"
+                   IsVisible="{Binding Description, Converter={StaticResource IsNotNullConverter}}" />
+            <!-- A search across the whole tree can return two shelves with the same
+                 name, so say which one this is. -->
+            <Label Text="{Binding Parent.Name, StringFormat='Parent: {0}'}"
+                   FontSize="12"
+                   IsVisible="{Binding Parent, Converter={StaticResource IsNotNullConverter}}"
+                   TextColor="{AppThemeBinding Light={StaticResource Gray500}, Dark={StaticResource Gray400}}" />
+        </StackLayout>
+    </Frame>
+
+</ContentView>
