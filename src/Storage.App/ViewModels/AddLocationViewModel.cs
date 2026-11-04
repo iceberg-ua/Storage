@@ -6,9 +6,9 @@ using StorageLocation = Storage.Core.Models.Location;
 
 namespace Storage.App.ViewModels;
 
-// Backs both "add" and "edit" for a location. Shell passes an optional "locationId"
-// query parameter to edit an existing location, or a "parentId" to preselect where a
-// new one goes.
+// Backs both "add" and "edit" for a location: the edit page binds it directly, the create
+// page through CreateViewModel. Shell passes an optional "locationId" query parameter to
+// edit an existing location, or a "parentId" to preselect where a new one goes.
 public partial class AddLocationViewModel : ObservableObject, IQueryAttributable
 {
     private readonly ILocationRepository _locationRepository;
@@ -148,14 +148,14 @@ public partial class AddLocationViewModel : ObservableObject, IQueryAttributable
         await Shell.Current.GoToAsync("..");
     }
 
-    // Shortcut: open the add-item form with this location already selected.
+    // Shortcut: open the create screen on an item, with this location already selected.
     [RelayCommand]
     private async Task AddItemHereAsync()
     {
         if (!IsEditMode)
             return;
 
-        await Shell.Current.GoToAsync($"additem?locationId={_locationId}");
+        await Shell.Current.GoToAsync($"create?kind=item&locationId={_locationId}");
     }
 
     [RelayCommand]

@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:Storage.App.ViewModels"
+             xmlns:views="clr-namespace:Storage.App.Views"
+             x:Class="Storage.App.Views.CreatePage"
+             x:DataType="vm:CreateViewModel"
+             Title="{Binding PageTitle}">
+
+    <ContentPage.Resources>
+        <Style x:Key="KindSegment" TargetType="Button">
+            <Setter Property="CornerRadius" Value="0" />
+            <Setter Property="HeightRequest" Value="40" />
+        </Style>
+    </ContentPage.Resources>
+
+    <!-- The switch and the buttons stay put; only the form between them scrolls. -->
+    <Grid RowDefinitions="Auto,*,Auto">
+
+        <!-- What is being made. The selected half is filled; the other is grey. -->
+        <Grid Grid.Row="0"
+              ColumnDefinitions="*,*"
+              Padding="20,15,20,0">
+            <Button Grid.Column="0"
+                    Text="Item"
+                    Style="{StaticResource KindSegment}"
+                    Command="{Binding SetKindCommand}"
+                    CommandParameter="{x:Static vm:CreateKind.Item}"
+                    SemanticProperties.Description="Create an item">
+                <Button.Triggers>
+                    <DataTrigger TargetType="Button" Binding="{Binding IsItem}" Value="False">
+                        <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource Gray600}}" />
+                        <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}" />
+                    </DataTrigger>
+                </Button.Triggers>
+            </Button>
+            <Button Grid.Column="1"
+                    Text="Location"
+                    Style="{StaticResource KindSegment}"
+                    Command="{Binding SetKindCommand}"
+                    CommandParameter="{x:Static vm:CreateKind.Location}"
+                    SemanticProperties.Description="Create a location">
+                <Button.Triggers>
+                    <DataTrigger TargetType="Button" Binding="{Binding IsLocation}" Value="False">
+                        <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource Gray600}}" />
+                        <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}" />
+                    </DataTrigger>
+                </Button.Triggers>
+            </Button>
+        </Grid>
+
+        <!-- Both forms are kept and only one is shown, so switching back finds the
+             other just as it was left. Each sits in a wrapper because the form's own
+             BindingContext is its view model, not this page's. -->
+        <ScrollView Grid.Row="1">
+            <Grid Padding="20">
+                <ContentView IsVisible="{Binding IsItem}">
+                    <views:ItemForm BindingContext="{Binding Item}" />
+                </ContentView>
+                <ContentView IsVisible="{Binding IsLocation}">
+                    <views:LocationForm BindingContext="{Binding Location}" />
+                </ContentView>
+            </Grid>
+        </ScrollView>
+
+        <Grid Grid.Row="2"
+              ColumnDefinitions="*,*"
+              ColumnSpacing="10"
+              Padding="20,10">
+            <Button Grid.Column="0"
+                    Text="Cancel"
+                    Command="{Binding CancelCommand}"
+                    BackgroundColor="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource Gray600}}"
+                    TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}" />
+            <Button Grid.Column="1"
+                    Text="Save"
+                    Command="{Binding SaveCommand}" />
+        </Grid>
+
+    </Grid>
+
+</ContentPage>

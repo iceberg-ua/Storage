@@ -13,7 +13,10 @@ public partial class AppShell : Shell
 
 		_locationContext = locationContext;
 
-		// Register routes for navigation
+		// Register routes for navigation.
+		// Everything new is made on "create", pushed with a "kind" and an optional
+		// "locationId". The two below are the edit forms, pushed with the id to edit.
+		Routing.RegisterRoute("create", typeof(CreatePage));
 		Routing.RegisterRoute("additem", typeof(AddItemPage));
 		Routing.RegisterRoute("addlocation", typeof(AddLocationPage));
 

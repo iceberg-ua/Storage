@@ -41,6 +41,7 @@ A simple mobile app that makes cataloging possessions effortless:
 - Optional location description, previewed on one line in lists and matched by location search
 - Assign item to a location
 - Add an item directly from a location's edit screen
+- One create screen for both items and locations, with a switch between the two; whatever is made goes in the location being viewed by default
 - Location-based grouping in item list
 
 ### Search & Discovery

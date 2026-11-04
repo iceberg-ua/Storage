@@ -59,6 +59,7 @@ public static class MauiProgram
 		builder.Services.AddTransient<ViewModels.AddLocationViewModel>();
 		builder.Services.AddTransient<ViewModels.TagsViewModel>();
 		builder.Services.AddTransient<ViewModels.EditTagViewModel>();
+		builder.Services.AddTransient<ViewModels.CreateViewModel>();
 
 		// Register Pages
 		builder.Services.AddTransient<Views.ItemsPage>();
@@ -69,6 +70,7 @@ public static class MauiProgram
 		builder.Services.AddTransient<Views.TagsPage>();
 		builder.Services.AddTransient<Views.EditTagPage>();
 		builder.Services.AddTransient<Views.CameraPage>();
+		builder.Services.AddTransient<Views.CreatePage>();
 
 		var app = builder.Build();
 

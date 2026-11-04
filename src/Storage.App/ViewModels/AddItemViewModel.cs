@@ -9,9 +9,9 @@ using StorageLocation = Storage.Core.Models.Location;
 
 namespace Storage.App.ViewModels;
 
-// Backs both "add" and "edit" for an item. Shell passes an optional "itemId" query
-// parameter to edit an existing item, and an optional "locationId" to pre-select the
-// location when adding (used by the shortcut on the location edit screen).
+// Backs both "add" and "edit" for an item: the edit page binds it directly, the create
+// page through CreateViewModel. Shell passes an optional "itemId" query parameter to edit
+// an existing item, and an optional "locationId" to pre-select the location when adding.
 public partial class AddItemViewModel : ObservableObject, IQueryAttributable
 {
     private const int MaxSuggestions = 5;

@@ -73,10 +73,11 @@ public partial class LocationsViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private async Task NavigateToAddLocationAsync()
+    private async Task NavigateToCreateAsync()
     {
-        // Inside a location, a new one is nested in it by default.
-        var route = Context.CurrentId is int id ? $"addlocation?parentId={id}" : "addlocation";
+        // Opens on a location, since this is the locations tab; inside a location,
+        // whatever is made goes in it by default.
+        var route = Context.CurrentId is int id ? $"create?kind=location&locationId={id}" : "create?kind=location";
         await Shell.Current.GoToAsync(route);
     }
 
