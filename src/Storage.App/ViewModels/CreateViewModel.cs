@@ -111,7 +111,7 @@ public partial class CreateViewModel : ObservableObject, IQueryAttributable
         {
             // Caught here because the page calls this from OnAppearing, an async void
             // handler, where an exception would take the app down.
-            await Shell.Current.DisplayAlertAsync("Couldn't open the form", ex.Message, "OK");
+            await Shell.Current.DisplayAlertAsync("Couldn't open the form", $"Go back and try again.\n\n{ex.Message}".TrimEnd(), "OK");
         }
     }
 

@@ -344,7 +344,7 @@ public partial class CameraPage : ContentPage
         catch (Exception ex)
         {
             SetBusy(false);
-            await DisplayAlertAsync("Couldn't save photo", ex.Message, "OK");
+            await DisplayAlertAsync("Couldn't save photo", $"Try taking it again.\n\n{ex.Message}".TrimEnd(), "OK");
         }
     }
 
@@ -365,7 +365,7 @@ public partial class CameraPage : ContentPage
         catch (Exception ex)
         {
             SetBusy(false);
-            await DisplayAlertAsync("Couldn't import photo", ex.Message, "OK");
+            await DisplayAlertAsync("Couldn't import photo", $"Try a different image.\n\n{ex.Message}".TrimEnd(), "OK");
         }
     }
 

@@ -27,12 +27,7 @@ public partial class EditTagViewModel : ObservableObject, IQueryAttributable
     [ObservableProperty]
     private string _name = string.Empty;
 
-    // Shown under the name field when a save is refused over the name; null hides it.
-    [ObservableProperty]
-    private string? _nameError;
-
-    /// <summary>Raised when a save is refused over the name, so the page can focus the field.</summary>
-    public event EventHandler? NameRequired;
+    public FieldError NameError { get; } = new();
 
     [ObservableProperty]
     private ObservableCollection<PaletteSwatch> _swatches = [];
@@ -190,15 +185,23 @@ public partial class EditTagViewModel : ObservableObject, IQueryAttributable
 
         if (string.IsNullOrWhiteSpace(name))
         {
-            RejectName("Please enter a tag name");
+            NameError.Show("Please enter a tag name");
             return;
         }
 
         // Checked here so a clash reads as a message rather than surfacing from the
         // unique index as a SqliteException. Editing keeps its own name.
-        if (await _tagRepository.NameExistsAsync(name, IsEditMode ? _tagId : null))
+        var nameTaken = await _tagRepository.NameExistsAsync(name, IsEditMode ? _tagId : null);
+
+        // The user may have kept typing while that ran. The answer is about a name that
+        // is no longer in the field, so it can neither be shown nor relied on: stop, and
+        // let the next Save check what is there now.
+        if (Name.Trim() != name)
+            return;
+
+        if (nameTaken)
         {
-            RejectName($"A tag called '{name}' already exists (names ignore case)");
+            NameError.Show($"A tag called '{name}' already exists (names ignore case)");
             return;
         }
 
@@ -226,13 +229,7 @@ public partial class EditTagViewModel : ObservableObject, IQueryAttributable
     }
 
     // The message has done its job once the user starts changing the name.
-    partial void OnNameChanged(string value) => NameError = null;
-
-    private void RejectName(string message)
-    {
-        NameError = message;
-        NameRequired?.Invoke(this, EventArgs.Empty);
-    }
+    partial void OnNameChanged(string value) => NameError.Clear();
 
     [RelayCommand]
     private async Task CancelAsync()

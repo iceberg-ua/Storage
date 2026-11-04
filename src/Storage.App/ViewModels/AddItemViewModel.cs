@@ -57,12 +57,7 @@ public partial class AddItemViewModel : ObservableObject, IQueryAttributable
     [ObservableProperty]
     private string _name = string.Empty;
 
-    // Shown under the name field after a save without one; null hides it.
-    [ObservableProperty]
-    private string? _nameError;
-
-    /// <summary>Raised when a save is refused for a missing name, so the form can focus the field.</summary>
-    public event EventHandler? NameRequired;
+    public FieldError NameError { get; } = new();
 
     [ObservableProperty]
     private string _description = string.Empty;
@@ -261,7 +256,7 @@ public partial class AddItemViewModel : ObservableObject, IQueryAttributable
     }
 
     // The message has done its job once the user starts typing a name.
-    partial void OnNameChanged(string value) => NameError = null;
+    partial void OnNameChanged(string value) => NameError.Clear();
 
     // Typing filters the tags already in the database down to what is worth offering.
     partial void OnTagInputChanged(string value)
@@ -359,7 +354,8 @@ public partial class AddItemViewModel : ObservableObject, IQueryAttributable
         }
         catch (Exception ex)
         {
-            await Shell.Current.DisplayAlertAsync("Couldn't import photo", ex.Message, "OK");
+            await Shell.Current.DisplayAlertAsync(
+                "Couldn't import photo", $"Try a different image.\n\n{ex.Message}".TrimEnd(), "OK");
         }
         finally
         {
@@ -391,8 +387,7 @@ public partial class AddItemViewModel : ObservableObject, IQueryAttributable
     {
         if (string.IsNullOrWhiteSpace(Name))
         {
-            NameError = "Please enter an item name";
-            NameRequired?.Invoke(this, EventArgs.Empty);
+            NameError.Show("Please enter an item name");
             return;
         }
 
