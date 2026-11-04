@@ -71,10 +71,11 @@ public partial class ItemsViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private async Task NavigateToAddItemAsync()
+    private async Task NavigateToCreateAsync()
     {
-        // Inside a location, new items belong to it by default.
-        var route = Context.CurrentId is int id ? $"additem?locationId={id}" : "additem";
+        // Opens on an item, since this is the items tab; inside a location, whatever is
+        // made goes in it by default.
+        var route = Context.CurrentId is int id ? $"create?kind=item&locationId={id}" : "create?kind=item";
         await Shell.Current.GoToAsync(route);
     }
 
@@ -84,6 +85,6 @@ public partial class ItemsViewModel : ObservableObject
         if (Context.CurrentId is not int id)
             return;
 
-        await Shell.Current.GoToAsync($"addlocation?locationId={id}");
+        await Shell.Current.GoToAsync($"editlocation?locationId={id}");
     }
 }

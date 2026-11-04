@@ -6,9 +6,9 @@ using StorageLocation = Storage.Core.Models.Location;
 
 namespace Storage.App.ViewModels;
 
-// Backs both "add" and "edit" for a location. Shell passes an optional "locationId"
-// query parameter to edit an existing location, or a "parentId" to preselect where a
-// new one goes.
+// Backs both "add" and "edit" for a location. The edit page binds it directly and is
+// pushed with the "locationId" to edit; the create page reaches it through
+// CreateViewModel, which leaves it in add mode and preselects a parent with PreselectParent.
 public partial class AddLocationViewModel : ObservableObject, IQueryAttributable
 {
     private readonly ILocationRepository _locationRepository;
@@ -40,7 +40,8 @@ public partial class AddLocationViewModel : ObservableObject, IQueryAttributable
         _locationRepository = locationRepository;
     }
 
-    // Shell calls this on the page's BindingContext before the page appears.
+    // The edit page's entry point: Shell calls this on its BindingContext with the
+    // "locationId" to edit. The create page does not go through here.
     public void ApplyQueryAttributes(IDictionary<string, object> query)
     {
         if (query.TryGetValue("locationId", out var locationId) &&
@@ -49,15 +50,12 @@ public partial class AddLocationViewModel : ObservableObject, IQueryAttributable
             _locationId = parsedLocationId;
         }
 
-        if (query.TryGetValue("parentId", out var parentId) &&
-            int.TryParse(Convert.ToString(parentId), out var parsedParentId))
-        {
-            _parentId = parsedParentId;
-        }
-
         IsEditMode = _locationId != 0;
         PageTitle = IsEditMode ? "Edit Location" : "Add Location";
     }
+
+    /// <summary>The parent a new location starts under. Applied on the first load.</summary>
+    public void PreselectParent(int? parentId) => _parentId = parentId;
 
     [RelayCommand]
     private async Task LoadAsync()
@@ -148,14 +146,14 @@ public partial class AddLocationViewModel : ObservableObject, IQueryAttributable
         await Shell.Current.GoToAsync("..");
     }
 
-    // Shortcut: open the add-item form with this location already selected.
+    // Shortcut: open the create screen on an item, with this location already selected.
     [RelayCommand]
     private async Task AddItemHereAsync()
     {
         if (!IsEditMode)
             return;
 
-        await Shell.Current.GoToAsync($"additem?locationId={_locationId}");
+        await Shell.Current.GoToAsync($"create?kind=item&locationId={_locationId}");
     }
 
     [RelayCommand]

@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!-- The location's fields, without Save or Cancel: shared by the edit page and the
+     create page, which each put their own buttons under it. Bound to an
+     AddLocationViewModel. -->
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:Storage.App.ViewModels"
+             x:Class="Storage.App.Views.LocationForm"
+             x:DataType="vm:AddLocationViewModel">
+
+    <VerticalStackLayout Spacing="15">
+
+        <Label Text="Location Name" FontSize="16" />
+        <Entry Text="{Binding Name}"
+               Placeholder="Enter location name (e.g., 'Garage', 'Kitchen')"
+               MaxLength="100" />
+
+        <Label Text="Description (Optional)" FontSize="16" Margin="0,10,0,0" />
+        <Editor Text="{Binding Description}"
+                Placeholder="What's here, or how to find it"
+                HeightRequest="100"
+                MaxLength="1000" />
+
+        <Label Text="Parent Location (Optional)" FontSize="16" Margin="0,10,0,0" />
+        <Label Text="Select a parent to create a nested location hierarchy"
+               FontSize="12"
+               TextColor="{AppThemeBinding Light={StaticResource Gray500}, Dark={StaticResource Gray300}}"
+               Margin="0,0,0,5" />
+        <Picker ItemsSource="{Binding AvailableParents}"
+                SelectedItem="{Binding ParentLocation}"
+                ItemDisplayBinding="{Binding Name}"
+                Title="Select parent location" />
+
+    </VerticalStackLayout>
+
+</ContentView>

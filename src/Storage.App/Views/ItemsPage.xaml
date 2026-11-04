@@ -31,9 +31,9 @@
                     ToolTipProperties.Text="Edit location" />
             <Button Text="➕"
                     Style="{StaticResource IconButton}"
-                    Command="{Binding NavigateToAddItemCommand}"
-                    SemanticProperties.Description="Add item"
-                    ToolTipProperties.Text="Add item" />
+                    Command="{Binding NavigateToCreateCommand}"
+                    SemanticProperties.Description="Add an item or a location"
+                    ToolTipProperties.Text="Add" />
         </HorizontalStackLayout>
 
         <!-- Its own row: a path three levels deep needs the full width. -->

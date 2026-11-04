@@ -1,0 +1,237 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!-- The item's fields, without Save or Cancel: shared by the edit page and the create
+     page, which each put their own buttons under it. Bound to an AddItemViewModel. -->
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:Storage.App.ViewModels"
+             xmlns:controls="clr-namespace:Storage.App.Controls"
+             xmlns:models="clr-namespace:Storage.Core.Models;assembly=Storage.Core"
+             x:Class="Storage.App.Views.ItemForm"
+             x:DataType="vm:AddItemViewModel">
+
+    <VerticalStackLayout Spacing="15">
+
+        <!-- Photos, in the order they will be shown; the first is the primary,
+             the one the item list uses as its thumbnail. The strip scrolls
+             sideways because ten thumbnails do not fit across a phone. -->
+        <Label Text="Photos" FontSize="16" />
+
+        <ScrollView Orientation="Horizontal" HorizontalScrollBarVisibility="Never">
+            <HorizontalStackLayout Spacing="10">
+
+                <!-- Always first in the strip. Taking a photo is what this
+                     section is for, and the shutter should not drift further
+                     from the thumb with every photo already added. It doubles
+                     as the empty state: with no photos, this tile is the strip. -->
+                <Border WidthRequest="110"
+                        HeightRequest="110"
+                        Padding="0"
+                        IsVisible="{Binding CanAddMorePhotos}"
+                        BackgroundColor="{AppThemeBinding Light={StaticResource Gray100}, Dark={StaticResource Gray600}}"
+                        Stroke="{AppThemeBinding Light={StaticResource Gray300}, Dark={StaticResource Gray500}}">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="10" />
+                    </Border.StrokeShape>
+                    <Border.GestureRecognizers>
+                        <TapGestureRecognizer Command="{Binding TakePhotoCommand}" />
+                    </Border.GestureRecognizers>
+                    <Label Text="📷"
+                           FontSize="36"
+                           HorizontalOptions="Center"
+                           VerticalOptions="Center"
+                           SemanticProperties.Description="Take a photo" />
+                </Border>
+
+                <HorizontalStackLayout BindableLayout.ItemsSource="{Binding Photos}" Spacing="10">
+                    <BindableLayout.ItemTemplate>
+                        <DataTemplate x:DataType="vm:PhotoSlot">
+                            <Grid WidthRequest="110" HeightRequest="110">
+                                <Border Padding="0" StrokeThickness="0">
+                                    <Border.StrokeShape>
+                                        <RoundRectangle CornerRadius="10" />
+                                    </Border.StrokeShape>
+                                    <Image Source="{Binding Source}" Aspect="AspectFill" />
+                                </Border>
+
+                                <!-- Filled on the photo the lists show, hollow on
+                                     the rest; tapping one moves that photo to the
+                                     front, which is what being primary is. Both
+                                     it and the remove button carry their own
+                                     scrim, since a photo can be any colour. -->
+                                <Border WidthRequest="30"
+                                        HeightRequest="30"
+                                        Margin="4"
+                                        Padding="0"
+                                        VerticalOptions="End"
+                                        HorizontalOptions="Start"
+                                        StrokeThickness="0"
+                                        BackgroundColor="#66000000">
+                                    <Border.StrokeShape>
+                                        <RoundRectangle CornerRadius="15" />
+                                    </Border.StrokeShape>
+                                    <Border.GestureRecognizers>
+                                        <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:AddItemViewModel}}, Path=MakePrimaryCommand}"
+                                                              CommandParameter="{Binding .}" />
+                                    </Border.GestureRecognizers>
+                                    <Label Text="{Binding HeartGlyph}"
+                                           FontSize="16"
+                                           TextColor="White"
+                                           HorizontalOptions="Center"
+                                           VerticalOptions="Center"
+                                           SemanticProperties.Description="Make this the primary photo">
+                                        <Label.Triggers>
+                                            <DataTrigger TargetType="Label" Binding="{Binding IsPrimary}" Value="True">
+                                                <Setter Property="TextColor" Value="#FF4D6A" />
+                                            </DataTrigger>
+                                        </Label.Triggers>
+                                    </Label>
+                                </Border>
+
+                                <Border WidthRequest="30"
+                                        HeightRequest="30"
+                                        Margin="4"
+                                        Padding="0"
+                                        VerticalOptions="Start"
+                                        HorizontalOptions="End"
+                                        StrokeThickness="0"
+                                        BackgroundColor="#66000000">
+                                    <Border.StrokeShape>
+                                        <RoundRectangle CornerRadius="15" />
+                                    </Border.StrokeShape>
+                                    <Border.GestureRecognizers>
+                                        <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:AddItemViewModel}}, Path=RemovePhotoCommand}"
+                                                              CommandParameter="{Binding .}" />
+                                    </Border.GestureRecognizers>
+                                    <Label Text="✕"
+                                           FontSize="14"
+                                           TextColor="White"
+                                           HorizontalOptions="Center"
+                                           VerticalOptions="Center"
+                                           SemanticProperties.Description="Remove this photo" />
+                                </Border>
+                            </Grid>
+                        </DataTemplate>
+                    </BindableLayout.ItemTemplate>
+                </HorizontalStackLayout>
+            </HorizontalStackLayout>
+        </ScrollView>
+
+        <HorizontalStackLayout Spacing="10">
+            <Button Text="Take photo"
+                    Command="{Binding TakePhotoCommand}"
+                    IsEnabled="{Binding CanAddMorePhotos}" />
+            <Button Text="Choose from gallery"
+                    Command="{Binding ChooseFromGalleryCommand}"
+                    IsEnabled="{Binding CanAddMorePhotos}"
+                    BackgroundColor="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource Gray600}}"
+                    TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}" />
+        </HorizontalStackLayout>
+
+        <Label Text="{Binding PhotoLimitMessage}"
+               FontSize="12"
+               IsVisible="{Binding IsAtPhotoLimit}"
+               TextColor="{AppThemeBinding Light={StaticResource Gray500}, Dark={StaticResource Gray400}}" />
+
+        <Label Text="Item Name" FontSize="16" Margin="0,10,0,0" />
+        <Entry Text="{Binding Name}"
+               Placeholder="Enter item name"
+               MaxLength="200" />
+
+        <Label Text="Quantity" FontSize="16" Margin="0,10,0,0" />
+        <controls:NumericStepper Value="{Binding Quantity}" Minimum="1" />
+
+        <Label Text="Location (Optional)" FontSize="16" Margin="0,10,0,0" />
+        <Picker ItemsSource="{Binding Locations}"
+                SelectedItem="{Binding SelectedLocation}"
+                ItemDisplayBinding="{Binding Name}"
+                Title="Select a location" />
+
+        <Label Text="Tags (Optional)" FontSize="16" Margin="0,10,0,0" />
+
+        <!-- Assigned tags. FlexLayout wraps onto as many rows as it needs;
+             tapping a chip removes it. -->
+        <FlexLayout BindableLayout.ItemsSource="{Binding ItemTags}"
+                    Wrap="Wrap"
+                    Direction="Row"
+                    IsVisible="{Binding ItemTags.Count, Converter={StaticResource CountToBoolConverter}}">
+            <BindableLayout.ItemTemplate>
+                <DataTemplate x:DataType="models:Tag">
+                    <Border Margin="0,0,8,8"
+                            Padding="12,6"
+                            StrokeThickness="0"
+                            BackgroundColor="{Binding Color, Converter={StaticResource HexToColorConverter}}">
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="16" />
+                        </Border.StrokeShape>
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:AddItemViewModel}}, Path=RemoveTagCommand}"
+                                                  CommandParameter="{Binding .}" />
+                        </Border.GestureRecognizers>
+                        <!-- Text follows the background: a custom colour can be
+                             any brightness, so white is not always readable. -->
+                        <Label Text="{Binding Name, StringFormat='{0}  ✕'}"
+                               FontSize="14"
+                               TextColor="{Binding Color, Converter={StaticResource HexToTextColorConverter}}" />
+                    </Border>
+                </DataTemplate>
+            </BindableLayout.ItemTemplate>
+        </FlexLayout>
+
+        <Entry Text="{Binding TagInput}"
+               Placeholder="Add a tag"
+               MaxLength="50"
+               ReturnType="Done"
+               IsEnabled="{Binding CanAddMoreTags}"
+               ReturnCommand="{Binding AddTagCommand}" />
+
+        <Label Text="{Binding TagLimitMessage}"
+               FontSize="12"
+               IsVisible="{Binding IsAtTagLimit}"
+               TextColor="{AppThemeBinding Light={StaticResource Gray500}, Dark={StaticResource Gray400}}" />
+
+        <!-- Autocomplete against tags already in use. A VerticalStackLayout,
+             not a CollectionView: one nested inside this page's ScrollView
+             cannot measure itself and collapses. -->
+        <VerticalStackLayout BindableLayout.ItemsSource="{Binding TagSuggestions}"
+                             Spacing="1"
+                             IsVisible="{Binding HasTagSuggestions}">
+            <BindableLayout.ItemTemplate>
+                <DataTemplate x:DataType="models:Tag">
+                    <Border Padding="12,10"
+                            StrokeThickness="0"
+                            BackgroundColor="{AppThemeBinding Light={StaticResource Gray100}, Dark={StaticResource Gray900}}">
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:AddItemViewModel}}, Path=SelectSuggestionCommand}"
+                                                  CommandParameter="{Binding .}" />
+                        </Border.GestureRecognizers>
+                        <HorizontalStackLayout Spacing="8">
+                            <!-- Its colour, so a suggestion is recognisable as
+                                 the chip it will become. -->
+                            <Border WidthRequest="14"
+                                    HeightRequest="14"
+                                    Padding="0"
+                                    StrokeThickness="0"
+                                    VerticalOptions="Center"
+                                    BackgroundColor="{Binding Color, Converter={StaticResource HexToColorConverter}}">
+                                <Border.StrokeShape>
+                                    <RoundRectangle CornerRadius="7" />
+                                </Border.StrokeShape>
+                            </Border>
+                            <Label Text="{Binding Name}"
+                                   FontSize="14"
+                                   TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}" />
+                        </HorizontalStackLayout>
+                    </Border>
+                </DataTemplate>
+            </BindableLayout.ItemTemplate>
+        </VerticalStackLayout>
+
+        <Label Text="Description (Optional)" FontSize="16" Margin="0,10,0,0" />
+        <Editor Text="{Binding Description}"
+                Placeholder="Enter description"
+                HeightRequest="100"
+                MaxLength="1000" />
+
+    </VerticalStackLayout>
+
+</ContentView>
