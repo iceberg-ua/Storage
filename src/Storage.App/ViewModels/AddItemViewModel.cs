@@ -9,9 +9,9 @@ using StorageLocation = Storage.Core.Models.Location;
 
 namespace Storage.App.ViewModels;
 
-// Backs both "add" and "edit" for an item: the edit page binds it directly, the create
-// page through CreateViewModel. Shell passes an optional "itemId" query parameter to edit
-// an existing item, and an optional "locationId" to pre-select the location when adding.
+// Backs both "add" and "edit" for an item. The edit page binds it directly and is pushed
+// with the "itemId" to edit; the create page reaches it through CreateViewModel, which
+// leaves it in add mode and preselects a location with PreselectLocation.
 public partial class AddItemViewModel : ObservableObject, IQueryAttributable
 {
     private const int MaxSuggestions = 5;
@@ -127,7 +127,9 @@ public partial class AddItemViewModel : ObservableObject, IQueryAttributable
         ItemTags = [];
     }
 
-    // Shell calls this on the page's BindingContext before the page appears.
+    // The edit page's entry point: Shell calls this on its BindingContext with the
+    // "itemId" to edit, and again when the camera pops back with a "photoFileName".
+    // The create page does not go through here; it uses the two methods below.
     public void ApplyQueryAttributes(IDictionary<string, object> query)
     {
         if (query.TryGetValue("itemId", out var itemId) &&
@@ -136,23 +138,24 @@ public partial class AddItemViewModel : ObservableObject, IQueryAttributable
             _itemId = parsedItemId;
         }
 
-        if (query.TryGetValue("locationId", out var locationId) &&
-            int.TryParse(Convert.ToString(locationId), out var parsedLocationId))
-        {
-            _preselectedLocationId = parsedLocationId;
-        }
-
-        // Handed back by the camera page. Applied in LoadAsync so the add can be
-        // awaited — this method can't be.
         if (query.TryGetValue("photoFileName", out var photoFileName) &&
             Convert.ToString(photoFileName) is { Length: > 0 } capturedFileName)
         {
-            _capturedPhotoFileName = capturedFileName;
+            AcceptCapturedPhoto(capturedFileName);
         }
 
         IsEditMode = _itemId != 0;
         PageTitle = IsEditMode ? "Edit Item" : "Add Item";
     }
+
+    /// <summary>The location a new item starts in. Applied on the first load.</summary>
+    public void PreselectLocation(int? locationId) => _preselectedLocationId = locationId;
+
+    /// <summary>
+    /// A photo the camera page handed back. Added on the next load rather than here, so
+    /// the add can be awaited.
+    /// </summary>
+    public void AcceptCapturedPhoto(string fileName) => _capturedPhotoFileName = fileName;
 
     [RelayCommand]
     private async Task LoadAsync()

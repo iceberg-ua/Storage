@@ -107,7 +107,7 @@ public partial class ItemDetailViewModel : ObservableObject, IQueryAttributable
     [RelayCommand]
     private async Task EditAsync()
     {
-        await Shell.Current.GoToAsync($"additem?itemId={_itemId}");
+        await Shell.Current.GoToAsync($"edititem?itemId={_itemId}");
     }
 
     [RelayCommand]

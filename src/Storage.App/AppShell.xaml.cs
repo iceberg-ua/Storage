@@ -17,17 +17,18 @@ public partial class AppShell : Shell
 		// Everything new is made on "create", pushed with a "kind" and an optional
 		// "locationId". The two below are the edit forms, pushed with the id to edit.
 		Routing.RegisterRoute("create", typeof(CreatePage));
-		Routing.RegisterRoute("additem", typeof(AddItemPage));
-		Routing.RegisterRoute("addlocation", typeof(AddLocationPage));
+		Routing.RegisterRoute("edititem", typeof(AddItemPage));
+		Routing.RegisterRoute("editlocation", typeof(AddLocationPage));
 
 		// Pushed with an "itemId". Tapping an item in a list opens this read-only view;
-		// the edit form is reached from here, so "additem" is never the tap target.
+		// the edit form is reached from here, so "edititem" is never the tap target.
 		Routing.RegisterRoute("itemdetail", typeof(ItemDetailPage));
 
 		// Pushed with an optional "tagId" to edit an existing tag instead of adding one.
 		Routing.RegisterRoute("edittag", typeof(EditTagPage));
 
-		// Pops back with a "photoFileName" for the edit page to pick up.
+		// Pops back with a "photoFileName" for the item form to pick up, on the item
+		// edit page or the create page.
 		Routing.RegisterRoute("camera", typeof(CameraPage));
 	}
 

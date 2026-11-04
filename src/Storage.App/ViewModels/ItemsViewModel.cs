@@ -85,6 +85,6 @@ public partial class ItemsViewModel : ObservableObject
         if (Context.CurrentId is not int id)
             return;
 
-        await Shell.Current.GoToAsync($"addlocation?locationId={id}");
+        await Shell.Current.GoToAsync($"editlocation?locationId={id}");
     }
 }
