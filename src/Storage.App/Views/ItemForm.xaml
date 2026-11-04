@@ -133,9 +133,13 @@
                TextColor="{AppThemeBinding Light={StaticResource Gray500}, Dark={StaticResource Gray400}}" />
 
         <Label Text="Item Name" FontSize="16" Margin="0,10,0,0" />
-        <Entry Text="{Binding Name}"
-               Placeholder="Enter item name"
-               MaxLength="200" />
+        <VerticalStackLayout Spacing="4">
+            <Entry x:Name="NameEntry"
+                   Text="{Binding Name}"
+                   Placeholder="Enter item name"
+                   MaxLength="200" />
+            <Label Text="{Binding NameError}" Style="{StaticResource FieldError}" />
+        </VerticalStackLayout>
 
         <Label Text="Quantity" FontSize="16" Margin="0,10,0,0" />
         <controls:NumericStepper Value="{Binding Quantity}" Minimum="1" />

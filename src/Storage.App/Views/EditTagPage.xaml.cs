@@ -11,6 +11,9 @@ public partial class EditTagPage : ContentPage
         InitializeComponent();
         _viewModel = viewModel;
         BindingContext = _viewModel;
+
+        // Page and view model live and die together, so there is nothing to unsubscribe.
+        _viewModel.NameRequired += (_, _) => NameEntry.Focus();
     }
 
     protected override async void OnAppearing()

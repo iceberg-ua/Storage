@@ -20,6 +20,13 @@ public partial class AddLocationViewModel : ObservableObject, IQueryAttributable
     [ObservableProperty]
     private string _name = string.Empty;
 
+    // Shown under the name field after a save without one; null hides it.
+    [ObservableProperty]
+    private string? _nameError;
+
+    /// <summary>Raised when a save is refused for a missing name, so the form can focus the field.</summary>
+    public event EventHandler? NameRequired;
+
     [ObservableProperty]
     private string _description = string.Empty;
 
@@ -81,7 +88,7 @@ public partial class AddLocationViewModel : ObservableObject, IQueryAttributable
             var location = await _locationRepository.GetByIdAsync(_locationId);
             if (location is null)
             {
-                await Shell.Current.DisplayAlertAsync("Error", "This location no longer exists", "OK");
+                await Shell.Current.DisplayAlertAsync(null, "This location no longer exists", "OK");
                 await Shell.Current.GoToAsync("..");
                 return;
             }
@@ -96,12 +103,16 @@ public partial class AddLocationViewModel : ObservableObject, IQueryAttributable
         }
     }
 
+    // The message has done its job once the user starts typing a name.
+    partial void OnNameChanged(string value) => NameError = null;
+
     [RelayCommand]
     private async Task SaveLocationAsync()
     {
         if (string.IsNullOrWhiteSpace(Name))
         {
-            await Shell.Current.DisplayAlertAsync("Error", "Please enter a location name", "OK");
+            NameError = "Please enter a location name";
+            NameRequired?.Invoke(this, EventArgs.Empty);
             return;
         }
 
@@ -112,7 +123,7 @@ public partial class AddLocationViewModel : ObservableObject, IQueryAttributable
             var location = await _locationRepository.GetByIdAsync(_locationId);
             if (location is null)
             {
-                await Shell.Current.DisplayAlertAsync("Error", "This location no longer exists", "OK");
+                await Shell.Current.DisplayAlertAsync(null, "This location no longer exists", "OK");
                 await Shell.Current.GoToAsync("..");
                 return;
             }
@@ -129,7 +140,7 @@ public partial class AddLocationViewModel : ObservableObject, IQueryAttributable
             {
                 // The picker hides descendants, but the tree may have changed since it loaded.
                 await Shell.Current.DisplayAlertAsync(
-                    "Error", $"{parent.Name} is inside {Name.Trim()}, so it can't be its parent", "OK");
+                    "Can't use that parent", $"{parent.Name} is inside {Name.Trim()}, so it can't be its parent", "OK");
                 return;
             }
         }

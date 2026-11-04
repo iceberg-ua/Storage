@@ -90,7 +90,7 @@ public partial class ItemDetailViewModel : ObservableObject, IQueryAttributable
         var item = await _itemRepository.GetByIdAsync(_itemId);
         if (item is null)
         {
-            await Shell.Current.DisplayAlertAsync("Error", "This item no longer exists", "OK");
+            await Shell.Current.DisplayAlertAsync(null, "This item no longer exists", "OK");
             await Shell.Current.GoToAsync("..");
             return;
         }

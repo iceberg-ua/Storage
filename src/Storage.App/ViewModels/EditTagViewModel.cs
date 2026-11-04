@@ -27,6 +27,13 @@ public partial class EditTagViewModel : ObservableObject, IQueryAttributable
     [ObservableProperty]
     private string _name = string.Empty;
 
+    // Shown under the name field when a save is refused over the name; null hides it.
+    [ObservableProperty]
+    private string? _nameError;
+
+    /// <summary>Raised when a save is refused over the name, so the page can focus the field.</summary>
+    public event EventHandler? NameRequired;
+
     [ObservableProperty]
     private ObservableCollection<PaletteSwatch> _swatches = [];
 
@@ -89,7 +96,7 @@ public partial class EditTagViewModel : ObservableObject, IQueryAttributable
             var tag = await _tagRepository.GetByIdAsync(_tagId);
             if (tag is null)
             {
-                await Shell.Current.DisplayAlertAsync("Error", "This tag no longer exists", "OK");
+                await Shell.Current.DisplayAlertAsync(null, "This tag no longer exists", "OK");
                 await Shell.Current.GoToAsync("..");
                 return;
             }
@@ -183,7 +190,7 @@ public partial class EditTagViewModel : ObservableObject, IQueryAttributable
 
         if (string.IsNullOrWhiteSpace(name))
         {
-            await Shell.Current.DisplayAlertAsync("Error", "Please enter a tag name", "OK");
+            RejectName("Please enter a tag name");
             return;
         }
 
@@ -191,10 +198,7 @@ public partial class EditTagViewModel : ObservableObject, IQueryAttributable
         // unique index as a SqliteException. Editing keeps its own name.
         if (await _tagRepository.NameExistsAsync(name, IsEditMode ? _tagId : null))
         {
-            await Shell.Current.DisplayAlertAsync(
-                "Name already used",
-                $"A tag called '{name}' already exists. Tag names are matched without regard to case.",
-                "OK");
+            RejectName($"A tag called '{name}' already exists (names ignore case)");
             return;
         }
 
@@ -203,7 +207,7 @@ public partial class EditTagViewModel : ObservableObject, IQueryAttributable
             var tag = await _tagRepository.GetByIdAsync(_tagId);
             if (tag is null)
             {
-                await Shell.Current.DisplayAlertAsync("Error", "This tag no longer exists", "OK");
+                await Shell.Current.DisplayAlertAsync(null, "This tag no longer exists", "OK");
                 await Shell.Current.GoToAsync("..");
                 return;
             }
@@ -219,6 +223,15 @@ public partial class EditTagViewModel : ObservableObject, IQueryAttributable
         }
 
         await Shell.Current.GoToAsync("..");
+    }
+
+    // The message has done its job once the user starts changing the name.
+    partial void OnNameChanged(string value) => NameError = null;
+
+    private void RejectName(string message)
+    {
+        NameError = message;
+        NameRequired?.Invoke(this, EventArgs.Empty);
     }
 
     [RelayCommand]

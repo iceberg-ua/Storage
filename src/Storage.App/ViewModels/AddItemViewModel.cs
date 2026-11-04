@@ -57,6 +57,13 @@ public partial class AddItemViewModel : ObservableObject, IQueryAttributable
     [ObservableProperty]
     private string _name = string.Empty;
 
+    // Shown under the name field after a save without one; null hides it.
+    [ObservableProperty]
+    private string? _nameError;
+
+    /// <summary>Raised when a save is refused for a missing name, so the form can focus the field.</summary>
+    public event EventHandler? NameRequired;
+
     [ObservableProperty]
     private string _description = string.Empty;
 
@@ -186,7 +193,7 @@ public partial class AddItemViewModel : ObservableObject, IQueryAttributable
             var item = await _itemRepository.GetByIdAsync(_itemId);
             if (item is null)
             {
-                await Shell.Current.DisplayAlertAsync("Error", "This item no longer exists", "OK");
+                await Shell.Current.DisplayAlertAsync(null, "This item no longer exists", "OK");
                 await Shell.Current.GoToAsync("..");
                 return;
             }
@@ -252,6 +259,9 @@ public partial class AddItemViewModel : ObservableObject, IQueryAttributable
         for (var i = 0; i < Photos.Count; i++)
             Photos[i].IsPrimary = i == 0;
     }
+
+    // The message has done its job once the user starts typing a name.
+    partial void OnNameChanged(string value) => NameError = null;
 
     // Typing filters the tags already in the database down to what is worth offering.
     partial void OnTagInputChanged(string value)
@@ -349,7 +359,7 @@ public partial class AddItemViewModel : ObservableObject, IQueryAttributable
         }
         catch (Exception ex)
         {
-            await Shell.Current.DisplayAlertAsync("Error", $"That image could not be imported.\n\n{ex.Message}", "OK");
+            await Shell.Current.DisplayAlertAsync("Couldn't import photo", ex.Message, "OK");
         }
         finally
         {
@@ -381,7 +391,8 @@ public partial class AddItemViewModel : ObservableObject, IQueryAttributable
     {
         if (string.IsNullOrWhiteSpace(Name))
         {
-            await Shell.Current.DisplayAlertAsync("Error", "Please enter an item name", "OK");
+            NameError = "Please enter an item name";
+            NameRequired?.Invoke(this, EventArgs.Empty);
             return;
         }
 
@@ -403,7 +414,7 @@ public partial class AddItemViewModel : ObservableObject, IQueryAttributable
             var item = await _itemRepository.GetByIdAsync(_itemId);
             if (item is null)
             {
-                await Shell.Current.DisplayAlertAsync("Error", "This item no longer exists", "OK");
+                await Shell.Current.DisplayAlertAsync(null, "This item no longer exists", "OK");
                 await Shell.Current.GoToAsync("..");
                 return;
             }
