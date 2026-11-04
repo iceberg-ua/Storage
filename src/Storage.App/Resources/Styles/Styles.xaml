@@ -195,6 +195,21 @@
         <Setter Property="HorizontalTextAlignment" Value="Center" />
     </Style>
 
+    <!-- The message under a field that failed validation. Hidden while it has no text,
+         so a form binds Text and nothing else. Paired with ViewModels.FieldError. -->
+    <Style TargetType="Label" x:Key="FieldError">
+        <!-- A keyed style replaces the implicit Label one rather than adding to it,
+             so the font has to be restated. -->
+        <Setter Property="FontFamily" Value="OpenSansRegular" />
+        <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}" />
+        <Setter Property="FontSize" Value="13" />
+        <Style.Triggers>
+            <Trigger TargetType="Label" Property="Text" Value="{x:Null}">
+                <Setter Property="IsVisible" Value="False" />
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
     <Style TargetType="Picker">
         <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}" />
         <Setter Property="TitleColor" Value="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource Gray200}}" />

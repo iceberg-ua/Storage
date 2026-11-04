@@ -12,6 +12,10 @@
     <Color x:Key="SecondaryDarkText">#5FA8A8</Color>
     <Color x:Key="Tertiary">#084A4A</Color>
 
+    <!-- Validation messages. The dark-theme shade is lighter so it reads on a dark page. -->
+    <Color x:Key="Danger">#B3261E</Color>
+    <Color x:Key="DangerDark">#F2B8B5</Color>
+
     <Color x:Key="White">White</Color>
     <Color x:Key="Black">Black</Color>
     <Color x:Key="Magenta">#D600AA</Color>

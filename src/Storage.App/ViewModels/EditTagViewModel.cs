@@ -27,6 +27,8 @@ public partial class EditTagViewModel : ObservableObject, IQueryAttributable
     [ObservableProperty]
     private string _name = string.Empty;
 
+    public FieldError NameError { get; } = new();
+
     [ObservableProperty]
     private ObservableCollection<PaletteSwatch> _swatches = [];
 
@@ -89,7 +91,7 @@ public partial class EditTagViewModel : ObservableObject, IQueryAttributable
             var tag = await _tagRepository.GetByIdAsync(_tagId);
             if (tag is null)
             {
-                await Shell.Current.DisplayAlertAsync("Error", "This tag no longer exists", "OK");
+                await Shell.Current.DisplayAlertAsync(null, "This tag no longer exists", "OK");
                 await Shell.Current.GoToAsync("..");
                 return;
             }
@@ -183,18 +185,23 @@ public partial class EditTagViewModel : ObservableObject, IQueryAttributable
 
         if (string.IsNullOrWhiteSpace(name))
         {
-            await Shell.Current.DisplayAlertAsync("Error", "Please enter a tag name", "OK");
+            NameError.Show("Please enter a tag name");
             return;
         }
 
         // Checked here so a clash reads as a message rather than surfacing from the
         // unique index as a SqliteException. Editing keeps its own name.
-        if (await _tagRepository.NameExistsAsync(name, IsEditMode ? _tagId : null))
+        var nameTaken = await _tagRepository.NameExistsAsync(name, IsEditMode ? _tagId : null);
+
+        // The user may have kept typing while that ran. The answer is about a name that
+        // is no longer in the field, so it can neither be shown nor relied on: stop, and
+        // let the next Save check what is there now.
+        if (Name.Trim() != name)
+            return;
+
+        if (nameTaken)
         {
-            await Shell.Current.DisplayAlertAsync(
-                "Name already used",
-                $"A tag called '{name}' already exists. Tag names are matched without regard to case.",
-                "OK");
+            NameError.Show($"A tag called '{name}' already exists (names ignore case)");
             return;
         }
 
@@ -203,7 +210,7 @@ public partial class EditTagViewModel : ObservableObject, IQueryAttributable
             var tag = await _tagRepository.GetByIdAsync(_tagId);
             if (tag is null)
             {
-                await Shell.Current.DisplayAlertAsync("Error", "This tag no longer exists", "OK");
+                await Shell.Current.DisplayAlertAsync(null, "This tag no longer exists", "OK");
                 await Shell.Current.GoToAsync("..");
                 return;
             }
@@ -220,6 +227,9 @@ public partial class EditTagViewModel : ObservableObject, IQueryAttributable
 
         await Shell.Current.GoToAsync("..");
     }
+
+    // The message has done its job once the user starts changing the name.
+    partial void OnNameChanged(string value) => NameError.Clear();
 
     [RelayCommand]
     private async Task CancelAsync()
