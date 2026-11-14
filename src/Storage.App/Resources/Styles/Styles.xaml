@@ -24,24 +24,27 @@
 
     <!-- What every button shares. Keyed so the variants below can build on it: a keyed
          style replaces the implicit one instead of adding to it, so without a shared
-         base each variant would have to restate the font, sizes and disabled state. -->
+         base each variant would have to restate the font, sizes and disabled state.
+         It sets no colours: PrimaryButton and the variants below do. -->
     <Style TargetType="Button" x:Key="BaseButton">
         <Setter Property="FontFamily" Value="JakartaBold"/>
         <Setter Property="FontSize" Value="16"/>
         <Setter Property="BorderWidth" Value="0"/>
         <Setter Property="CornerRadius" Value="26"/>
         <Setter Property="Padding" Value="20,0"/>
-        <Setter Property="HeightRequest" Value="52"/>
-        <Setter Property="MinimumHeightRequest" Value="44"/>
+        <!-- A minimum, not a fixed height: at a large font scale, or when the label
+             wraps, the button grows instead of clipping its text. -->
+        <Setter Property="MinimumHeightRequest" Value="52"/>
         <Setter Property="MinimumWidthRequest" Value="44"/>
         <Setter Property="VisualStateManager.VisualStateGroups">
             <VisualStateGroupList>
                 <VisualStateGroup x:Name="CommonStates">
                     <VisualState x:Name="Normal" />
+                    <!-- Dimmed rather than repainted, so every variant (filled, white,
+                         text-only, segment) stays recognisably itself when disabled. -->
                     <VisualState x:Name="Disabled">
                         <VisualState.Setters>
-                            <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource InkMuted}, Dark={StaticResource InkMutedDark}}" />
-                            <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource SurfaceSunken}, Dark={StaticResource SurfaceSunkenDark}}" />
+                            <Setter Property="Opacity" Value="0.4" />
                         </VisualState.Setters>
                     </VisualState>
                     <VisualState x:Name="PointerOver" />
@@ -50,11 +53,14 @@
         </Setter>
     </Style>
 
-    <!-- The default is the primary action: an accent pill. One per screen. -->
-    <Style TargetType="Button" BasedOn="{StaticResource BaseButton}">
-        <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource OnAccent}, Dark={StaticResource OnAccentDark}}" />
-        <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource AccentDark}}" />
+    <!-- The primary action: an accent pill. One per screen. Keyed as well as implicit,
+         so page-level styles (segments, overlay buttons) can build on it. -->
+    <Style TargetType="Button" x:Key="PrimaryButton" BasedOn="{StaticResource BaseButton}">
+        <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource PrimaryDarkText}}" />
+        <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
     </Style>
+
+    <Style TargetType="Button" BasedOn="{StaticResource PrimaryButton}" />
 
     <!-- A white pill beside the primary one: Move, Cancel, Sub-place. -->
     <Style TargetType="Button" x:Key="SecondaryButton" BasedOn="{StaticResource BaseButton}">
@@ -67,26 +73,26 @@
     <!-- Ink-filled: the main action on a read-only screen (Edit) and header actions
          (New place, New tag), so it does not compete with the accent Snap button. -->
     <Style TargetType="Button" x:Key="StrongButton" BasedOn="{StaticResource BaseButton}">
-        <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource OnStrong}, Dark={StaticResource OnStrongDark}}" />
-        <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource Strong}, Dark={StaticResource StrongDark}}" />
+        <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource Ink}}" />
+        <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
     </Style>
 
     <!-- Soft accent fill for in-card actions such as "Add item" on Edit place. -->
-    <Style TargetType="Button" x:Key="SoftAccentButton" BasedOn="{StaticResource BaseButton}">
-        <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource OnAccentSoft}, Dark={StaticResource OnAccentSoftDark}}" />
-        <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource AccentSoft}, Dark={StaticResource AccentSoftDark}}" />
+    <Style TargetType="Button" x:Key="SoftPrimaryButton" BasedOn="{StaticResource BaseButton}">
+        <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource OnPrimarySoft}, Dark={StaticResource OnPrimarySoftDark}}" />
+        <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource PrimarySoft}, Dark={StaticResource PrimarySoftDark}}" />
         <Setter Property="FontSize" Value="14"/>
-        <Setter Property="HeightRequest" Value="44"/>
+        <Setter Property="MinimumHeightRequest" Value="44"/>
         <Setter Property="CornerRadius" Value="22"/>
         <Setter Property="Padding" Value="16,0"/>
     </Style>
 
     <!-- Text-only, for actions that sit in the flow of a page: "See all", "Clear". -->
     <Style TargetType="Button" x:Key="TextButton" BasedOn="{StaticResource BaseButton}">
-        <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource AccentDark}}" />
+        <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
         <Setter Property="BackgroundColor" Value="Transparent" />
         <Setter Property="FontSize" Value="14"/>
-        <Setter Property="HeightRequest" Value="44"/>
+        <Setter Property="MinimumHeightRequest" Value="44"/>
         <Setter Property="Padding" Value="4,0"/>
     </Style>
 
@@ -96,30 +102,42 @@
         <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}" />
     </Style>
 
-    <!-- Icon-only round button on a white disc: back, search, edit, more. Always pair
-         with SemanticProperties.Description, since the glyph alone tells a screen
-         reader nothing. -->
-    <Style TargetType="Button" x:Key="IconButton" BasedOn="{StaticResource BaseButton}">
+    <!-- Icon-only action button on the screens that are not redesigned yet. Left as it
+         was so those headers keep their layout; RoundIconButton replaces it per screen.
+         Always pair with SemanticProperties.Description, since the glyph alone tells a
+         screen reader nothing. -->
+    <Style TargetType="Button" x:Key="IconButton">
+        <Setter Property="FontSize" Value="20" />
+        <Setter Property="WidthRequest" Value="52" />
+        <Setter Property="HeightRequest" Value="44" />
+        <Setter Property="Padding" Value="0" />
+    </Style>
+
+    <!-- Icon-only round button on a white disc: back, search, edit, more. Same
+         SemanticProperties.Description rule as IconButton. -->
+    <Style TargetType="Button" x:Key="RoundIconButton" BasedOn="{StaticResource BaseButton}">
         <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
         <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}" />
         <Setter Property="FontSize" Value="18" />
         <Setter Property="WidthRequest" Value="44" />
         <Setter Property="HeightRequest" Value="44" />
+        <Setter Property="MinimumHeightRequest" Value="44" />
         <Setter Property="CornerRadius" Value="22" />
         <Setter Property="Padding" Value="0" />
     </Style>
 
     <!-- The Snap button: the one accent disc that starts a capture. -->
     <Style TargetType="Button" x:Key="SnapButton" BasedOn="{StaticResource BaseButton}">
-        <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource OnAccent}, Dark={StaticResource OnAccentDark}}" />
-        <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource AccentDark}}" />
+        <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource PrimaryDarkText}}" />
+        <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
         <Setter Property="FontSize" Value="24" />
         <Setter Property="WidthRequest" Value="64" />
         <Setter Property="HeightRequest" Value="64" />
+        <Setter Property="MinimumHeightRequest" Value="64" />
         <Setter Property="CornerRadius" Value="32" />
         <Setter Property="Padding" Value="0" />
         <Setter Property="Shadow">
-            <Shadow Brush="#590F6E6E" Offset="0,6" Radius="16" Opacity="1" />
+            <Shadow Brush="{AppThemeBinding Light={StaticResource PrimaryShadowBrush}, Dark={StaticResource PrimaryShadowDarkBrush}}" Offset="0,6" Radius="16" Opacity="1" />
         </Setter>
     </Style>
 
@@ -136,7 +154,9 @@
     <!-- The white box an Entry, Editor or picker row sits in. The control inside stays
          transparent. Android still draws its own underline under an Entry; turning that
          off is a handler mapping, and it lands with the restyled forms so the current
-         forms do not lose the only outline their fields have. -->
+         forms do not lose the only outline their fields have.
+         Focus and error rings are a Stroke / StrokeThickness="2" set by a trigger on the
+         form's own Border, which can see the Entry it wraps; a shared style cannot. -->
     <Style TargetType="Border" x:Key="FieldSurface">
         <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}" />
         <Setter Property="Stroke" Value="{AppThemeBinding Light={StaticResource Hairline}, Dark={StaticResource HairlineDark}}" />
@@ -144,13 +164,6 @@
         <Setter Property="StrokeShape" Value="RoundRectangle 16" />
         <Setter Property="Padding" Value="14,0" />
         <Setter Property="MinimumHeightRequest" Value="52" />
-    </Style>
-
-    <!-- A FieldSurface whose field has focus or has failed validation: set Stroke on it
-         from a trigger. Kept as its own style so the 2px ring is defined once. -->
-    <Style TargetType="Border" x:Key="FieldSurfaceFocused" BasedOn="{StaticResource FieldSurface}">
-        <Setter Property="Stroke" Value="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource AccentDark}}" />
-        <Setter Property="StrokeThickness" Value="2" />
     </Style>
 
     <!-- The grey track behind a two- or three-way switch (Item | Place, Items | Places). -->
@@ -161,21 +174,18 @@
         <Setter Property="Padding" Value="4" />
     </Style>
 
-    <!-- A segment inside SegmentTrack. The selected one sets Style to SegmentSelected. -->
+    <!-- A segment inside SegmentTrack. The selected one gets TextColor Ink / InkDark,
+         BackgroundColor Surface / SurfaceDark and FontFamily JakartaBold from a
+         DataTrigger on the page, the pattern CreatePage already uses; swapping the
+         whole Style from a trigger is unreliable in MAUI. -->
     <Style TargetType="Button" x:Key="Segment" BasedOn="{StaticResource BaseButton}">
         <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource InkMuted}, Dark={StaticResource InkMutedDark}}" />
         <Setter Property="BackgroundColor" Value="Transparent" />
         <Setter Property="FontFamily" Value="JakartaSemiBold"/>
         <Setter Property="FontSize" Value="14"/>
-        <Setter Property="HeightRequest" Value="40"/>
+        <Setter Property="MinimumHeightRequest" Value="40"/>
         <Setter Property="CornerRadius" Value="20"/>
         <Setter Property="Padding" Value="8,0"/>
-    </Style>
-
-    <Style TargetType="Button" x:Key="SegmentSelected" BasedOn="{StaticResource Segment}">
-        <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
-        <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}" />
-        <Setter Property="FontFamily" Value="JakartaBold"/>
     </Style>
 
     <!-- ===== Chips ===== -->
@@ -191,12 +201,13 @@
 
     <!-- A location chip or the in: filter: soft accent fill. -->
     <Style TargetType="Border" x:Key="PlaceChip" BasedOn="{StaticResource Chip}">
-        <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource AccentSoft}, Dark={StaticResource AccentSoftDark}}" />
+        <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource PrimarySoft}, Dark={StaticResource PrimarySoftDark}}" />
         <Setter Property="StrokeShape" Value="RoundRectangle 18" />
         <Setter Property="HeightRequest" Value="36" />
     </Style>
 
-    <!-- Sub-place filter chips on a place page. The selected one uses ChoiceChipSelected. -->
+    <!-- Sub-place filter chips on a place page. The selected chip is Ink-filled with
+         no stroke, set by the list's Selected visual state rather than a second style. -->
     <Style TargetType="Border" x:Key="ChoiceChip" BasedOn="{StaticResource Chip}">
         <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}" />
         <Setter Property="Stroke" Value="{AppThemeBinding Light={StaticResource Hairline}, Dark={StaticResource HairlineDark}}" />
@@ -204,11 +215,6 @@
         <Setter Property="StrokeShape" Value="RoundRectangle 20" />
         <Setter Property="Padding" Value="16,0" />
         <Setter Property="HeightRequest" Value="40" />
-    </Style>
-
-    <Style TargetType="Border" x:Key="ChoiceChipSelected" BasedOn="{StaticResource ChoiceChip}">
-        <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource Strong}, Dark={StaticResource StrongDark}}" />
-        <Setter Property="StrokeThickness" Value="0" />
     </Style>
 
     <!-- A suggestion that is not applied yet ("+ tag: Car"): dashed outline. -->
@@ -229,7 +235,7 @@
                     <VisualState x:Name="Normal" />
                     <VisualState x:Name="Disabled">
                         <VisualState.Setters>
-                            <Setter Property="Color" Value="{AppThemeBinding Light={StaticResource Gray300}, Dark={StaticResource Gray600}}" />
+                            <Setter Property="Color" Value="{AppThemeBinding Light={StaticResource InkMuted}, Dark={StaticResource InkMutedDark}}" />
                         </VisualState.Setters>
                     </VisualState>
                 </VisualStateGroup>
@@ -272,7 +278,7 @@
                     <VisualState x:Name="Normal" />
                     <VisualState x:Name="Disabled">
                         <VisualState.Setters>
-                            <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Gray300}, Dark={StaticResource Gray600}}" />
+                            <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource InkMuted}, Dark={StaticResource InkMutedDark}}" />
                         </VisualState.Setters>
                     </VisualState>
                 </VisualStateGroup>
@@ -294,7 +300,7 @@
                     <VisualState x:Name="Normal" />
                     <VisualState x:Name="Disabled">
                         <VisualState.Setters>
-                            <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Gray300}, Dark={StaticResource Gray600}}" />
+                            <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource InkMuted}, Dark={StaticResource InkMutedDark}}" />
                         </VisualState.Setters>
                     </VisualState>
                 </VisualStateGroup>
@@ -359,7 +365,7 @@
     </Style>
 
     <!-- Card and row titles: item names, place names. -->
-    <Style TargetType="Label" x:Key="Strong" BasedOn="{StaticResource BaseLabel}">
+    <Style TargetType="Label" x:Key="StrongLabel" BasedOn="{StaticResource BaseLabel}">
         <Setter Property="FontFamily" Value="JakartaBold" />
     </Style>
 
@@ -376,7 +382,7 @@
                     <VisualState x:Name="Normal" />
                     <VisualState x:Name="Disabled">
                         <VisualState.Setters>
-                            <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Gray300}, Dark={StaticResource Gray600}}" />
+                            <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource InkMuted}, Dark={StaticResource InkMutedDark}}" />
                         </VisualState.Setters>
                     </VisualState>
                 </VisualStateGroup>
@@ -385,14 +391,12 @@
     </Style>
 
     <Style TargetType="Label" x:Key="Headline" BasedOn="{StaticResource BaseLabel}">
-        <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
         <Setter Property="FontSize" Value="32" />
         <Setter Property="HorizontalOptions" Value="Center" />
         <Setter Property="HorizontalTextAlignment" Value="Center" />
     </Style>
 
     <Style TargetType="Label" x:Key="SubHeadline" BasedOn="{StaticResource BaseLabel}">
-        <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
         <Setter Property="FontSize" Value="24" />
         <Setter Property="HorizontalOptions" Value="Center" />
         <Setter Property="HorizontalTextAlignment" Value="Center" />
@@ -424,8 +428,8 @@
                     <VisualState x:Name="Normal" />
                     <VisualState x:Name="Disabled">
                         <VisualState.Setters>
-                            <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Gray300}, Dark={StaticResource Gray600}}" />
-                            <Setter Property="TitleColor" Value="{AppThemeBinding Light={StaticResource Gray300}, Dark={StaticResource Gray600}}" />
+                            <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource InkMuted}, Dark={StaticResource InkMutedDark}}" />
+                            <Setter Property="TitleColor" Value="{AppThemeBinding Light={StaticResource InkMuted}, Dark={StaticResource InkMutedDark}}" />
                         </VisualState.Setters>
                     </VisualState>
                 </VisualStateGroup>
@@ -441,7 +445,7 @@
                     <VisualState x:Name="Normal" />
                     <VisualState x:Name="Disabled">
                         <VisualState.Setters>
-                            <Setter Property="ProgressColor" Value="{AppThemeBinding Light={StaticResource Gray300}, Dark={StaticResource Gray600}}" />
+                            <Setter Property="ProgressColor" Value="{AppThemeBinding Light={StaticResource InkMuted}, Dark={StaticResource InkMutedDark}}" />
                         </VisualState.Setters>
                     </VisualState>
                 </VisualStateGroup>
@@ -462,7 +466,7 @@
                     <VisualState x:Name="Normal" />
                     <VisualState x:Name="Disabled">
                         <VisualState.Setters>
-                            <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Gray300}, Dark={StaticResource Gray600}}" />
+                            <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource InkMuted}, Dark={StaticResource InkMutedDark}}" />
                         </VisualState.Setters>
                     </VisualState>
                 </VisualStateGroup>
@@ -489,8 +493,8 @@
                     <VisualState x:Name="Normal" />
                     <VisualState x:Name="Disabled">
                         <VisualState.Setters>
-                            <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Gray300}, Dark={StaticResource Gray600}}" />
-                            <Setter Property="PlaceholderColor" Value="{AppThemeBinding Light={StaticResource Gray300}, Dark={StaticResource Gray600}}" />
+                            <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource InkMuted}, Dark={StaticResource InkMutedDark}}" />
+                            <Setter Property="PlaceholderColor" Value="{AppThemeBinding Light={StaticResource InkMuted}, Dark={StaticResource InkMutedDark}}" />
                         </VisualState.Setters>
                     </VisualState>
                 </VisualStateGroup>
@@ -510,8 +514,8 @@
                     <VisualState x:Name="Normal" />
                     <VisualState x:Name="Disabled">
                         <VisualState.Setters>
-                            <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Gray300}, Dark={StaticResource Gray600}}" />
-                            <Setter Property="PlaceholderColor" Value="{AppThemeBinding Light={StaticResource Gray300}, Dark={StaticResource Gray600}}" />
+                            <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource InkMuted}, Dark={StaticResource InkMutedDark}}" />
+                            <Setter Property="PlaceholderColor" Value="{AppThemeBinding Light={StaticResource InkMuted}, Dark={StaticResource InkMutedDark}}" />
                         </VisualState.Setters>
                     </VisualState>
                 </VisualStateGroup>
@@ -536,9 +540,9 @@
                     <VisualState x:Name="Normal" />
                     <VisualState x:Name="Disabled">
                         <VisualState.Setters>
-                            <Setter Property="MinimumTrackColor" Value="{AppThemeBinding Light={StaticResource Gray300}, Dark={StaticResource Gray600}}"/>
-                            <Setter Property="MaximumTrackColor" Value="{AppThemeBinding Light={StaticResource Gray300}, Dark={StaticResource Gray600}}"/>
-                            <Setter Property="ThumbColor" Value="{AppThemeBinding Light={StaticResource Gray300}, Dark={StaticResource Gray600}}"/>
+                            <Setter Property="MinimumTrackColor" Value="{AppThemeBinding Light={StaticResource InkMuted}, Dark={StaticResource InkMutedDark}}"/>
+                            <Setter Property="MaximumTrackColor" Value="{AppThemeBinding Light={StaticResource InkMuted}, Dark={StaticResource InkMutedDark}}"/>
+                            <Setter Property="ThumbColor" Value="{AppThemeBinding Light={StaticResource InkMuted}, Dark={StaticResource InkMutedDark}}"/>
                         </VisualState.Setters>
                     </VisualState>
                 </VisualStateGroup>
@@ -559,8 +563,8 @@
                     <VisualState x:Name="Normal" />
                     <VisualState x:Name="Disabled">
                         <VisualState.Setters>
-                            <Setter Property="OnColor" Value="{AppThemeBinding Light={StaticResource Gray300}, Dark={StaticResource Gray600}}" />
-                            <Setter Property="ThumbColor" Value="{AppThemeBinding Light={StaticResource Gray300}, Dark={StaticResource Gray600}}" />
+                            <Setter Property="OnColor" Value="{AppThemeBinding Light={StaticResource InkMuted}, Dark={StaticResource InkMutedDark}}" />
+                            <Setter Property="ThumbColor" Value="{AppThemeBinding Light={StaticResource InkMuted}, Dark={StaticResource InkMutedDark}}" />
                         </VisualState.Setters>
                     </VisualState>
                     <VisualState x:Name="On">
@@ -592,7 +596,7 @@
                     <VisualState x:Name="Normal" />
                     <VisualState x:Name="Disabled">
                         <VisualState.Setters>
-                            <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Gray300}, Dark={StaticResource Gray600}}" />
+                            <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource InkMuted}, Dark={StaticResource InkMutedDark}}" />
                         </VisualState.Setters>
                     </VisualState>
                 </VisualStateGroup>
@@ -638,8 +642,8 @@
         <Setter Property="Shell.UnselectedColor" Value="{AppThemeBinding Light={StaticResource InkMuted}, Dark={StaticResource InkMutedDark}}" />
         <Setter Property="Shell.NavBarHasShadow" Value="False" />
         <Setter Property="Shell.TabBarBackgroundColor" Value="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}" />
-        <Setter Property="Shell.TabBarForegroundColor" Value="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource AccentDark}}" />
-        <Setter Property="Shell.TabBarTitleColor" Value="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource AccentDark}}" />
+        <Setter Property="Shell.TabBarForegroundColor" Value="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
+        <Setter Property="Shell.TabBarTitleColor" Value="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
         <Setter Property="Shell.TabBarUnselectedColor" Value="{AppThemeBinding Light={StaticResource InkMuted}, Dark={StaticResource InkMutedDark}}" />
     </Style>
 

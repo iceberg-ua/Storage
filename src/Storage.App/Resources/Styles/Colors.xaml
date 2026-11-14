@@ -52,22 +52,20 @@
     <Color x:Key="InkMuted">#5F5B53</Color>
     <Color x:Key="InkMutedDark">#ABA69C</Color>
 
-    <!-- The accent: primary buttons, the Snap button, selected tab, focused field. -->
-    <Color x:Key="Accent">#0F6E6E</Color>
-    <Color x:Key="AccentDark">#6FC7C7</Color>
-    <Color x:Key="OnAccent">#FFFFFF</Color>
-    <Color x:Key="OnAccentDark">#0B2A2A</Color>
-    <!-- Soft accent fill for location chips and secondary accent buttons. -->
-    <Color x:Key="AccentSoft">#DCEDEA</Color>
-    <Color x:Key="AccentSoftDark">#173C3B</Color>
-    <Color x:Key="OnAccentSoft">#0B5555</Color>
-    <Color x:Key="OnAccentSoftDark">#A6E2DC</Color>
+    <!-- The accent is Primary / PrimaryDark above, with White / PrimaryDarkText on it;
+         it is not redefined here so the two cannot drift apart. Ink-filled buttons
+         (Edit, New place) likewise use Ink / InkDark with White / Ink on them. -->
 
-    <!-- High-emphasis neutral button (Edit, New place): ink on canvas, inverted. -->
-    <Color x:Key="Strong">#1C1B19</Color>
-    <Color x:Key="StrongDark">#F3F1EC</Color>
-    <Color x:Key="OnStrong">#FFFFFF</Color>
-    <Color x:Key="OnStrongDark">#1C1B19</Color>
+    <!-- Soft accent fill for location chips and secondary accent buttons. -->
+    <Color x:Key="PrimarySoft">#DCEDEA</Color>
+    <Color x:Key="PrimarySoftDark">#173C3B</Color>
+    <Color x:Key="OnPrimarySoft">#0B5555</Color>
+    <Color x:Key="OnPrimarySoftDark">#A6E2DC</Color>
+
+    <!-- The Snap button's glow: the accent at 35% in light, plain shade in dark,
+         where a coloured glow reads as a halo rather than a shadow. -->
+    <SolidColorBrush x:Key="PrimaryShadowBrush" Color="#590F6E6E" />
+    <SolidColorBrush x:Key="PrimaryShadowDarkBrush" Color="#80000000" />
 
     <SolidColorBrush x:Key="PrimaryBrush" Color="{StaticResource Primary}"/>
     <SolidColorBrush x:Key="SecondaryBrush" Color="{StaticResource Secondary}"/>
