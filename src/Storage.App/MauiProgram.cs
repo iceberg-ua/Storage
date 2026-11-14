@@ -18,8 +18,12 @@ public static class MauiProgram
 			.UseMauiCommunityToolkitCamera()
 			.ConfigureFonts(fonts =>
 			{
-				fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
-				fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
+				// One alias per weight. A custom font with FontAttributes="Bold" is only
+				// faked by thickening the regular cut, so styles pick the weight by family.
+				fonts.AddFont("PlusJakartaSans-Regular.ttf", "JakartaRegular");
+				fonts.AddFont("PlusJakartaSans-SemiBold.ttf", "JakartaSemiBold");
+				fonts.AddFont("PlusJakartaSans-Bold.ttf", "JakartaBold");
+				fonts.AddFont("PlusJakartaSans-ExtraBold.ttf", "JakartaExtraBold");
 			});
 
 #if DEBUG

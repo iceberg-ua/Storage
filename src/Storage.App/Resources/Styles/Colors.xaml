@@ -31,6 +31,44 @@
     <Color x:Key="Gray900">#212121</Color>
     <Color x:Key="Gray950">#141414</Color>
 
+    <!-- Snapshot redesign tokens. Each role has a light and a dark value; pages bind
+         them with AppThemeBinding Light={StaticResource X}, Dark={StaticResource XDark}.
+         The Gray scale above stays until every page has moved over to these. -->
+
+    <!-- Page ground and the white cards that sit on it. -->
+    <Color x:Key="Canvas">#F6F4EF</Color>
+    <Color x:Key="CanvasDark">#141412</Color>
+    <Color x:Key="Surface">#FFFFFF</Color>
+    <Color x:Key="SurfaceDark">#1F1E1B</Color>
+    <!-- Segment tracks, stepper minus, clear buttons: a step down from Surface. -->
+    <Color x:Key="SurfaceSunken">#ECE8DF</Color>
+    <Color x:Key="SurfaceSunkenDark">#2A2925</Color>
+    <Color x:Key="Hairline">#E4DFD4</Color>
+    <Color x:Key="HairlineDark">#34322D</Color>
+
+    <!-- Text. InkMuted clears 4.5:1 on both Canvas and Surface in each theme. -->
+    <Color x:Key="Ink">#1C1B19</Color>
+    <Color x:Key="InkDark">#F3F1EC</Color>
+    <Color x:Key="InkMuted">#5F5B53</Color>
+    <Color x:Key="InkMutedDark">#ABA69C</Color>
+
+    <!-- The accent: primary buttons, the Snap button, selected tab, focused field. -->
+    <Color x:Key="Accent">#0F6E6E</Color>
+    <Color x:Key="AccentDark">#6FC7C7</Color>
+    <Color x:Key="OnAccent">#FFFFFF</Color>
+    <Color x:Key="OnAccentDark">#0B2A2A</Color>
+    <!-- Soft accent fill for location chips and secondary accent buttons. -->
+    <Color x:Key="AccentSoft">#DCEDEA</Color>
+    <Color x:Key="AccentSoftDark">#173C3B</Color>
+    <Color x:Key="OnAccentSoft">#0B5555</Color>
+    <Color x:Key="OnAccentSoftDark">#A6E2DC</Color>
+
+    <!-- High-emphasis neutral button (Edit, New place): ink on canvas, inverted. -->
+    <Color x:Key="Strong">#1C1B19</Color>
+    <Color x:Key="StrongDark">#F3F1EC</Color>
+    <Color x:Key="OnStrong">#FFFFFF</Color>
+    <Color x:Key="OnStrongDark">#1C1B19</Color>
+
     <SolidColorBrush x:Key="PrimaryBrush" Color="{StaticResource Primary}"/>
     <SolidColorBrush x:Key="SecondaryBrush" Color="{StaticResource Secondary}"/>
     <SolidColorBrush x:Key="TertiaryBrush" Color="{StaticResource Tertiary}"/>
