@@ -8,20 +8,23 @@
 
     <TabBar>
         <!-- Locations is first, so it is the tab the app opens on. -->
+        <!-- Icons are single-colour SVGs; the tab bar tints them with the selected and
+             unselected colours from the Shell style, so one file serves both themes. -->
         <ShellContent
             Title="Locations"
-            Icon="folder.png"
+            Icon="tab_places.png"
             ContentTemplate="{DataTemplate views:LocationsPage}"
             Route="locations" />
 
         <ShellContent
             Title="Items"
-            Icon="box.png"
+            Icon="tab_items.png"
             ContentTemplate="{DataTemplate views:ItemsPage}"
             Route="items" />
 
         <ShellContent
             Title="Tags"
+            Icon="tab_tags.png"
             ContentTemplate="{DataTemplate views:TagsPage}"
             Route="tags" />
     </TabBar>

@@ -1,4 +1,4 @@
-using CommunityToolkit.Mvvm.ComponentModel;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Storage.App.Services;
 using Storage.Core.Repositories;
@@ -68,15 +68,6 @@ public partial class ItemsViewModel : ObservableObject
         {
             IsLoading = false;
         }
-    }
-
-    [RelayCommand]
-    private async Task NavigateToCreateAsync()
-    {
-        // Opens on an item, since this is the items tab; inside a location, whatever is
-        // made goes in it by default.
-        var route = Context.CurrentId is int id ? $"create?kind=item&locationId={id}" : "create?kind=item";
-        await Shell.Current.GoToAsync(route);
     }
 
     [RelayCommand]

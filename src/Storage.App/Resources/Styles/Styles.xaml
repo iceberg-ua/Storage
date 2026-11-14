@@ -126,7 +126,12 @@
         <Setter Property="Padding" Value="0" />
     </Style>
 
-    <!-- The Snap button: the one accent disc that starts a capture. -->
+    <!-- The Snap button: the one accent disc that starts a capture. It floats over the
+         bottom-right of a tab's list, so a page only places it and binds Command; the
+         icon, its label for screen readers and the position all come from here. Lists
+         under it end with a footer SnapClearance tall, so the last row can scroll clear
+         of it instead of staying hidden underneath. -->
+    <x:Double x:Key="SnapClearance">104</x:Double>
     <Style TargetType="Button" x:Key="SnapButton" BasedOn="{StaticResource BaseButton}">
         <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource PrimaryDarkText}}" />
         <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
@@ -136,6 +141,14 @@
         <Setter Property="MinimumHeightRequest" Value="64" />
         <Setter Property="CornerRadius" Value="32" />
         <Setter Property="Padding" Value="0" />
+        <!-- White on the light accent, dark on the pale dark-theme accent: a Button's
+             image is not tinted by TextColor, so there is one file per theme. -->
+        <Setter Property="ImageSource" Value="{AppThemeBinding Light=snap_light.png, Dark=snap_dark.png}" />
+        <Setter Property="HorizontalOptions" Value="End" />
+        <Setter Property="VerticalOptions" Value="End" />
+        <Setter Property="Margin" Value="0,0,20,20" />
+        <Setter Property="SemanticProperties.Description" Value="Snap a new item" />
+        <Setter Property="ToolTipProperties.Text" Value="Snap a new item" />
         <Setter Property="Shadow">
             <Shadow Brush="{AppThemeBinding Light={StaticResource PrimaryShadowBrush}, Dark={StaticResource PrimaryShadowDarkBrush}}" Offset="0,6" Radius="16" Opacity="1" />
         </Setter>

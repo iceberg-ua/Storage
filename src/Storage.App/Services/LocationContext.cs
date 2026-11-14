@@ -107,6 +107,13 @@ public partial class LocationContext : ObservableObject
         await ShowLocationsAsync();
     }
 
+    // The Snap button on the Locations and Items tabs: a new item, made in the location
+    // the user is inside. Here rather than on either tab's view model because both
+    // tabs follow this one location and the button means the same on each.
+    [RelayCommand]
+    private Task SnapAsync() => Shell.Current.GoToAsync(
+        CurrentId is int id ? $"create?kind=item&locationId={id}" : "create?kind=item");
+
     private static Task ShowLocationsAsync() => Shell.Current.GoToAsync("//locations");
 
     private void SetPath(IReadOnlyList<StorageLocation> path)

@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8" ?>
+﻿<?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:Storage.App.ViewModels"
@@ -29,11 +29,6 @@
                     IsVisible="{Binding IsLocationView}"
                     SemanticProperties.Description="Edit location"
                     ToolTipProperties.Text="Edit location" />
-            <Button Text="➕"
-                    Style="{StaticResource IconButton}"
-                    Command="{Binding NavigateToCreateCommand}"
-                    SemanticProperties.Description="Add an item or a location"
-                    ToolTipProperties.Text="Add" />
         </HorizontalStackLayout>
 
         <!-- Its own row: a path three levels deep needs the full width. -->
@@ -52,7 +47,11 @@
                      Command="{Binding Source={RelativeSource AncestorType={x:Type vm:ItemsViewModel}}, Path=RefreshCommand}">
             <CollectionView ItemsSource="{Binding Items}"
                             ItemTemplate="{StaticResource ItemRow}"
-                            EmptyViewTemplate="{StaticResource EmptyState}" />
+                            EmptyViewTemplate="{StaticResource EmptyState}">
+                <CollectionView.Footer>
+                    <ContentView HeightRequest="{StaticResource SnapClearance}" />
+                </CollectionView.Footer>
+            </CollectionView>
         </RefreshView>
 
         <!-- Locations: this location's children when browsing, the matches when searching. -->
@@ -61,7 +60,16 @@
                         ItemsSource="{Binding Locations}"
                         IsVisible="{Binding ShowLocationList}"
                         ItemTemplate="{StaticResource LocationRow}"
-                        EmptyViewTemplate="{StaticResource EmptyState}" />
+                        EmptyViewTemplate="{StaticResource EmptyState}">
+            <CollectionView.Footer>
+                <ContentView HeightRequest="{StaticResource SnapClearance}" />
+            </CollectionView.Footer>
+        </CollectionView>
+
+        <!-- Last in the grid so it draws over both lists. -->
+        <Button Grid.Row="3"
+                Style="{StaticResource SnapButton}"
+                Command="{Binding Context.SnapCommand}" />
     </Grid>
 
 </ContentPage>

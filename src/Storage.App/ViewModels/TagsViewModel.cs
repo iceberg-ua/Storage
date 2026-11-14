@@ -43,6 +43,11 @@ public partial class TagsViewModel : ObservableObject
         await Shell.Current.GoToAsync("edittag");
     }
 
+    // The Snap button. Tags are not a place, so the new item starts at the top level
+    // rather than in whatever location the other tabs were last showing.
+    [RelayCommand]
+    private Task SnapAsync() => Shell.Current.GoToAsync("create?kind=item");
+
     [RelayCommand]
     private async Task EditTagAsync(Tag tag)
     {
