@@ -46,6 +46,20 @@ public class LocationRepository : ILocationRepository
             .ToListAsync();
     }
 
+    public async Task<IReadOnlyList<LocationSummary>> GetChildSummariesAsync(int? parentId)
+    {
+        // Counted in the query, so a shelf of a hundred items costs one number, not a
+        // hundred loaded rows. Untracked for the same reason as GetPathAsync.
+        var rows = await _context.Locations
+            .AsNoTracking()
+            .Where(l => l.ParentId == parentId)
+            .OrderBy(l => l.Name)
+            .Select(l => new { Location = l, Items = l.Items.Count, Children = l.Children.Count })
+            .ToListAsync();
+
+        return rows.Select(r => new LocationSummary(r.Location, r.Items, r.Children)).ToList();
+    }
+
     public async Task<IReadOnlyList<Location>> GetPathAsync(int id)
     {
         var path = new List<Location>();

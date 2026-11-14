@@ -10,6 +10,12 @@ public interface ILocationRepository
     Task<IEnumerable<Location>> GetChildrenAsync(int parentId);
 
     /// <summary>
+    /// The locations directly under <paramref name="parentId"/>, or the top-level ones
+    /// when it is null, each with its item and child counts, in name order.
+    /// </summary>
+    Task<IReadOnlyList<LocationSummary>> GetChildSummariesAsync(int? parentId);
+
+    /// <summary>
     /// The chain from the top-level location down to <paramref name="id"/>, inclusive,
     /// root first. Empty when the location does not exist.
     /// </summary>

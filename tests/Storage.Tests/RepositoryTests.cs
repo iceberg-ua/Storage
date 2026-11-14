@@ -528,6 +528,45 @@ public class RepositoryTests : IDisposable
         Assert.Empty(await _context.ItemPhotos.ToListAsync());
     }
 
+    [Fact]
+    public async Task ChildSummariesCountOnlyWhatIsDirectlyInside()
+    {
+        var locationRepo = new LocationRepository(_context);
+        var itemRepo = new ItemRepository(_context);
+
+        var garage = await locationRepo.AddAsync(new Location { Name = "Garage" });
+        var shelf = await locationRepo.AddAsync(new Location { Name = "Shelf 2", ParentId = garage.Id });
+        var bin = await locationRepo.AddAsync(new Location { Name = "Bin A", ParentId = shelf.Id });
+        var bench = await locationRepo.AddAsync(new Location { Name = "Bench", ParentId = garage.Id });
+
+        await itemRepo.AddAsync(new Item { Name = "Tyres", LocationId = shelf.Id });
+        await itemRepo.AddAsync(new Item { Name = "Pump", LocationId = shelf.Id });
+        await itemRepo.AddAsync(new Item { Name = "Cable", LocationId = bin.Id });
+        await itemRepo.AddAsync(new Item { Name = "Drill", LocationId = garage.Id });
+
+        var summaries = await locationRepo.GetChildSummariesAsync(garage.Id);
+
+        // Name order, and the bin's cable is not counted on the shelf.
+        Assert.Collection(summaries,
+            s => Assert.Equal(("Bench", 0, 0), (s.Location.Name, s.ItemCount, s.ChildCount)),
+            s => Assert.Equal(("Shelf 2", 2, 1), (s.Location.Name, s.ItemCount, s.ChildCount)));
+    }
+
+    [Fact]
+    public async Task ChildSummariesOfNullAreTheTopLevelLocations()
+    {
+        var locationRepo = new LocationRepository(_context);
+
+        var garage = await locationRepo.AddAsync(new Location { Name = "Garage" });
+        await locationRepo.AddAsync(new Location { Name = "Attic" });
+        await locationRepo.AddAsync(new Location { Name = "Shelf", ParentId = garage.Id });
+
+        var summaries = await locationRepo.GetChildSummariesAsync(null);
+
+        Assert.Equal(["Attic", "Garage"], summaries.Select(s => s.Location.Name));
+        Assert.Equal(1, summaries.Single(s => s.Location.Name == "Garage").ChildCount);
+    }
+
     public void Dispose()
     {
         _context.Dispose();

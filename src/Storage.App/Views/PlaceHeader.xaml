@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:Storage.App.ViewModels"
+             xmlns:models="clr-namespace:Storage.Core.Models;assembly=Storage.Core"
+             x:Class="Storage.App.Views.PlaceHeader"
+             x:DataType="vm:PlaceViewModel">
+
+    <!-- The top of a location's page, used as the header of its lists so it scrolls
+         away with them instead of holding a third of the screen. Its BindingContext is
+         the page's view model; the list it sits in is bound to the search. -->
+    <VerticalStackLayout Padding="8,16,8,8" Spacing="16">
+
+        <!-- The photo when there is one, with the actions over it; without one, the
+             same actions on the canvas. Either way they are in the same place. -->
+        <Grid>
+            <Border HeightRequest="220"
+                    StrokeThickness="0"
+                    StrokeShape="RoundRectangle 24"
+                    IsVisible="{Binding HasPhoto}">
+                <Image Source="{Binding PhotoFileName, Converter={StaticResource PhotoSourceConverter}}"
+                       Aspect="AspectFill"
+                       SemanticProperties.Description="{Binding Name, StringFormat='Photo of {0}'}" />
+            </Border>
+
+            <Grid ColumnDefinitions="Auto,*,Auto,Auto"
+                  ColumnSpacing="8"
+                  Padding="12"
+                  VerticalOptions="Start">
+                <Button Grid.Column="0"
+                        Text="←"
+                        Style="{StaticResource RoundIconButton}"
+                        Command="{Binding BackCommand}"
+                        SemanticProperties.Description="Back" />
+                <Button Grid.Column="2"
+                        Text="{Binding Search.ToggleIcon}"
+                        Style="{StaticResource RoundIconButton}"
+                        Command="{Binding Search.ToggleCommand}"
+                        SemanticProperties.Description="{Binding Search.ToggleDescription}" />
+                <Button Grid.Column="3"
+                        Text="✏️"
+                        Style="{StaticResource RoundIconButton}"
+                        Command="{Binding EditCommand}"
+                        SemanticProperties.Description="{Binding Name, StringFormat='Edit {0}'}" />
+            </Grid>
+        </Grid>
+
+        <VerticalStackLayout Spacing="4" Padding="8,0">
+            <Label Text="{Binding ParentPath}" Style="{StaticResource Caption}" />
+            <Label Text="{Binding Name}"
+                   Style="{StaticResource Display}"
+                   SemanticProperties.HeadingLevel="Level1" />
+            <Label Text="{Binding Summary}"
+                   Style="{StaticResource Caption}"
+                   FontSize="14"
+                   MaxLines="2"
+                   LineBreakMode="TailTruncation" />
+        </VerticalStackLayout>
+
+        <!-- Locations inside this one, as chips: one tap opens it, and the last chip
+             adds another. A row rather than a second list, so the items below stay the
+             main content of the page. -->
+        <ScrollView Orientation="Horizontal" HorizontalScrollBarVisibility="Never">
+            <HorizontalStackLayout Spacing="8" Padding="8,0">
+                <HorizontalStackLayout BindableLayout.ItemsSource="{Binding SubPlaces}" Spacing="8">
+                    <BindableLayout.ItemTemplate>
+                        <DataTemplate x:DataType="models:LocationSummary">
+                            <Border Style="{StaticResource ChoiceChip}"
+                                    SemanticProperties.Description="{Binding Location.Name, StringFormat='Open {0}'}">
+                                <Border.GestureRecognizers>
+                                    <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:PlaceViewModel}}, Path=OpenSubPlaceCommand}"
+                                                          CommandParameter="{Binding .}" />
+                                </Border.GestureRecognizers>
+                                <HorizontalStackLayout Spacing="6" VerticalOptions="Center">
+                                    <Label Text="{Binding Location.Name}"
+                                           Style="{StaticResource StrongLabel}"
+                                           FontSize="14"
+                                           VerticalOptions="Center" />
+                                    <Label Text="{Binding ItemCount}"
+                                           Style="{StaticResource Caption}"
+                                           VerticalOptions="Center" />
+                                </HorizontalStackLayout>
+                            </Border>
+                        </DataTemplate>
+                    </BindableLayout.ItemTemplate>
+                </HorizontalStackLayout>
+
+                <Border Style="{StaticResource SuggestionChip}"
+                        HeightRequest="40"
+                        StrokeShape="RoundRectangle 20"
+                        Padding="16,0"
+                        SemanticProperties.Description="Add a location inside this one">
+                    <Border.GestureRecognizers>
+                        <TapGestureRecognizer Command="{Binding AddSubPlaceCommand}" />
+                    </Border.GestureRecognizers>
+                    <Label Text="+ Location inside"
+                           Style="{StaticResource StrongLabel}"
+                           FontSize="14"
+                           VerticalOptions="Center" />
+                </Border>
+            </HorizontalStackLayout>
+        </ScrollView>
+    </VerticalStackLayout>
+
+</ContentView>

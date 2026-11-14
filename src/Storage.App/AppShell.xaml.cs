@@ -1,17 +1,12 @@
-﻿using Storage.App.Services;
-using Storage.App.Views;
+﻿using Storage.App.Views;
 
 namespace Storage.App;
 
 public partial class AppShell : Shell
 {
-	private readonly LocationContext _locationContext;
-
-	public AppShell(LocationContext locationContext)
+	public AppShell()
 	{
 		InitializeComponent();
-
-		_locationContext = locationContext;
 
 		// Register routes for navigation.
 		// Everything new is made on "create", pushed with a "kind" and an optional
@@ -19,6 +14,10 @@ public partial class AppShell : Shell
 		Routing.RegisterRoute("create", typeof(CreatePage));
 		Routing.RegisterRoute("edititem", typeof(AddItemPage));
 		Routing.RegisterRoute("editlocation", typeof(AddLocationPage));
+
+		// Pushed with a "locationId": one location's page. Opening a location inside it
+		// pushes another, so Back walks up the tree one level at a time.
+		Routing.RegisterRoute("place", typeof(PlacePage));
 
 		// Pushed with an "itemId". Tapping an item in a list opens this read-only view;
 		// the edit form is reached from here, so "edititem" is never the tap target.
@@ -30,20 +29,5 @@ public partial class AppShell : Shell
 		// Pops back with a "photoFileName" for the item form to pick up, on the item
 		// edit page or the create page.
 		Routing.RegisterRoute("camera", typeof(CameraPage));
-	}
-
-	// Android's Back button, on the Locations or Items tab itself: does what the
-	// title's back arrow does — up one level, onto the Locations tab — and only leaves
-	// the app from the top. On a pushed page (detail, edit, camera) it pops that page
-	// as usual. iOS has no Back button; the arrow covers it there.
-	protected override bool OnBackButtonPressed()
-	{
-		if (CurrentPage is LocationsPage or ItemsPage && _locationContext.IsInside)
-		{
-			_locationContext.BackCommand.Execute(null);
-			return true;
-		}
-
-		return base.OnBackButtonPressed();
 	}
 }

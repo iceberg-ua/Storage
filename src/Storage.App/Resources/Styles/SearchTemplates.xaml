@@ -100,6 +100,74 @@
         </Frame>
     </DataTemplate>
 
+    <!-- An item as a photo tile, for the two-column grid on a location's page: you
+         recognise a thing by sight faster than by its name. Padding gives the gutter,
+         since GridItemsLayout spacing would also indent the full-width header. -->
+    <DataTemplate x:Key="ItemTile" x:DataType="models:Item">
+        <VerticalStackLayout Padding="8,0,8,16" Spacing="8">
+            <VerticalStackLayout.GestureRecognizers>
+                <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:SearchViewModel}}, Path=OpenItemCommand}"
+                                      CommandParameter="{Binding .}" />
+            </VerticalStackLayout.GestureRecognizers>
+
+            <Border HeightRequest="150"
+                    StrokeThickness="0"
+                    StrokeShape="RoundRectangle 20"
+                    BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceSunken}, Dark={StaticResource SurfaceSunkenDark}}">
+                <Grid>
+                    <Label Text="📦"
+                           FontSize="28"
+                           HorizontalOptions="Center"
+                           VerticalOptions="Center" />
+                    <Image Source="{Binding PrimaryPhotoFileName, Converter={StaticResource PhotoSourceConverter}}"
+                           Aspect="AspectFill"
+                           IsVisible="{Binding PrimaryPhotoFileName, Converter={StaticResource IsNotNullConverter}}"
+                           SemanticProperties.Description="{Binding Name, StringFormat='Photo of {0}'}" />
+
+                    <!-- Over the photo, so it carries its own white pill rather than
+                         relying on whatever colour the photo happens to be there. -->
+                    <Border Style="{StaticResource Chip}"
+                            HeightRequest="24"
+                            Padding="8,0"
+                            Margin="10"
+                            HorizontalOptions="End"
+                            VerticalOptions="Start"
+                            BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}"
+                            IsVisible="{Binding Quantity, Converter={StaticResource GreaterThanOneConverter}}">
+                        <Label Text="{Binding Quantity, StringFormat='×{0}'}"
+                               Style="{StaticResource StrongLabel}"
+                               FontSize="12"
+                               VerticalOptions="Center" />
+                    </Border>
+                </Grid>
+            </Border>
+
+            <Label Text="{Binding Name}"
+                   Style="{StaticResource StrongLabel}"
+                   MaxLines="2"
+                   LineBreakMode="TailTruncation"
+                   Margin="4,0" />
+
+            <!-- Tag colours only: the names would not fit two to a row, and the
+                 detail page shows them in full. -->
+            <HorizontalStackLayout BindableLayout.ItemsSource="{Binding Tags}"
+                                   Spacing="6"
+                                   Margin="4,0"
+                                   IsVisible="{Binding Tags.Count, Converter={StaticResource CountToBoolConverter}}">
+                <BindableLayout.ItemTemplate>
+                    <DataTemplate x:DataType="models:Tag">
+                        <Border WidthRequest="10"
+                                HeightRequest="10"
+                                StrokeThickness="0"
+                                StrokeShape="RoundRectangle 5"
+                                BackgroundColor="{Binding Color, Converter={StaticResource HexToColorConverter}}"
+                                SemanticProperties.Description="{Binding Name}" />
+                    </DataTemplate>
+                </BindableLayout.ItemTemplate>
+            </HorizontalStackLayout>
+        </VerticalStackLayout>
+    </DataTemplate>
+
     <!-- Both location rows show the same LocationCard, so a change to the card reaches
          the Locations tab and search results alike. -->
     <DataTemplate x:Key="LocationRow" x:DataType="models:Location">
