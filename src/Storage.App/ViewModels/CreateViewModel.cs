@@ -67,10 +67,15 @@ public partial class CreateViewModel : ObservableObject, IQueryAttributable
             Location.PreselectParent(parsedLocationId);
         }
 
+        // The photo belongs to the form that opened the camera, which is the one still
+        // showing: the switch can't be reached while the camera covers the page.
         if (query.TryGetValue("photoFileName", out var photoFileName) &&
             Convert.ToString(photoFileName) is { Length: > 0 } capturedFileName)
         {
-            Item.AcceptCapturedPhoto(capturedFileName);
+            if (IsLocation)
+                Location.AcceptCapturedPhoto(capturedFileName);
+            else
+                Item.AcceptCapturedPhoto(capturedFileName);
         }
     }
 
@@ -96,8 +101,8 @@ public partial class CreateViewModel : ObservableObject, IQueryAttributable
 
     // Each form loads the first time it is shown, so a visit that only adds a location
     // never reads the tags, and a form that fails to load does not stop the other one.
-    // The item form also runs again on every return, which is when it picks up a photo
-    // from the camera — only reachable from that form, so it is the one showing.
+    // The shown form also runs again on every return, which is when it picks up a photo
+    // from the camera — the form that opened the camera is still the one showing.
     private async Task LoadShownFormAsync()
     {
         try
@@ -125,8 +130,18 @@ public partial class CreateViewModel : ObservableObject, IQueryAttributable
     private Task CancelAsync() => Shell.Current.GoToAsync("..");
 
     /// <summary>
-    /// Called when the page is leaving. Photos taken on the item form and never saved are
-    /// cleaned up here — including when the visit ended by saving a location instead.
+    /// Called when the page is leaving. Photos taken on either form and never saved are
+    /// cleaned up here — including the other form's, when the visit ended by saving one.
     /// </summary>
-    public Task LeaveAsync() => Item.ReconcilePhotosOnLeaveAsync();
+    public async Task LeaveAsync()
+    {
+        // Either form's photo source covers the whole page. Each form only knows about
+        // its own, so without this the other form would take the page as left and throw
+        // away what it had staged.
+        if (Item.IsAwaitingPhotoSource || Location.IsAwaitingPhotoSource)
+            return;
+
+        await Item.ReconcilePhotosOnLeaveAsync();
+        await Location.ReconcilePhotoOnLeaveAsync();
+    }
 }

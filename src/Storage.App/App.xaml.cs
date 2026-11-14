@@ -46,11 +46,9 @@ public partial class App : Application
 			using var scope = _serviceProvider.CreateScope();
 			var dbContext = scope.ServiceProvider.GetRequiredService<StorageDbContext>();
 
-			// Every photo row, not one per item: an item's non-primary photos are
-			// referenced just as firmly as its first one.
-			var referenced = await dbContext.ItemPhotos
-				.Select(p => p.FileName)
-				.ToListAsync();
+			// Every item photo and every location photo. An owner missing from this
+			// list would have its files swept away as orphans.
+			var referenced = await dbContext.GetReferencedPhotoFileNamesAsync();
 
 			var photoService = _serviceProvider.GetRequiredService<IPhotoService>();
 			var removed = await photoService.CleanupOrphansAsync(referenced);

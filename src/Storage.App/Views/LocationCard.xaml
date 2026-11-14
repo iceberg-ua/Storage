@@ -15,25 +15,50 @@
             <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:SearchViewModel}}, Path=OpenLocationCommand}"
                                   CommandParameter="{Binding .}" />
         </Frame.GestureRecognizers>
-        <StackLayout>
-            <Label Text="{Binding Name}"
-                   FontSize="18"
-                   FontAttributes="Bold"
-                   TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}" />
-            <!-- One line, as on the item card; the edit form shows all of it. -->
-            <Label Text="{Binding Description}"
-                   FontSize="14"
-                   MaxLines="1"
-                   LineBreakMode="TailTruncation"
-                   TextColor="{AppThemeBinding Light={StaticResource Gray500}, Dark={StaticResource Gray300}}"
-                   IsVisible="{Binding Description, Converter={StaticResource IsNotNullConverter}}" />
-            <!-- A search across the whole tree can return two shelves with the same
-                 name, so say which one this is. -->
-            <Label Text="{Binding Parent.Name, StringFormat='Parent: {0}'}"
-                   FontSize="12"
-                   IsVisible="{Binding Parent, Converter={StaticResource IsNotNullConverter}}"
-                   TextColor="{AppThemeBinding Light={StaticResource Gray500}, Dark={StaticResource Gray400}}" />
-        </StackLayout>
+        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+            <!-- The same fixed tile as an item row, so a card with a photo is exactly as
+                 tall as one without, and the two kinds of row line up in search. -->
+            <Border Grid.Column="0"
+                    WidthRequest="48"
+                    HeightRequest="48"
+                    Padding="0"
+                    VerticalOptions="Start"
+                    BackgroundColor="{AppThemeBinding Light={StaticResource Gray100}, Dark={StaticResource Gray600}}"
+                    Stroke="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource Gray500}}">
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="6" />
+                </Border.StrokeShape>
+                <Grid>
+                    <Label Text="📍"
+                           FontSize="20"
+                           HorizontalOptions="Center"
+                           VerticalOptions="Center" />
+                    <Image Source="{Binding PhotoFileName, Converter={StaticResource PhotoSourceConverter}}"
+                           Aspect="AspectFill"
+                           IsVisible="{Binding PhotoFileName, Converter={StaticResource IsNotNullConverter}}" />
+                </Grid>
+            </Border>
+
+            <StackLayout Grid.Column="1">
+                <Label Text="{Binding Name}"
+                       FontSize="18"
+                       FontAttributes="Bold"
+                       TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}" />
+                <!-- One line, as on the item card; the edit form shows all of it. -->
+                <Label Text="{Binding Description}"
+                       FontSize="14"
+                       MaxLines="1"
+                       LineBreakMode="TailTruncation"
+                       TextColor="{AppThemeBinding Light={StaticResource Gray500}, Dark={StaticResource Gray300}}"
+                       IsVisible="{Binding Description, Converter={StaticResource IsNotNullConverter}}" />
+                <!-- A search across the whole tree can return two shelves with the same
+                     name, so say which one this is. -->
+                <Label Text="{Binding Parent.Name, StringFormat='Parent: {0}'}"
+                       FontSize="12"
+                       IsVisible="{Binding Parent, Converter={StaticResource IsNotNullConverter}}"
+                       TextColor="{AppThemeBinding Light={StaticResource Gray500}, Dark={StaticResource Gray400}}" />
+            </StackLayout>
+        </Grid>
     </Frame>
 
 </ContentView>

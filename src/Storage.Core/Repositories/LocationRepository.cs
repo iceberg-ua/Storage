@@ -161,13 +161,25 @@ public class LocationRepository : ILocationRepository
         }
     }
 
-    public async Task DeleteAsync(int id)
+    public async Task<Location?> DeleteAsync(int id)
     {
         var location = await _context.Locations.FindAsync(id);
         if (location != null)
         {
             _context.Locations.Remove(location);
-            await _context.SaveChangesAsync();
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch
+            {
+                // As in UpdateAsync: a refused delete (a location with children is
+                // Restrict) left pending would be retried by the next SaveChanges anywhere.
+                _context.DiscardChanges();
+                throw;
+            }
         }
+
+        return location;
     }
 }

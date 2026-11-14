@@ -18,4 +18,12 @@ public partial class AddLocationPage : ContentPage
         base.OnAppearing();
         await _viewModel.LoadCommand.ExecuteAsync(null);
     }
+
+    // Every way out of the page ends here, so this is where an unsaved photo is
+    // reconciled. Ignored while the camera or the gallery picker only covers the page.
+    protected override async void OnDisappearing()
+    {
+        base.OnDisappearing();
+        await _viewModel.ReconcilePhotoOnLeaveAsync();
+    }
 }

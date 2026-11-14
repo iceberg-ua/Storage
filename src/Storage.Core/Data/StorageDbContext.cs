@@ -53,6 +53,22 @@ public class StorageDbContext : DbContext
         }
     }
 
+    /// <summary>
+    /// Every photo filename a row points at — each item photo and each location photo.
+    /// This is the keep-list for the orphan sweep, so a photo owner left out of it has
+    /// its files deleted on the next launch.
+    /// </summary>
+    public async Task<List<string>> GetReferencedPhotoFileNamesAsync()
+    {
+        // One round trip: EF turns the Concat into a UNION ALL.
+        return await ItemPhotos
+            .Select(p => p.FileName)
+            .Concat(Locations
+                .Where(l => l.PhotoFileName != null)
+                .Select(l => l.PhotoFileName!))
+            .ToListAsync();
+    }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -129,6 +145,7 @@ public class StorageDbContext : DbContext
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Name).IsRequired().HasMaxLength(100);
             entity.Property(e => e.Description).HasMaxLength(1000);
+            entity.Property(e => e.PhotoFileName).HasMaxLength(500);
 
             entity.HasOne(e => e.Parent)
                 .WithMany(l => l.Children)
