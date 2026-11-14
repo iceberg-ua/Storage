@@ -35,7 +35,7 @@
                            VerticalOptions="Center"
                            IsVisible="{Binding HasPhoto, Converter={StaticResource InvertedBoolConverter}}"
                            SemanticProperties.Description="Take a photo" />
-                    <Image Source="{Binding PhotoSource}"
+                    <Image Source="{Binding PhotoFileName, Converter={StaticResource PhotoSourceConverter}}"
                            Aspect="AspectFill"
                            IsVisible="{Binding HasPhoto}"
                            SemanticProperties.Description="Location photo. Tap to retake" />

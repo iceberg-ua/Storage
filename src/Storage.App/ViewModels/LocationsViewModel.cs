@@ -98,7 +98,19 @@ public partial class LocationsViewModel : ObservableObject
         {
             // The file goes only after the row: a delete that fails must not leave the
             // location pointing at a photo that is no longer there.
-            var deleted = await _locationRepository.DeleteAsync(location.Id);
+            StorageLocation? deleted;
+            try
+            {
+                deleted = await _locationRepository.DeleteAsync(location.Id);
+            }
+            catch (Exception ex)
+            {
+                // Most likely it still has locations inside it, which the schema refuses.
+                await Shell.Current.DisplayAlertAsync(
+                    "Couldn't delete location", $"Move or delete what is inside it first.\n\n{ex.Message}".TrimEnd(), "OK");
+                return;
+            }
+
             await _photoService.DeleteAsync(deleted?.PhotoFileName);
 
             Search.Locations.Remove(location);

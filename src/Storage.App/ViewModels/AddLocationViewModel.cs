@@ -44,13 +44,9 @@ public partial class AddLocationViewModel : ObservableObject, IQueryAttributable
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasPhoto))]
-    [NotifyPropertyChangedFor(nameof(PhotoSource))]
     private string? _photoFileName;
 
     public bool HasPhoto => PhotoFileName is not null;
-
-    public ImageSource? PhotoSource =>
-        _photoService.GetFullPath(PhotoFileName) is string path ? ImageSource.FromFile(path) : null;
 
     [ObservableProperty]
     private string _name = string.Empty;
@@ -149,7 +145,11 @@ public partial class AddLocationViewModel : ObservableObject, IQueryAttributable
             ParentLocation = AvailableParents.FirstOrDefault(l => l.Id == location.ParentId);
 
             _savedPhotoFileName = location.PhotoFileName;
-            PhotoFileName = _savedPhotoFileName;
+
+            // The gallery button works before this load finishes. A photo picked in that
+            // window is the user's choice, so the saved one must not overwrite it.
+            if (_stagedPhotoFileNames.Count == 0)
+                PhotoFileName = _savedPhotoFileName;
         }
         else if (_parentId is int parent)
         {

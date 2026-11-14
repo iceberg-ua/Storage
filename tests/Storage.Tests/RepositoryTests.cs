@@ -239,6 +239,25 @@ public class RepositoryTests : IDisposable
     }
 
     [Fact]
+    public async Task RefusedLocationDeleteDoesNotBlockLaterSaves()
+    {
+        var locationRepo = new LocationRepository(_context);
+
+        var garage = await locationRepo.AddAsync(new Location { Name = "Garage" });
+        await locationRepo.AddAsync(new Location { Name = "Shelf", ParentId = garage.Id });
+
+        // With the child untracked, EF can't null its ParentId, so SQLite's foreign key
+        // refuses the delete. (A tracked child is detached from its parent instead.)
+        _context.ChangeTracker.Clear();
+        await Assert.ThrowsAsync<DbUpdateException>(() => locationRepo.DeleteAsync(garage.Id));
+
+        // Left pending, the refused delete would be retried here and throw again.
+        await locationRepo.AddAsync(new Location { Name = "Attic" });
+
+        Assert.Equal(["Attic", "Garage", "Shelf"], _context.Locations.AsNoTracking().Select(l => l.Name).Order());
+    }
+
+    [Fact]
     public async Task ReferencedPhotosIncludeLocationPhotos()
     {
         var locationRepo = new LocationRepository(_context);

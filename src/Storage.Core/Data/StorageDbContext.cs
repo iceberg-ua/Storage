@@ -60,16 +60,13 @@ public class StorageDbContext : DbContext
     /// </summary>
     public async Task<List<string>> GetReferencedPhotoFileNamesAsync()
     {
-        var itemPhotos = await ItemPhotos
+        // One round trip: EF turns the Concat into a UNION ALL.
+        return await ItemPhotos
             .Select(p => p.FileName)
+            .Concat(Locations
+                .Where(l => l.PhotoFileName != null)
+                .Select(l => l.PhotoFileName!))
             .ToListAsync();
-
-        var locationPhotos = await Locations
-            .Where(l => l.PhotoFileName != null)
-            .Select(l => l.PhotoFileName!)
-            .ToListAsync();
-
-        return [.. itemPhotos, .. locationPhotos];
     }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
