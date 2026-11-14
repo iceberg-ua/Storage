@@ -200,6 +200,64 @@ public class RepositoryTests : IDisposable
     }
 
     [Fact]
+    public async Task LocationPhotoIsSavedReplacedAndCleared()
+    {
+        var locationRepo = new LocationRepository(_context);
+
+        var location = await locationRepo.AddAsync(
+            new Location { Name = "Garage Shelf", PhotoFileName = "shelf.jpg" });
+
+        _context.ChangeTracker.Clear();
+        var fetched = await locationRepo.GetByIdAsync(location.Id);
+        Assert.Equal("shelf.jpg", fetched!.PhotoFileName);
+
+        fetched.PhotoFileName = "shelf-tidied.jpg";
+        await locationRepo.UpdateAsync(fetched);
+        _context.ChangeTracker.Clear();
+        Assert.Equal("shelf-tidied.jpg", (await locationRepo.GetByIdAsync(location.Id))!.PhotoFileName);
+
+        fetched = await locationRepo.GetByIdAsync(location.Id);
+        fetched!.PhotoFileName = null;
+        await locationRepo.UpdateAsync(fetched);
+        _context.ChangeTracker.Clear();
+        Assert.Null((await locationRepo.GetByIdAsync(location.Id))!.PhotoFileName);
+    }
+
+    [Fact]
+    public async Task DeleteLocationHandsBackItsPhotoForTheCallerToRemove()
+    {
+        var locationRepo = new LocationRepository(_context);
+
+        var location = await locationRepo.AddAsync(
+            new Location { Name = "Attic", PhotoFileName = "attic.jpg" });
+
+        var deleted = await locationRepo.DeleteAsync(location.Id);
+
+        Assert.Equal("attic.jpg", deleted?.PhotoFileName);
+        Assert.Empty(_context.Locations.AsNoTracking());
+        Assert.Null(await locationRepo.DeleteAsync(location.Id));
+    }
+
+    [Fact]
+    public async Task ReferencedPhotosIncludeLocationPhotos()
+    {
+        var locationRepo = new LocationRepository(_context);
+        var itemRepo = new ItemRepository(_context);
+
+        // The orphan sweep keeps only what this returns, so a location photo missing
+        // from it would be deleted on the next launch.
+        var garage = await locationRepo.AddAsync(new Location { Name = "Garage", PhotoFileName = "garage.jpg" });
+        await locationRepo.AddAsync(new Location { Name = "Attic" });
+
+        var drill = await itemRepo.AddAsync(new Item { Name = "Drill", LocationId = garage.Id });
+        await itemRepo.SetItemPhotosAsync(drill.Id, ["drill.jpg", "drill-label.jpg"]);
+
+        var referenced = await _context.GetReferencedPhotoFileNamesAsync();
+
+        Assert.Equal(["drill-label.jpg", "drill.jpg", "garage.jpg"], referenced.Order());
+    }
+
+    [Fact]
     public async Task GetPathReturnsTheChainRootFirst()
     {
         var locationRepo = new LocationRepository(_context);

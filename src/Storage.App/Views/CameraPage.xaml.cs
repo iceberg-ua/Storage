@@ -127,7 +127,7 @@ public partial class CameraPage : ContentPage
             // "don't ask again" — at that point only app settings can undo it.
             if (Permissions.ShouldShowRationale<Permissions.Camera>())
             {
-                ShowMessage("Storage needs camera access to take item photos.", offerGallery: true);
+                ShowMessage("Storage needs camera access to take photos.", offerGallery: true);
             }
             else
             {

@@ -36,5 +36,9 @@ public interface ILocationRepository
     /// saved, and a tracked <paramref name="location"/> is reset to its loaded values.
     /// </exception>
     Task UpdateAsync(Location location);
-    Task DeleteAsync(int id);
+    /// <summary>
+    /// Deletes the location and returns the row as it was, or null when there was none.
+    /// Its photo file is the caller's to remove, since only it knows the delete went through.
+    /// </summary>
+    Task<Location?> DeleteAsync(int id);
 }

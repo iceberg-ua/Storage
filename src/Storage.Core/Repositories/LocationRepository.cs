@@ -161,7 +161,7 @@ public class LocationRepository : ILocationRepository
         }
     }
 
-    public async Task DeleteAsync(int id)
+    public async Task<Location?> DeleteAsync(int id)
     {
         var location = await _context.Locations.FindAsync(id);
         if (location != null)
@@ -169,5 +169,7 @@ public class LocationRepository : ILocationRepository
             _context.Locations.Remove(location);
             await _context.SaveChangesAsync();
         }
+
+        return location;
     }
 }

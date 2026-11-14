@@ -21,6 +21,9 @@ public class MigrationTests : IDisposable
     // The last schema with one photo per item, held in Items.PhotoPath.
     private const string BeforePhotos = "20260816180839_AddTagColor";
 
+    // Locations have a description but no photo yet.
+    private const string BeforeLocationPhoto = "20261103143022_AddLocationDescription";
+
     private readonly SqliteConnection _connection;
     private readonly StorageDbContext _context;
 
@@ -168,6 +171,34 @@ public class MigrationTests : IDisposable
         // the whole migration exists to keep.
         var referenced = await _context.ItemPhotos.Select(p => p.FileName).ToListAsync();
         Assert.Equal(["drill.jpg", "saw.jpg"], referenced.Order());
+    }
+
+    [Fact]
+    public async Task AddLocationPhotoKeepsExistingLocationsWithNoPhoto()
+    {
+        var migrator = _context.GetService<IMigrator>();
+        migrator.Migrate(BeforeLocationPhoto);
+
+        _context.Database.ExecuteSqlRaw(
+            "INSERT INTO Locations (Name, Description) VALUES ('Garage', 'By the door');");
+
+        migrator.Migrate();
+
+        var garage = await _context.Locations.SingleAsync();
+        Assert.Equal("Garage", garage.Name);
+        Assert.Equal("By the door", garage.Description);
+        Assert.Null(garage.PhotoFileName);
+    }
+
+    [Fact]
+    public void AddLocationPhotoDownDropsTheColumn()
+    {
+        var migrator = _context.GetService<IMigrator>();
+        migrator.Migrate();
+        Assert.Contains("PhotoFileName", GetColumns("Locations"));
+
+        migrator.Migrate(BeforeLocationPhoto);
+        Assert.DoesNotContain("PhotoFileName", GetColumns("Locations"));
     }
 
     [Fact]

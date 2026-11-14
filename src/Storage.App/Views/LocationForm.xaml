@@ -11,7 +11,77 @@
 
     <VerticalStackLayout Spacing="15">
 
-        <Label Text="Location Name" FontSize="16" />
+        <!-- One photo at most: the picture you recognise the place by. With none, the
+             tile is a shutter; with one, it shows the photo and a remove button, and
+             taking or picking another replaces it. -->
+        <Label Text="Photo (Optional)" FontSize="16" />
+
+        <Grid WidthRequest="160"
+              HeightRequest="160"
+              HorizontalOptions="Start">
+            <Border Padding="0"
+                    BackgroundColor="{AppThemeBinding Light={StaticResource Gray100}, Dark={StaticResource Gray600}}"
+                    Stroke="{AppThemeBinding Light={StaticResource Gray300}, Dark={StaticResource Gray500}}">
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="10" />
+                </Border.StrokeShape>
+                <Border.GestureRecognizers>
+                    <TapGestureRecognizer Command="{Binding TakePhotoCommand}" />
+                </Border.GestureRecognizers>
+                <Grid>
+                    <Label Text="📷"
+                           FontSize="40"
+                           HorizontalOptions="Center"
+                           VerticalOptions="Center"
+                           IsVisible="{Binding HasPhoto, Converter={StaticResource InvertedBoolConverter}}"
+                           SemanticProperties.Description="Take a photo" />
+                    <Image Source="{Binding PhotoSource}"
+                           Aspect="AspectFill"
+                           IsVisible="{Binding HasPhoto}"
+                           SemanticProperties.Description="Location photo. Tap to retake" />
+                </Grid>
+            </Border>
+
+            <!-- Its own scrim, since a photo can be any colour. -->
+            <Border WidthRequest="30"
+                    HeightRequest="30"
+                    Margin="4"
+                    Padding="0"
+                    VerticalOptions="Start"
+                    HorizontalOptions="End"
+                    StrokeThickness="0"
+                    BackgroundColor="#66000000"
+                    IsVisible="{Binding HasPhoto}">
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="15" />
+                </Border.StrokeShape>
+                <Border.GestureRecognizers>
+                    <TapGestureRecognizer Command="{Binding RemovePhotoCommand}" />
+                </Border.GestureRecognizers>
+                <Label Text="✕"
+                       FontSize="14"
+                       TextColor="White"
+                       HorizontalOptions="Center"
+                       VerticalOptions="Center"
+                       SemanticProperties.Description="Remove the photo" />
+            </Border>
+        </Grid>
+
+        <HorizontalStackLayout Spacing="10">
+            <Button Text="Take photo"
+                    Command="{Binding TakePhotoCommand}" />
+            <Button Text="Choose from gallery"
+                    Command="{Binding ChooseFromGalleryCommand}"
+                    BackgroundColor="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource Gray600}}"
+                    TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}" />
+        </HorizontalStackLayout>
+
+        <Label Text="One photo per location. A new one replaces it."
+               FontSize="12"
+               IsVisible="{Binding HasPhoto}"
+               TextColor="{AppThemeBinding Light={StaticResource Gray500}, Dark={StaticResource Gray400}}" />
+
+        <Label Text="Location Name" FontSize="16" Margin="0,10,0,0" />
         <VerticalStackLayout Spacing="4">
             <Entry Text="{Binding Name}"
                    Placeholder="Enter location name (e.g., 'Garage', 'Kitchen')"

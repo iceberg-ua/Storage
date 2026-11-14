@@ -54,6 +54,9 @@ public partial class AddItemViewModel : ObservableObject, IQueryAttributable
     private bool _isAwaitingPhotoSource;
     private bool _isCommitted;
 
+    /// <summary>True while the camera page or the gallery picker covers the form.</summary>
+    public bool IsAwaitingPhotoSource => _isAwaitingPhotoSource;
+
     [ObservableProperty]
     private string _name = string.Empty;
 
