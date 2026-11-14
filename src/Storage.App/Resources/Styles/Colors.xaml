@@ -62,11 +62,6 @@
     <Color x:Key="OnPrimarySoft">#0B5555</Color>
     <Color x:Key="OnPrimarySoftDark">#A6E2DC</Color>
 
-    <!-- The Snap button's glow: the accent at 35% in light, plain shade in dark,
-         where a coloured glow reads as a halo rather than a shadow. -->
-    <SolidColorBrush x:Key="PrimaryShadowBrush" Color="#590F6E6E" />
-    <SolidColorBrush x:Key="PrimaryShadowDarkBrush" Color="#80000000" />
-
     <SolidColorBrush x:Key="PrimaryBrush" Color="{StaticResource Primary}"/>
     <SolidColorBrush x:Key="SecondaryBrush" Color="{StaticResource Secondary}"/>
     <SolidColorBrush x:Key="TertiaryBrush" Color="{StaticResource Tertiary}"/>

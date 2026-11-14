@@ -12,7 +12,7 @@
                                  BindingContext="{Binding Context}" />
     </Shell.TitleView>
 
-    <Grid RowDefinitions="Auto,Auto,Auto,*">
+    <Grid RowDefinitions="Auto,Auto,Auto,*,Auto">
         <!-- Header. "Edit location" only applies inside a location. -->
         <HorizontalStackLayout Grid.Row="0"
                                Margin="10"
@@ -32,8 +32,8 @@
             <Button Text="➕"
                     Style="{StaticResource IconButton}"
                     Command="{Binding NavigateToCreateCommand}"
-                    SemanticProperties.Description="Add an item or a location"
-                    ToolTipProperties.Text="Add" />
+                    SemanticProperties.Description="Add a location"
+                    ToolTipProperties.Text="Add a location" />
         </HorizontalStackLayout>
 
         <!-- Its own row: a path three levels deep needs the full width. -->
@@ -62,6 +62,14 @@
                         IsVisible="{Binding ShowLocationList}"
                         ItemTemplate="{StaticResource LocationRow}"
                         EmptyViewTemplate="{StaticResource EmptyState}" />
+
+        <!-- Its own row under the lists, not floating over them, so it never covers a
+             row's swipe action and the lists need no spacer at the end. -->
+        <Button Grid.Row="4"
+                Text="New item"
+                Command="{Binding Context.NewItemCommand}"
+                Margin="20,8,20,16"
+                SemanticProperties.Description="Add a new item here" />
     </Grid>
 
 </ContentPage>

@@ -73,10 +73,9 @@ public partial class ItemsViewModel : ObservableObject
     [RelayCommand]
     private async Task NavigateToCreateAsync()
     {
-        // Opens on an item, since this is the items tab; inside a location, whatever is
-        // made goes in it by default.
-        var route = Context.CurrentId is int id ? $"create?kind=item&locationId={id}" : "create?kind=item";
-        await Shell.Current.GoToAsync(route);
+        // Opens on a location: items have the "New item" button at the bottom. Inside a
+        // location, the new one is nested in it by default.
+        await Shell.Current.GoToAsync(Routes.Create(CreateKind.Location, Context.CurrentId));
     }
 
     [RelayCommand]
