@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8" ?>
+﻿<?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:Storage.App.ViewModels"
@@ -10,12 +10,12 @@
     <ContentPage.Resources>
         <!-- Every field is a caption over its value, so the page scans as a list of
              answers rather than a wall of labelled rows. -->
-        <Style x:Key="FieldCaption" TargetType="Label">
+        <Style x:Key="FieldCaption" TargetType="Label" BasedOn="{StaticResource BaseLabel}">
             <Setter Property="FontSize" Value="12" />
             <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Gray500}, Dark={StaticResource Gray400}}" />
         </Style>
 
-        <Style x:Key="FieldValue" TargetType="Label">
+        <Style x:Key="FieldValue" TargetType="Label" BasedOn="{StaticResource BaseLabel}">
             <Setter Property="FontSize" Value="16" />
             <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}" />
         </Style>

@@ -31,6 +31,42 @@
     <Color x:Key="Gray900">#212121</Color>
     <Color x:Key="Gray950">#141414</Color>
 
+    <!-- Snapshot redesign tokens. Each role has a light and a dark value; pages bind
+         them with AppThemeBinding Light={StaticResource X}, Dark={StaticResource XDark}.
+         The Gray scale above stays until every page has moved over to these. -->
+
+    <!-- Page ground and the white cards that sit on it. -->
+    <Color x:Key="Canvas">#F6F4EF</Color>
+    <Color x:Key="CanvasDark">#141412</Color>
+    <Color x:Key="Surface">#FFFFFF</Color>
+    <Color x:Key="SurfaceDark">#1F1E1B</Color>
+    <!-- Segment tracks, stepper minus, clear buttons: a step down from Surface. -->
+    <Color x:Key="SurfaceSunken">#ECE8DF</Color>
+    <Color x:Key="SurfaceSunkenDark">#2A2925</Color>
+    <Color x:Key="Hairline">#E4DFD4</Color>
+    <Color x:Key="HairlineDark">#34322D</Color>
+
+    <!-- Text. InkMuted clears 4.5:1 on both Canvas and Surface in each theme. -->
+    <Color x:Key="Ink">#1C1B19</Color>
+    <Color x:Key="InkDark">#F3F1EC</Color>
+    <Color x:Key="InkMuted">#5F5B53</Color>
+    <Color x:Key="InkMutedDark">#ABA69C</Color>
+
+    <!-- The accent is Primary / PrimaryDark above, with White / PrimaryDarkText on it;
+         it is not redefined here so the two cannot drift apart. Ink-filled buttons
+         (Edit, New place) likewise use Ink / InkDark with White / Ink on them. -->
+
+    <!-- Soft accent fill for location chips and secondary accent buttons. -->
+    <Color x:Key="PrimarySoft">#DCEDEA</Color>
+    <Color x:Key="PrimarySoftDark">#173C3B</Color>
+    <Color x:Key="OnPrimarySoft">#0B5555</Color>
+    <Color x:Key="OnPrimarySoftDark">#A6E2DC</Color>
+
+    <!-- The Snap button's glow: the accent at 35% in light, plain shade in dark,
+         where a coloured glow reads as a halo rather than a shadow. -->
+    <SolidColorBrush x:Key="PrimaryShadowBrush" Color="#590F6E6E" />
+    <SolidColorBrush x:Key="PrimaryShadowDarkBrush" Color="#80000000" />
+
     <SolidColorBrush x:Key="PrimaryBrush" Color="{StaticResource Primary}"/>
     <SolidColorBrush x:Key="SecondaryBrush" Color="{StaticResource Secondary}"/>
     <SolidColorBrush x:Key="TertiaryBrush" Color="{StaticResource Tertiary}"/>

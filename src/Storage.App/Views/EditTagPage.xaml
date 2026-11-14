@@ -80,7 +80,7 @@
 
                     <Label Text="{Binding SelectedColor}"
                            FontSize="14"
-                           FontFamily="OpenSansSemibold"
+                           FontFamily="JakartaSemiBold"
                            TextColor="{AppThemeBinding Light={StaticResource Gray500}, Dark={StaticResource Gray400}}" />
 
                     <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="10" RowSpacing="4">
