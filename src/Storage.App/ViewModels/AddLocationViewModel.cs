@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Storage.App.Services;
 using Storage.Core.Repositories;
 using Storage.Core.Services;
 using StorageLocation = Storage.Core.Models.Location;
@@ -274,7 +275,7 @@ public partial class AddLocationViewModel : ObservableObject, IQueryAttributable
 
         // The edit stays open underneath, unsaved photo included.
         _isCoveredByCreate = true;
-        await Shell.Current.GoToAsync($"create?kind=item&locationId={_locationId}");
+        await Shell.Current.GoToAsync(Routes.Create(CreateKind.Item, _locationId));
     }
 
     [RelayCommand]

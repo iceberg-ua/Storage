@@ -1,4 +1,4 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Storage.App.Services;
 using Storage.Core.Repositories;
@@ -68,6 +68,14 @@ public partial class ItemsViewModel : ObservableObject
         {
             IsLoading = false;
         }
+    }
+
+    [RelayCommand]
+    private async Task NavigateToCreateAsync()
+    {
+        // Opens on a location: items have the "New item" button at the bottom. Inside a
+        // location, the new one is nested in it by default.
+        await Shell.Current.GoToAsync(Routes.Create(CreateKind.Location, Context.CurrentId));
     }
 
     [RelayCommand]

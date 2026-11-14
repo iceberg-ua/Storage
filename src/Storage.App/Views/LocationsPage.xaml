@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8" ?>
+<?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:Storage.App.ViewModels"
@@ -12,8 +12,8 @@
                                  BindingContext="{Binding Context}" />
     </Shell.TitleView>
 
-    <Grid RowDefinitions="Auto,Auto,Auto,*">
-        <!-- Header: search, then add a location. Items come from the Snap button. -->
+    <Grid RowDefinitions="Auto,Auto,Auto,*,Auto">
+        <!-- Header: search, then add a location. Items come from "New item" below. -->
         <HorizontalStackLayout Grid.Row="0"
                                Margin="10"
                                Spacing="10"
@@ -49,11 +49,7 @@
                      Command="{Binding Source={RelativeSource AncestorType={x:Type vm:LocationsViewModel}}, Path=LoadLocationsCommand}">
             <CollectionView ItemsSource="{Binding Locations}"
                             ItemTemplate="{StaticResource DeletableLocationRow}"
-                            EmptyViewTemplate="{StaticResource EmptyState}">
-                <CollectionView.Footer>
-                    <ContentView HeightRequest="{StaticResource SnapClearance}" />
-                </CollectionView.Footer>
-            </CollectionView>
+                            EmptyViewTemplate="{StaticResource EmptyState}" />
         </RefreshView>
 
         <!-- Items, when the toggle is flipped: found without leaving this page. -->
@@ -62,16 +58,15 @@
                         ItemsSource="{Binding Items}"
                         IsVisible="{Binding ShowItemList}"
                         ItemTemplate="{StaticResource ItemRow}"
-                        EmptyViewTemplate="{StaticResource EmptyState}">
-            <CollectionView.Footer>
-                <ContentView HeightRequest="{StaticResource SnapClearance}" />
-            </CollectionView.Footer>
-        </CollectionView>
+                        EmptyViewTemplate="{StaticResource EmptyState}" />
 
-        <!-- Last in the grid so it draws over both lists. -->
-        <Button Grid.Row="3"
-                Style="{StaticResource SnapButton}"
-                Command="{Binding Context.SnapCommand}" />
+        <!-- Its own row under the lists, not floating over them, so it never covers a
+             row's swipe action and the lists need no spacer at the end. -->
+        <Button Grid.Row="4"
+                Text="New item"
+                Command="{Binding Context.NewItemCommand}"
+                Margin="20,8,20,16"
+                SemanticProperties.Description="Add a new item here" />
     </Grid>
 
 </ContentPage>

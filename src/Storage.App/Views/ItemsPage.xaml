@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8" ?>
+<?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:Storage.App.ViewModels"
@@ -12,7 +12,7 @@
                                  BindingContext="{Binding Context}" />
     </Shell.TitleView>
 
-    <Grid RowDefinitions="Auto,Auto,Auto,*">
+    <Grid RowDefinitions="Auto,Auto,Auto,*,Auto">
         <!-- Header. "Edit location" only applies inside a location. -->
         <HorizontalStackLayout Grid.Row="0"
                                Margin="10"
@@ -29,6 +29,11 @@
                     IsVisible="{Binding IsLocationView}"
                     SemanticProperties.Description="Edit location"
                     ToolTipProperties.Text="Edit location" />
+            <Button Text="➕"
+                    Style="{StaticResource IconButton}"
+                    Command="{Binding NavigateToCreateCommand}"
+                    SemanticProperties.Description="Add a location"
+                    ToolTipProperties.Text="Add a location" />
         </HorizontalStackLayout>
 
         <!-- Its own row: a path three levels deep needs the full width. -->
@@ -47,11 +52,7 @@
                      Command="{Binding Source={RelativeSource AncestorType={x:Type vm:ItemsViewModel}}, Path=RefreshCommand}">
             <CollectionView ItemsSource="{Binding Items}"
                             ItemTemplate="{StaticResource ItemRow}"
-                            EmptyViewTemplate="{StaticResource EmptyState}">
-                <CollectionView.Footer>
-                    <ContentView HeightRequest="{StaticResource SnapClearance}" />
-                </CollectionView.Footer>
-            </CollectionView>
+                            EmptyViewTemplate="{StaticResource EmptyState}" />
         </RefreshView>
 
         <!-- Locations: this location's children when browsing, the matches when searching. -->
@@ -60,16 +61,15 @@
                         ItemsSource="{Binding Locations}"
                         IsVisible="{Binding ShowLocationList}"
                         ItemTemplate="{StaticResource LocationRow}"
-                        EmptyViewTemplate="{StaticResource EmptyState}">
-            <CollectionView.Footer>
-                <ContentView HeightRequest="{StaticResource SnapClearance}" />
-            </CollectionView.Footer>
-        </CollectionView>
+                        EmptyViewTemplate="{StaticResource EmptyState}" />
 
-        <!-- Last in the grid so it draws over both lists. -->
-        <Button Grid.Row="3"
-                Style="{StaticResource SnapButton}"
-                Command="{Binding Context.SnapCommand}" />
+        <!-- Its own row under the lists, not floating over them, so it never covers a
+             row's swipe action and the lists need no spacer at the end. -->
+        <Button Grid.Row="4"
+                Text="New item"
+                Command="{Binding Context.NewItemCommand}"
+                Margin="20,8,20,16"
+                SemanticProperties.Description="Add a new item here" />
     </Grid>
 
 </ContentPage>

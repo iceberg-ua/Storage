@@ -81,8 +81,7 @@ public partial class LocationsViewModel : ObservableObject
     {
         // Opens on a location, since this is the locations tab; inside a location,
         // whatever is made goes in it by default.
-        var route = Context.CurrentId is int id ? $"create?kind=location&locationId={id}" : "create?kind=location";
-        await Shell.Current.GoToAsync(route);
+        await Shell.Current.GoToAsync(Routes.Create(CreateKind.Location, Context.CurrentId));
     }
 
     [RelayCommand]
