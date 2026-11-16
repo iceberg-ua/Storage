@@ -22,7 +22,6 @@ public partial class SearchViewModel : ObservableObject
 {
     private readonly IItemRepository _itemRepository;
     private readonly ILocationRepository _locationRepository;
-    private readonly LocationContext _locationContext;
     private readonly SearchDebounce _debounce = new();
     private readonly bool _locationsByDefault;
 
@@ -36,12 +35,12 @@ public partial class SearchViewModel : ObservableObject
     public SearchViewModel(
         IItemRepository itemRepository,
         ILocationRepository locationRepository,
-        LocationContext locationContext,
-        bool locationsByDefault = false)
+        bool locationsByDefault = false,
+        bool canSearchLocations = true)
     {
         _itemRepository = itemRepository;
         _locationRepository = locationRepository;
-        _locationContext = locationContext;
+        CanSearchLocations = canSearchLocations;
         _locationsByDefault = locationsByDefault;
         _searchLocations = locationsByDefault;
     }
@@ -102,6 +101,12 @@ public partial class SearchViewModel : ObservableObject
 
     public bool ShowEverywhereToggle => IsScopedToLocation;
 
+    /// <summary>
+    /// Whether the "Search locations" switch is offered. Off on a location's page, which
+    /// already shows the locations inside it and has room for one list, not two.
+    /// </summary>
+    public bool CanSearchLocations { get; }
+
     public bool ShowFieldScope => !SearchLocations;
 
     public string Placeholder => SearchLocations ? "Search locations" : "Search items";
@@ -139,7 +144,7 @@ public partial class SearchViewModel : ObservableObject
     private string _emptyTitle = "📦 No items yet";
 
     [ObservableProperty]
-    private string _emptyMessage = "Tap ➕ to get started";
+    private string _emptyMessage = "Tap New item to get started";
 
     public async Task LoadAsync()
     {
@@ -185,14 +190,14 @@ public partial class SearchViewModel : ObservableObject
             EmptyTitle = "📍 No locations";
             EmptyMessage = IsScopedToLocation
                 ? "Nothing is stored inside this one"
-                : "Tap ➕ to create your first location";
+                : "Add one with ➕ on the Locations tab";
         }
         else
         {
             EmptyTitle = "📦 No items yet";
             EmptyMessage = IsScopedToLocation
-                ? "Tap ➕ to store something here"
-                : "Tap ➕ to get started";
+                ? "Tap New item to store something here"
+                : "Tap New item to get started";
         }
     }
 
@@ -263,12 +268,8 @@ public partial class SearchViewModel : ObservableObject
     private async Task OpenItemAsync(Item item) =>
         await Shell.Current.GoToAsync($"itemdetail?itemId={item.Id}");
 
-    // Opening a location shows what is stored in it, so the bar moves to Items; the
-    // Locations tab then lists what is nested inside it.
+    // Pushed on the current tab, so Back returns to the list it was opened from.
     [RelayCommand]
-    private async Task OpenLocationAsync(StorageLocation location)
-    {
-        await _locationContext.EnterAsync(location.Id);
-        await Shell.Current.GoToAsync("//items");
-    }
+    private async Task OpenLocationAsync(StorageLocation location) =>
+        await Shell.Current.GoToAsync(Routes.Place(location.Id));
 }

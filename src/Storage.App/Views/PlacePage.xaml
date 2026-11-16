@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:Storage.App.ViewModels"
+             xmlns:views="clr-namespace:Storage.App.Views"
+             x:Class="Storage.App.Views.PlacePage"
+             x:DataType="vm:PlaceViewModel"
+             Title="{Binding Name}"
+             Shell.NavBarIsVisible="False">
+
+    <!-- The page draws its own back button in the header, over the photo when there is
+         one, so Shell's bar is hidden. Android's Back button still pops as usual. -->
+    <Grid RowDefinitions="Auto,*,Auto">
+
+        <views:SearchToolbar x:Name="Toolbar"
+                             Grid.Row="0"
+                             Margin="0,12,0,0"
+                             BindingContext="{Binding Search}" />
+
+        <!-- Items stored here, two to a row, under the header. One list only: the
+             locations inside this one are the header's chips, so the search here does
+             not offer to list locations instead. -->
+        <CollectionView Grid.Row="1"
+                        Margin="8,0"
+                        BindingContext="{Binding Search}"
+                        ItemsSource="{Binding Items}"
+                        ItemTemplate="{StaticResource ItemTile}"
+                        EmptyViewTemplate="{StaticResource EmptyState}">
+            <CollectionView.ItemsLayout>
+                <GridItemsLayout Orientation="Vertical" Span="2" />
+            </CollectionView.ItemsLayout>
+            <CollectionView.Header>
+                <!-- BindingContext set in code-behind; see PlaceHeader.xaml. -->
+                <views:PlaceHeader x:Name="Header" />
+            </CollectionView.Header>
+        </CollectionView>
+
+        <Button Grid.Row="2"
+                Text="New item here"
+                Command="{Binding NewItemCommand}"
+                Margin="16,8,16,16"
+                SemanticProperties.Description="{Binding Name, StringFormat='Add a new item to {0}'}" />
+
+        <!-- Deleted while this page was underneath another one, from a search on a
+             tab. Said plainly, with a way out, instead of popping during OnAppearing. -->
+        <VerticalStackLayout Grid.RowSpan="3"
+                             IsVisible="{Binding IsMissing}"
+                             BackgroundColor="{AppThemeBinding Light={StaticResource Canvas}, Dark={StaticResource CanvasDark}}"
+                             Padding="32"
+                             Spacing="16"
+                             VerticalOptions="Fill">
+            <Label Text="This location no longer exists"
+                   Style="{StaticResource Title}"
+                   HorizontalTextAlignment="Center"
+                   Margin="0,120,0,0" />
+            <Button Text="Back"
+                    Style="{StaticResource SecondaryButton}"
+                    Command="{Binding BackCommand}"
+                    HorizontalOptions="Center" />
+        </VerticalStackLayout>
+    </Grid>
+
+</ContentPage>

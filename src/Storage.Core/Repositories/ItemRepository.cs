@@ -45,6 +45,9 @@ public class ItemRepository : IItemRepository
             .ToListAsync();
     }
 
+    public Task<int> CountInLocationAsync(int locationId) =>
+        _context.Items.CountAsync(i => i.LocationId == locationId);
+
     public async Task<IEnumerable<Item>> SearchAsync(string? query, SearchScope scope, int? locationId = null)
     {
         // Same shape as GetAllAsync, so a search result row renders exactly like a

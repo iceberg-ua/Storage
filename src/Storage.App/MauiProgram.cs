@@ -47,8 +47,7 @@ public static class MauiProgram
 		// Register services
 		builder.Services.AddSingleton<IImageCompressor, MauiImageCompressor>();
 		builder.Services.AddSingleton<IGalleryPicker, MauiGalleryPicker>();
-		// One "current location" for the whole app, so both tabs follow the same one.
-		builder.Services.AddSingleton<LocationContext>();
+		builder.Services.AddTransient<LocationDeletion>();
 		builder.Services.AddSingleton<IPhotoService>(sp => new PhotoService(
 			FileSystem.AppDataDirectory,
 			sp.GetRequiredService<IImageCompressor>(),
@@ -64,6 +63,7 @@ public static class MauiProgram
 		builder.Services.AddTransient<ViewModels.TagsViewModel>();
 		builder.Services.AddTransient<ViewModels.EditTagViewModel>();
 		builder.Services.AddTransient<ViewModels.CreateViewModel>();
+		builder.Services.AddTransient<ViewModels.PlaceViewModel>();
 
 		// Register Pages
 		builder.Services.AddTransient<Views.ItemsPage>();
@@ -75,6 +75,7 @@ public static class MauiProgram
 		builder.Services.AddTransient<Views.EditTagPage>();
 		builder.Services.AddTransient<Views.CameraPage>();
 		builder.Services.AddTransient<Views.CreatePage>();
+		builder.Services.AddTransient<Views.PlacePage>();
 
 		var app = builder.Build();
 

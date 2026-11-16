@@ -7,12 +7,7 @@
              x:DataType="vm:LocationsViewModel"
              Title="Locations">
 
-    <Shell.TitleView>
-        <views:LocationTitleView RootTitle="Locations"
-                                 BindingContext="{Binding Context}" />
-    </Shell.TitleView>
-
-    <Grid RowDefinitions="Auto,Auto,Auto,*,Auto">
+    <Grid RowDefinitions="Auto,Auto,*,Auto">
         <!-- Header: search, then add a location. Items come from "New item" below. -->
         <HorizontalStackLayout Grid.Row="0"
                                Margin="10"
@@ -30,19 +25,16 @@
                     ToolTipProperties.Text="Add a location" />
         </HorizontalStackLayout>
 
-        <!-- Its own row: a path three levels deep needs the full width. -->
-        <views:LocationPathBar Grid.Row="1"
-                               BindingContext="{Binding Context}" />
-
         <!-- The same toolbar the items page uses, so the search does not change shape
              depending on which tab it was opened from. -->
         <views:SearchToolbar x:Name="Toolbar"
-                             Grid.Row="2"
+                             Grid.Row="1"
                              BindingContext="{Binding Search}" />
 
-        <!-- Locations: the ones at this level when browsing, the matches when searching.
+        <!-- Locations: the top-level ones when browsing, the matches when searching.
+             Opening one pushes its own page, which shows what is nested inside it.
              Swipe-to-delete lives here only — this is the page that manages them. -->
-        <RefreshView Grid.Row="3"
+        <RefreshView Grid.Row="2"
                      BindingContext="{Binding Search}"
                      IsVisible="{Binding ShowLocationList}"
                      IsRefreshing="{Binding Source={RelativeSource AncestorType={x:Type vm:LocationsViewModel}}, Path=IsLoading}"
@@ -53,7 +45,7 @@
         </RefreshView>
 
         <!-- Items, when the toggle is flipped: found without leaving this page. -->
-        <CollectionView Grid.Row="3"
+        <CollectionView Grid.Row="2"
                         BindingContext="{Binding Search}"
                         ItemsSource="{Binding Items}"
                         IsVisible="{Binding ShowItemList}"
@@ -62,11 +54,11 @@
 
         <!-- Its own row under the lists, not floating over them, so it never covers a
              row's swipe action and the lists need no spacer at the end. -->
-        <Button Grid.Row="4"
+        <Button Grid.Row="3"
                 Text="New item"
-                Command="{Binding Context.NewItemCommand}"
+                Command="{Binding NewItemCommand}"
                 Margin="20,8,20,16"
-                SemanticProperties.Description="Add a new item here" />
+                SemanticProperties.Description="Add a new item" />
     </Grid>
 
 </ContentPage>

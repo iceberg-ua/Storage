@@ -9,6 +9,12 @@ public interface IItemRepository
     Task<IEnumerable<Item>> GetByLocationIdAsync(int locationId);
 
     /// <summary>
+    /// How many items are stored in <paramref name="locationId"/> itself, not in the
+    /// locations nested under it.
+    /// </summary>
+    Task<int> CountInLocationAsync(int locationId);
+
+    /// <summary>
     /// Items whose <paramref name="scope"/> field contains <paramref name="query"/>,
     /// matched case-insensitively in any language and partially. A blank query is not
     /// an error — it means "no filter", so the caller gets the same set it would from

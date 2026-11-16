@@ -5,63 +5,28 @@ using Storage.Core.Repositories;
 
 namespace Storage.App.ViewModels;
 
-// Backs the "Items" tab: everything at the top level, or what is stored in the current
-// location once one is opened. Everything to do with the list itself — searching it,
-// browsing it, what it shows when empty — lives in Search, which the Locations page
-// composes the same way.
+// Backs the "Items" tab: the whole inventory, wherever it is stored. What is in one
+// location is that location's own page. Everything to do with the list itself —
+// searching it, browsing it, what it shows when empty — lives in Search, which the
+// Locations tab and the location page compose the same way.
 public partial class ItemsViewModel : ObservableObject
 {
-    public LocationContext Context { get; }
-
     public SearchViewModel Search { get; }
 
     [ObservableProperty]
     private bool _isLoading;
 
-    [ObservableProperty]
-    private bool _isLocationView;
-
-    public ItemsViewModel(
-        IItemRepository itemRepository,
-        ILocationRepository locationRepository,
-        LocationContext locationContext)
+    public ItemsViewModel(IItemRepository itemRepository, ILocationRepository locationRepository)
     {
-        Context = locationContext;
-        Search = new SearchViewModel(itemRepository, locationRepository, locationContext);
+        Search = new SearchViewModel(itemRepository, locationRepository);
     }
-
-    // Followed only while the page is on screen: the context is a singleton, so a
-    // subscription left in place would keep this view model alive for good. A tab
-    // that was hidden when the path changed catches up in RefreshAsync on appearing.
-    public void Attach()
-    {
-        Context.Changed -= OnContextChanged;
-        Context.Changed += OnContextChanged;
-    }
-
-    public void Detach() => Context.Changed -= OnContextChanged;
-
-    private async void OnContextChanged(object? sender, EventArgs e) => await LoadAsync();
 
     [RelayCommand]
     private async Task RefreshAsync()
     {
-        // Picks up a rename, move or delete of the current location made on the edit
-        // screen; if that moved the user, Changed has already reloaded the list.
-        var before = Context.CurrentId;
-        await Context.RefreshAsync();
-
-        if (Context.CurrentId == before)
-            await LoadAsync();
-    }
-
-    private async Task LoadAsync()
-    {
         IsLoading = true;
         try
         {
-            IsLocationView = Context.IsInside;
-            Search.ScopeTo(Context.CurrentId);
             await Search.LoadAsync();
         }
         finally
@@ -70,20 +35,7 @@ public partial class ItemsViewModel : ObservableObject
         }
     }
 
+    // Not in any location: from here there is no place the user is "in".
     [RelayCommand]
-    private async Task NavigateToCreateAsync()
-    {
-        // Opens on a location: items have the "New item" button at the bottom. Inside a
-        // location, the new one is nested in it by default.
-        await Shell.Current.GoToAsync(Routes.Create(CreateKind.Location, Context.CurrentId));
-    }
-
-    [RelayCommand]
-    private async Task EditLocationAsync()
-    {
-        if (Context.CurrentId is not int id)
-            return;
-
-        await Shell.Current.GoToAsync($"editlocation?locationId={id}");
-    }
+    private Task NewItemAsync() => Shell.Current.GoToAsync(Routes.Create(CreateKind.Item));
 }
