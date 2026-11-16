@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:Storage.App.ViewModels"
+             x:Class="Storage.App.Views.PlaceCover"
+             x:DataType="vm:PlaceTile">
+
+    <!-- The picture for a location card, at whatever size its parent gives it; the
+         parent Border clips the corners. Bind it to a PlaceTile. -->
+    <Grid BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceSunken}, Dark={StaticResource SurfaceSunkenDark}}">
+
+        <!-- Nothing to show yet. -->
+        <Label Text="📍"
+               FontSize="22"
+               AutomationProperties.IsInAccessibleTree="False"
+               HorizontalOptions="Center"
+               VerticalOptions="Center"
+               IsVisible="{Binding HasNoPicture}" />
+
+        <!-- The location's own photo wins: it is the one picture the user chose. -->
+        <Image Source="{Binding OwnPhoto, Converter={StaticResource PhotoSourceConverter}}"
+               Aspect="AspectFill"
+               IsVisible="{Binding HasOwnPhoto}" />
+
+        <!-- Otherwise up to four recent item photos from inside it. -->
+        <Grid RowDefinitions="*,*"
+              ColumnDefinitions="*,*"
+              RowSpacing="2"
+              ColumnSpacing="2"
+              IsVisible="{Binding HasMosaic}">
+            <!-- Spans come from PlaceTile, so fewer than four photos still fill it. -->
+            <Image Grid.Row="0" Grid.Column="0" Aspect="AspectFill"
+                   Grid.RowSpan="{Binding Photo1RowSpan}"
+                   Grid.ColumnSpan="{Binding Photo1ColumnSpan}"
+                   Source="{Binding Photo1, Converter={StaticResource PhotoSourceConverter}}" />
+            <Image Grid.Row="0" Grid.Column="1" Aspect="AspectFill"
+                   Grid.RowSpan="{Binding Photo2RowSpan}"
+                   Source="{Binding Photo2, Converter={StaticResource PhotoSourceConverter}}"
+                   IsVisible="{Binding Photo2, Converter={StaticResource IsNotNullConverter}}" />
+            <Image Grid.Row="1" Aspect="AspectFill"
+                   Grid.Column="{Binding Photo3Column}"
+                   Source="{Binding Photo3, Converter={StaticResource PhotoSourceConverter}}"
+                   IsVisible="{Binding Photo3, Converter={StaticResource IsNotNullConverter}}" />
+            <Image Grid.Row="1" Grid.Column="1" Aspect="AspectFill"
+                   Source="{Binding Photo4, Converter={StaticResource PhotoSourceConverter}}"
+                   IsVisible="{Binding Photo4, Converter={StaticResource IsNotNullConverter}}" />
+        </Grid>
+    </Grid>
+
+</ContentView>

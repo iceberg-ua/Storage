@@ -117,6 +117,7 @@
                 <Grid>
                     <Label Text="📦"
                            FontSize="28"
+                           AutomationProperties.IsInAccessibleTree="False"
                            HorizontalOptions="Center"
                            VerticalOptions="Center" />
                     <Image Source="{Binding PrimaryPhotoFileName, Converter={StaticResource PhotoSourceConverter}}"

@@ -7,9 +7,15 @@
     Title="Storage">
 
     <TabBar>
-        <!-- Locations is first, so it is the tab the app opens on. -->
         <!-- Icons are single-colour SVGs; the tab bar tints them with the selected and
-             unselected colours from the Shell style, so one file serves both themes. -->
+             unselected colours from the Shell style, so one file serves both themes.
+             Home is first, so it is the tab the app opens on. -->
+        <ShellContent
+            Title="Home"
+            Icon="tab_home.png"
+            ContentTemplate="{DataTemplate views:HomePage}"
+            Route="home" />
+
         <ShellContent
             Title="Locations"
             Icon="tab_places.png"

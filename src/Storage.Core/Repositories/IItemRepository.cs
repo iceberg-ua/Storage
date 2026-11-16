@@ -14,6 +14,15 @@ public interface IItemRepository
     /// </summary>
     Task<int> CountInLocationAsync(int locationId);
 
+    /// <summary>How many items there are, wherever they are stored.</summary>
+    Task<int> CountAsync();
+
+    /// <summary>
+    /// The <paramref name="count"/> most recently added items, newest first, with their
+    /// location and photos.
+    /// </summary>
+    Task<IReadOnlyList<Item>> GetRecentAsync(int count);
+
     /// <summary>
     /// Items whose <paramref name="scope"/> field contains <paramref name="query"/>,
     /// matched case-insensitively in any language and partially. A blank query is not

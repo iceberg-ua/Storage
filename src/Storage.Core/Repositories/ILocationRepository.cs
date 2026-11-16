@@ -16,6 +16,14 @@ public interface ILocationRepository
     Task<IReadOnlyList<LocationSummary>> GetChildSummariesAsync(int parentId);
 
     /// <summary>
+    /// Every top-level location as a <see cref="PlaceCard"/>, in name order ignoring case.
+    /// </summary>
+    Task<IReadOnlyList<PlaceCard>> GetTopLevelCardsAsync();
+
+    /// <summary>How many locations there are, at every level.</summary>
+    Task<int> CountAsync();
+
+    /// <summary>
     /// The chain from the top-level location down to <paramref name="id"/>, inclusive,
     /// root first. Empty when the location does not exist.
     /// </summary>

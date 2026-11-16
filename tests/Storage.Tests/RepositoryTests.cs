@@ -589,6 +589,108 @@ public class RepositoryTests : IDisposable
         Assert.Equal(1, await itemRepo.CountInLocationAsync(shelf.Id));
     }
 
+    [Fact]
+    public async Task TopLevelCardsCountThroughEveryLevelBelow()
+    {
+        var locationRepo = new LocationRepository(_context);
+        var itemRepo = new ItemRepository(_context);
+
+        var garage = await locationRepo.AddAsync(new Location { Name = "Garage" });
+        var shelf = await locationRepo.AddAsync(new Location { Name = "Shelf", ParentId = garage.Id });
+        var bin = await locationRepo.AddAsync(new Location { Name = "Bin", ParentId = shelf.Id });
+        await locationRepo.AddAsync(new Location { Name = "Bench", ParentId = garage.Id });
+        var attic = await locationRepo.AddAsync(new Location { Name = "attic" });
+
+        await itemRepo.AddAsync(new Item { Name = "Drill", LocationId = garage.Id });
+        await itemRepo.AddAsync(new Item { Name = "Tyres", LocationId = shelf.Id });
+        await itemRepo.AddAsync(new Item { Name = "Cable", LocationId = bin.Id });
+        await itemRepo.AddAsync(new Item { Name = "Trunk", LocationId = attic.Id });
+        await itemRepo.AddAsync(new Item { Name = "Loose" });
+
+        var cards = await locationRepo.GetTopLevelCardsAsync();
+
+        // Top level only, in name order ignoring case.
+        Assert.Equal(["attic", "Garage"], cards.Select(c => c.Location.Name));
+
+        var garageCard = cards.Single(c => c.Location.Id == garage.Id);
+        Assert.Equal(3, garageCard.ItemCount);
+        Assert.Equal(2, garageCard.ChildCount);
+        Assert.Equal(1, cards.Single(c => c.Location.Id == attic.Id).ItemCount);
+    }
+
+    [Fact]
+    public async Task TopLevelCardsTakeTheNewestFourPrimaryPhotosFromBelow()
+    {
+        var locationRepo = new LocationRepository(_context);
+        var itemRepo = new ItemRepository(_context);
+
+        var garage = await locationRepo.AddAsync(new Location { Name = "Garage" });
+        var shelf = await locationRepo.AddAsync(new Location { Name = "Shelf", ParentId = garage.Id });
+        var attic = await locationRepo.AddAsync(new Location { Name = "Attic" });
+
+        // AddAsync stamps CreatedAt itself, so "newest" is the order they are added in.
+        for (var i = 0; i < 5; i++)
+        {
+            var item = await itemRepo.AddAsync(new Item
+            {
+                Name = $"Thing {i}",
+                LocationId = i % 2 == 0 ? garage.Id : shelf.Id
+            });
+            // The second photo is never the cover: the primary is.
+            await itemRepo.SetItemPhotosAsync(item.Id, [$"thing{i}.jpg", $"thing{i}-back.jpg"]);
+        }
+        await itemRepo.AddAsync(new Item { Name = "No photo", LocationId = garage.Id });
+        var trunk = await itemRepo.AddAsync(new Item { Name = "Trunk", LocationId = attic.Id });
+        await itemRepo.SetItemPhotosAsync(trunk.Id, ["trunk.jpg"]);
+
+        var cards = await locationRepo.GetTopLevelCardsAsync();
+
+        Assert.Equal(
+            ["thing4.jpg", "thing3.jpg", "thing2.jpg", "thing1.jpg"],
+            cards.Single(c => c.Location.Id == garage.Id).ItemPhotos);
+        Assert.Equal(["trunk.jpg"], cards.Single(c => c.Location.Id == attic.Id).ItemPhotos);
+    }
+
+    [Fact]
+    public async Task RootLocationsSortLikeTheCards()
+    {
+        var locationRepo = new LocationRepository(_context);
+        await locationRepo.AddAsync(new Location { Name = "Garage" });
+        await locationRepo.AddAsync(new Location { Name = "attic" });
+
+        // The search list the Locations tab shows must match the cards it replaces.
+        Assert.Equal(
+            (await locationRepo.GetTopLevelCardsAsync()).Select(c => c.Location.Name),
+            (await locationRepo.GetRootLocationsAsync()).Select(l => l.Name));
+    }
+
+    [Fact]
+    public async Task RecentItemsAreTheNewestFirst()
+    {
+        var itemRepo = new ItemRepository(_context);
+        for (var i = 0; i < 5; i++)
+            await itemRepo.AddAsync(new Item { Name = $"Thing {i}" });
+
+        var recent = await itemRepo.GetRecentAsync(3);
+
+        Assert.Equal(["Thing 4", "Thing 3", "Thing 2"], recent.Select(i => i.Name));
+    }
+
+    [Fact]
+    public async Task CountsCoverEveryLevel()
+    {
+        var locationRepo = new LocationRepository(_context);
+        var itemRepo = new ItemRepository(_context);
+
+        var garage = await locationRepo.AddAsync(new Location { Name = "Garage" });
+        var shelf = await locationRepo.AddAsync(new Location { Name = "Shelf", ParentId = garage.Id });
+        await itemRepo.AddAsync(new Item { Name = "Tyres", LocationId = shelf.Id });
+        await itemRepo.AddAsync(new Item { Name = "Loose" });
+
+        Assert.Equal(2, await locationRepo.CountAsync());
+        Assert.Equal(2, await itemRepo.CountAsync());
+    }
+
     public void Dispose()
     {
         _context.Dispose();

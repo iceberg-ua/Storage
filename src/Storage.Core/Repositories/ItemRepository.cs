@@ -48,6 +48,19 @@ public class ItemRepository : IItemRepository
     public Task<int> CountInLocationAsync(int locationId) =>
         _context.Items.CountAsync(i => i.LocationId == locationId);
 
+    public Task<int> CountAsync() => _context.Items.CountAsync();
+
+    public async Task<IReadOnlyList<Item>> GetRecentAsync(int count)
+    {
+        return await _context.Items
+            .Include(i => i.Location)
+            .Include(i => i.Photos.OrderBy(p => p.SortOrder))
+            .OrderByDescending(i => i.CreatedAt)
+            .ThenByDescending(i => i.Id)
+            .Take(count)
+            .ToListAsync();
+    }
+
     public async Task<IEnumerable<Item>> SearchAsync(string? query, SearchScope scope, int? locationId = null)
     {
         // Same shape as GetAllAsync, so a search result row renders exactly like a
