@@ -18,9 +18,11 @@ public partial class ItemDetailViewModel : ObservableObject, IQueryAttributable
     private readonly ILocationRepository _locationRepository;
     private readonly IPhotoService _photoService;
 
-    // One quantity write at a time: the database context allows a single operation, and
-    // a burst of taps would otherwise start a second save before the first finished.
-    private readonly SemaphoreSlim _saveGate = new(1, 1);
+    // Everything this page does with the database, and every way off it, goes through
+    // here one at a time. The context is shared by the whole app and allows a single
+    // operation: a save still running when the user taps Edit would otherwise collide
+    // with the edit form's load, and quantity taps that queue up must not overlap.
+    private readonly SemaphoreSlim _gate = new(1, 1);
 
     private int _itemId;
 
@@ -67,13 +69,10 @@ public partial class ItemDetailViewModel : ObservableObject, IQueryAttributable
     // the photo the user tapped.
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasPhotos))]
-    [NotifyPropertyChangedFor(nameof(HasNoPhotos))]
     [NotifyPropertyChangedFor(nameof(HasMultiplePhotos))]
     private ObservableCollection<ItemPhoto> _photos = [];
 
     public bool HasPhotos => Photos.Count > 0;
-
-    public bool HasNoPhotos => !HasPhotos;
 
     // The page dots only earn their space once there is a second photo to swipe to.
     public bool HasMultiplePhotos => Photos.Count > 1;
@@ -109,7 +108,9 @@ public partial class ItemDetailViewModel : ObservableObject, IQueryAttributable
     // nothing in progress here to protect, and re-reading on every appearance is what
     // makes the page show an edit the moment the form pops back to it.
     [RelayCommand]
-    private async Task LoadAsync()
+    private Task LoadAsync() => ExclusiveAsync(LoadCoreAsync);
+
+    private async Task LoadCoreAsync()
     {
         if (_isDeleted)
             return;
@@ -142,10 +143,12 @@ public partial class ItemDetailViewModel : ObservableObject, IQueryAttributable
         }
     }
 
-    [RelayCommand]
+    // Concurrent, so every tap counts: by default a command ignores taps while its last
+    // run is still going, and a quick +++ would add one. The gate queues the writes.
+    [RelayCommand(AllowConcurrentExecutions = true)]
     private Task IncreaseQuantityAsync() => SaveQuantityAsync(Quantity + 1);
 
-    [RelayCommand(CanExecute = nameof(CanDecrease))]
+    [RelayCommand(CanExecute = nameof(CanDecrease), AllowConcurrentExecutions = true)]
     private Task DecreaseQuantityAsync() => SaveQuantityAsync(Quantity - 1);
 
     // The number changes at once and the write follows. Each write sends the latest
@@ -154,33 +157,53 @@ public partial class ItemDetailViewModel : ObservableObject, IQueryAttributable
     {
         Quantity = quantity;
 
-        await _saveGate.WaitAsync();
-        try
+        // The label's description only refreshes when focus returns to it, so the
+        // change is spoken here.
+        SemanticScreenReader.Announce($"Quantity {Quantity}");
+
+        await ExclusiveAsync(async () =>
         {
-            if (!await _itemRepository.SetQuantityAsync(_itemId, Quantity))
-                IsMissing = true;
-        }
-        catch (Exception ex)
-        {
-            await Shell.Current.DisplayAlertAsync(
-                "Couldn't change the quantity", $"It is back to what was saved.\n\n{ex.Message}".TrimEnd(), "OK");
-            await LoadAsync();
-        }
-        finally
-        {
-            _saveGate.Release();
-        }
+            try
+            {
+                if (!await _itemRepository.SetQuantityAsync(_itemId, Quantity))
+                    IsMissing = true;
+            }
+            catch (Exception ex)
+            {
+                // The repository has discarded the failed change, so this reload shows
+                // the saved value rather than the one that failed.
+                await Shell.Current.DisplayAlertAsync(
+                    "Couldn't change the quantity", $"It is back to what was saved.\n\n{ex.Message}".TrimEnd(), "OK");
+                await LoadCoreAsync();
+            }
+        });
     }
+
+    // Every way off the page waits for a pending save, so the page it lands on does
+    // not start its load while that save still holds the context.
 
     // To that location's page, popping back to it when it is already underneath.
     [RelayCommand]
-    private Task OpenLocationAsync() => PlaceNavigation.ShowAsync(LocationId);
+    private Task OpenLocationAsync() => ExclusiveAsync(() => PlaceNavigation.ShowAsync(LocationId));
 
     [RelayCommand]
-    private Task BackAsync() => Shell.Current.GoToAsync("..");
+    private Task BackAsync() => ExclusiveAsync(() => Shell.Current.GoToAsync(".."));
 
     [RelayCommand]
-    private Task EditAsync() => Shell.Current.GoToAsync($"edititem?itemId={_itemId}");
+    private Task EditAsync() => ExclusiveAsync(() => Shell.Current.GoToAsync($"edititem?itemId={_itemId}"));
+
+    private async Task ExclusiveAsync(Func<Task> work)
+    {
+        await _gate.WaitAsync();
+        try
+        {
+            await work();
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
 
     // Delete is the only thing in the menu for now; Move joins it with the place picker.
     [RelayCommand]
@@ -190,7 +213,7 @@ public partial class ItemDetailViewModel : ObservableObject, IQueryAttributable
 
         var choice = await Shell.Current.DisplayActionSheetAsync(Name, "Cancel", delete);
         if (choice == delete)
-            await DeleteAsync();
+            await ExclusiveAsync(DeleteAsync);
     }
 
     private async Task DeleteAsync()

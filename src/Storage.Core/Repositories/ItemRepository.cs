@@ -139,7 +139,19 @@ public class ItemRepository : IItemRepository
             return false;
 
         item.Quantity = quantity;
-        await _context.SaveChangesAsync();
+        try
+        {
+            await _context.SaveChangesAsync();
+        }
+        catch
+        {
+            // As in LocationRepository.UpdateAsync: left pending, the failed quantity
+            // would show on the next read of this tracked item and be written by the
+            // next SaveChanges anywhere.
+            _context.DiscardChanges();
+            throw;
+        }
+
         return true;
     }
 

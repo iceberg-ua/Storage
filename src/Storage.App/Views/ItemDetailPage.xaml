@@ -12,7 +12,10 @@
          canvas when there is none, the same as on a location's page. -->
     <Grid RowDefinitions="*,Auto">
 
-        <ScrollView Grid.Row="0">
+        <!-- Hidden, not just covered, while the item is missing: a screen reader would
+             otherwise still reach the stepper and Edit underneath the message. -->
+        <ScrollView Grid.Row="0"
+                    IsVisible="{Binding IsMissing, Converter={StaticResource InvertedBoolConverter}}">
             <VerticalStackLayout>
 
                 <Grid>
@@ -167,6 +170,7 @@
                 Text="Edit"
                 Style="{StaticResource StrongButton}"
                 Command="{Binding EditCommand}"
+                IsVisible="{Binding IsMissing, Converter={StaticResource InvertedBoolConverter}}"
                 Margin="20,8,20,16"
                 SemanticProperties.Description="{Binding Name, StringFormat='Edit {0}'}" />
 

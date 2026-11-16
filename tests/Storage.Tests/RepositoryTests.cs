@@ -666,6 +666,44 @@ public class RepositoryTests : IDisposable
     }
 
     [Fact]
+    public async Task FailedSetQuantityLeavesNothingPending()
+    {
+        // A context over the same database whose first save throws.
+        var failOnce = new FailFirstSave();
+        using var context = new StorageDbContext(new DbContextOptionsBuilder<StorageDbContext>()
+            .UseSqlite(_connection)
+            .AddInterceptors(failOnce)
+            .Options);
+        var itemRepo = new ItemRepository(context);
+        var item = await new ItemRepository(_context).AddAsync(new Item { Name = "Tyres", Quantity = 2 });
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => itemRepo.SetQuantityAsync(item.Id, 5));
+
+        // The tracked copy is back to the saved value, and nothing waits for the next save.
+        Assert.False(context.ChangeTracker.HasChanges());
+        Assert.Equal(2, (await itemRepo.GetByIdAsync(item.Id))!.Quantity);
+    }
+
+    private sealed class FailFirstSave : Microsoft.EntityFrameworkCore.Diagnostics.SaveChangesInterceptor
+    {
+        private bool _failed;
+
+        public override ValueTask<Microsoft.EntityFrameworkCore.Diagnostics.InterceptionResult<int>> SavingChangesAsync(
+            Microsoft.EntityFrameworkCore.Diagnostics.DbContextEventData eventData,
+            Microsoft.EntityFrameworkCore.Diagnostics.InterceptionResult<int> result,
+            CancellationToken cancellationToken = default)
+        {
+            if (!_failed)
+            {
+                _failed = true;
+                throw new InvalidOperationException("Simulated failed save");
+            }
+
+            return base.SavingChangesAsync(eventData, result, cancellationToken);
+        }
+    }
+
+    [Fact]
     public async Task SetQuantityRefusesZeroAndReportsAMissingItem()
     {
         var itemRepo = new ItemRepository(_context);
