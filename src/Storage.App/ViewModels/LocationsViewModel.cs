@@ -29,8 +29,17 @@ public partial class LocationsViewModel : ObservableObject
     [ObservableProperty]
     private ObservableCollection<PlaceTile> _places = [];
 
+    /// <summary>
+    /// Set after the first load, so the empty state does not flash up on every cold
+    /// start before the cards arrive.
+    /// </summary>
+    [ObservableProperty]
+    private bool _isLoaded;
+
     /// <summary>The cards show while the search toolbar is closed; its results while it is open.</summary>
     public bool IsBrowsing => !Search.IsOpen;
+
+    public bool IsSearching => Search.IsOpen;
 
     public LocationsViewModel(
         ILocationRepository locationRepository,
@@ -47,15 +56,19 @@ public partial class LocationsViewModel : ObservableObject
     }
 
     // Opening the toolbar swaps the cards for its results, which have not been loaded
-    // yet; closing it swaps them back.
+    // yet. Closing it swaps the cards back, reloaded: a location may have been deleted
+    // from the results meanwhile, and its card and the counts would still show it.
     private async void OnSearchPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName != nameof(SearchViewModel.IsOpen))
             return;
 
         OnPropertyChanged(nameof(IsBrowsing));
+        OnPropertyChanged(nameof(IsSearching));
         if (Search.IsOpen)
             await LoadSearchAsync();
+        else
+            await LoadLocationsAsync();
     }
 
     [RelayCommand]
@@ -70,6 +83,8 @@ public partial class LocationsViewModel : ObservableObject
 
             if (Search.IsOpen)
                 await Search.LoadAsync();
+
+            IsLoaded = true;
         }
         catch (Exception ex)
         {

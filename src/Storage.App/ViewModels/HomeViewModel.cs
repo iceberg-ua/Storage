@@ -36,7 +36,12 @@ public partial class HomeViewModel : ObservableObject
 
     public bool HasPlaces => Places.Count > 0;
 
-    public bool HasNoPlaces => !HasPlaces;
+    /// <summary>Only once loaded, so a user with locations never sees "No locations yet" flash by.</summary>
+    public bool HasNoPlaces => IsLoaded && !HasPlaces;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasNoPlaces))]
+    private bool _isLoaded;
 
     public HomeViewModel(IItemRepository itemRepository, ILocationRepository locationRepository)
     {
@@ -58,6 +63,7 @@ public partial class HomeViewModel : ObservableObject
             RecentItems = new ObservableCollection<Item>(await _itemRepository.GetRecentAsync(RecentCount));
             Places = new ObservableCollection<PlaceTile>(
                 (await _locationRepository.GetTopLevelCardsAsync()).Select(c => new PlaceTile(c)));
+            IsLoaded = true;
         }
         catch (Exception ex)
         {

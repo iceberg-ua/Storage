@@ -12,6 +12,7 @@
         <!-- Nothing to show yet. -->
         <Label Text="📍"
                FontSize="22"
+               AutomationProperties.IsInAccessibleTree="False"
                HorizontalOptions="Center"
                VerticalOptions="Center"
                IsVisible="{Binding HasNoPicture}" />
@@ -27,12 +28,17 @@
               RowSpacing="2"
               ColumnSpacing="2"
               IsVisible="{Binding HasMosaic}">
+            <!-- Spans come from PlaceTile, so fewer than four photos still fill it. -->
             <Image Grid.Row="0" Grid.Column="0" Aspect="AspectFill"
+                   Grid.RowSpan="{Binding Photo1RowSpan}"
+                   Grid.ColumnSpan="{Binding Photo1ColumnSpan}"
                    Source="{Binding Photo1, Converter={StaticResource PhotoSourceConverter}}" />
             <Image Grid.Row="0" Grid.Column="1" Aspect="AspectFill"
+                   Grid.RowSpan="{Binding Photo2RowSpan}"
                    Source="{Binding Photo2, Converter={StaticResource PhotoSourceConverter}}"
                    IsVisible="{Binding Photo2, Converter={StaticResource IsNotNullConverter}}" />
-            <Image Grid.Row="1" Grid.Column="0" Aspect="AspectFill"
+            <Image Grid.Row="1" Aspect="AspectFill"
+                   Grid.Column="{Binding Photo3Column}"
                    Source="{Binding Photo3, Converter={StaticResource PhotoSourceConverter}}"
                    IsVisible="{Binding Photo3, Converter={StaticResource IsNotNullConverter}}" />
             <Image Grid.Row="1" Grid.Column="1" Aspect="AspectFill"

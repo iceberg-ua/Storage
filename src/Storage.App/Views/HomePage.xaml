@@ -26,12 +26,16 @@
                         StrokeShape="RoundRectangle 28"
                         Padding="18,0"
                         HeightRequest="56"
-                        SemanticProperties.Description="Search items and locations">
+                        SemanticProperties.Description="Search items and locations"
+                        SemanticProperties.Hint="Opens search on the Items tab">
                     <Border.GestureRecognizers>
                         <TapGestureRecognizer Command="{Binding OpenSearchCommand}" />
                     </Border.GestureRecognizers>
                     <HorizontalStackLayout Spacing="12" VerticalOptions="Center">
-                        <Label Text="🔍" FontSize="18" VerticalOptions="Center" />
+                        <Label Text="🔍"
+                               FontSize="18"
+                               VerticalOptions="Center"
+                               AutomationProperties.IsInAccessibleTree="False" />
                         <Label Text="Search items and locations"
                                Style="{StaticResource Caption}"
                                FontSize="16"
@@ -61,7 +65,9 @@
                         </CollectionView.ItemsLayout>
                         <CollectionView.ItemTemplate>
                             <DataTemplate x:DataType="models:Item">
-                                <VerticalStackLayout WidthRequest="116" Spacing="8">
+                                <VerticalStackLayout WidthRequest="116"
+                                                     Spacing="8"
+                                                     SemanticProperties.Description="{Binding Name, StringFormat='Open {0}'}">
                                     <VerticalStackLayout.GestureRecognizers>
                                         <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:HomeViewModel}}, Path=OpenItemCommand}"
                                                               CommandParameter="{Binding .}" />
@@ -73,6 +79,7 @@
                                         <Grid>
                                             <Label Text="📦"
                                                    FontSize="24"
+                                                   AutomationProperties.IsInAccessibleTree="False"
                                                    HorizontalOptions="Center"
                                                    VerticalOptions="Center" />
                                             <Image Source="{Binding PrimaryPhotoFileName, Converter={StaticResource PhotoSourceConverter}}"

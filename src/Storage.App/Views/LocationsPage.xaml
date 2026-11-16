@@ -97,7 +97,6 @@
                     FontSize="14"
                     Padding="16,0"
                     MinimumHeightRequest="44"
-                    HeightRequest="44"
                     CornerRadius="22"
                     VerticalOptions="End"
                     Command="{Binding NavigateToCreateCommand}"
@@ -118,7 +117,9 @@
             <CollectionView ItemsSource="{Binding Places}"
                             ItemTemplate="{StaticResource PlaceRow}">
                 <CollectionView.EmptyView>
-                    <VerticalStackLayout Padding="32" Spacing="8" VerticalOptions="Center">
+                    <!-- Only after the first load, so it does not flash up on a cold start. -->
+                    <VerticalStackLayout Padding="32" Spacing="8" VerticalOptions="Center"
+                                         IsVisible="{Binding IsLoaded}">
                         <Label Text="No locations yet"
                                Style="{StaticResource Title}"
                                HorizontalTextAlignment="Center" />
@@ -131,19 +132,23 @@
         </RefreshView>
 
         <!-- Searching: matching locations at any level, or items when the toggle is
-             flipped. The same rows as in every other search. -->
-        <Grid Grid.Row="2"
-              BindingContext="{Binding Search}"
-              IsVisible="{Binding IsOpen}">
-            <CollectionView ItemsSource="{Binding Locations}"
-                            IsVisible="{Binding ShowLocationList}"
-                            ItemTemplate="{StaticResource DeletableLocationRow}"
-                            EmptyViewTemplate="{StaticResource EmptyState}" />
-            <CollectionView ItemsSource="{Binding Items}"
-                            IsVisible="{Binding ShowItemList}"
-                            ItemTemplate="{StaticResource ItemRow}"
-                            EmptyViewTemplate="{StaticResource EmptyState}" />
-        </Grid>
+             flipped. The same rows as in every other search, and pull to refresh works
+             here too: LoadLocations reloads the search while it is open. -->
+        <RefreshView Grid.Row="2"
+                     IsVisible="{Binding IsSearching}"
+                     IsRefreshing="{Binding IsLoading}"
+                     Command="{Binding LoadLocationsCommand}">
+            <Grid BindingContext="{Binding Search}">
+                <CollectionView ItemsSource="{Binding Locations}"
+                                IsVisible="{Binding ShowLocationList}"
+                                ItemTemplate="{StaticResource DeletableLocationRow}"
+                                EmptyViewTemplate="{StaticResource EmptyState}" />
+                <CollectionView ItemsSource="{Binding Items}"
+                                IsVisible="{Binding ShowItemList}"
+                                ItemTemplate="{StaticResource ItemRow}"
+                                EmptyViewTemplate="{StaticResource EmptyState}" />
+            </Grid>
+        </RefreshView>
 
         <!-- Its own row under the lists, not floating over them, so it never covers a
              row's swipe action and the lists need no spacer at the end. -->

@@ -13,10 +13,16 @@ public static class PlaceNavigation
     /// lists the locations opened on the way here — this pops back to it instead of
     /// pushing a second copy, so Back keeps meaning "up one level".
     /// </summary>
-    public static Task ShowAsync(int? locationId)
+    public static async Task ShowAsync(int? locationId)
     {
         if (locationId is not int id)
-            return Shell.Current.GoToAsync("//locations");
+        {
+            // Pop this tab first: a place opened from Home would otherwise stay pushed on
+            // the Home tab, and the next tap on Home would land on it instead of Home.
+            await Shell.Current.Navigation.PopToRootAsync(animated: false);
+            await Shell.Current.GoToAsync("//locations");
+            return;
+        }
 
         var stack = Shell.Current.Navigation.NavigationStack;
         for (var i = stack.Count - 2; i >= 0; i--)
@@ -24,11 +30,12 @@ public static class PlaceNavigation
             if (stack[i] is PlacePage page && page.LocationId == id)
             {
                 var levels = stack.Count - 1 - i;
-                return Shell.Current.GoToAsync(string.Join('/', Enumerable.Repeat("..", levels)));
+                await Shell.Current.GoToAsync(string.Join('/', Enumerable.Repeat("..", levels)));
+                return;
             }
         }
 
         // Reached some other way, such as a search result: the ancestor was never opened.
-        return Shell.Current.GoToAsync(Routes.Place(id));
+        await Shell.Current.GoToAsync(Routes.Place(id));
     }
 }

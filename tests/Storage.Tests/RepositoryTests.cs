@@ -652,6 +652,19 @@ public class RepositoryTests : IDisposable
     }
 
     [Fact]
+    public async Task RootLocationsSortLikeTheCards()
+    {
+        var locationRepo = new LocationRepository(_context);
+        await locationRepo.AddAsync(new Location { Name = "Garage" });
+        await locationRepo.AddAsync(new Location { Name = "attic" });
+
+        // The search list the Locations tab shows must match the cards it replaces.
+        Assert.Equal(
+            (await locationRepo.GetTopLevelCardsAsync()).Select(c => c.Location.Name),
+            (await locationRepo.GetRootLocationsAsync()).Select(l => l.Name));
+    }
+
+    [Fact]
     public async Task RecentItemsAreTheNewestFirst()
     {
         var itemRepo = new ItemRepository(_context);

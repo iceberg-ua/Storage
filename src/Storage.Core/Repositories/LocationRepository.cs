@@ -34,7 +34,9 @@ public class LocationRepository : ILocationRepository
     {
         return await _context.Locations
             .Where(l => l.ParentId == null)
-            .OrderBy(l => l.Name)
+            // Folded, like the cards and chips, so every list of locations agrees on
+            // where "attic" goes relative to "Garage".
+            .OrderBy(l => StorageDbContext.UnicodeLower(l.Name))
             .ToListAsync();
     }
 
@@ -42,7 +44,7 @@ public class LocationRepository : ILocationRepository
     {
         return await _context.Locations
             .Where(l => l.ParentId == parentId)
-            .OrderBy(l => l.Name)
+            .OrderBy(l => StorageDbContext.UnicodeLower(l.Name))
             .ToListAsync();
     }
 
@@ -93,22 +95,35 @@ public class LocationRepository : ILocationRepository
             .ToListAsync();
 
         var children = locations.ToLookup(l => l.ParentId);
+        var roots = children[null].ToList();
 
-        var cards = new List<PlaceCard>();
-        foreach (var root in children[null])
+        // Which card each location counts towards, so the counts and the photos are each
+        // one pass rather than one pass per card.
+        var rootOf = new Dictionary<int, int>();
+        foreach (var root in roots)
         {
-            var subtree = Subtree(root.Id, children);
-            cards.Add(new PlaceCard(
-                root,
-                subtree.Sum(id => itemCounts.GetValueOrDefault(id)),
-                children[root.Id].Count(),
-                photos.Where(p => subtree.Contains(p.LocationId))
-                    .Select(p => p.FileName)
-                    .Take(photosPerCard)
-                    .ToList()));
+            foreach (var id in Subtree(root.Id, children))
+                rootOf.TryAdd(id, root.Id);
         }
 
-        return cards;
+        var totals = new Dictionary<int, int>();
+        foreach (var (locationId, count) in itemCounts)
+        {
+            if (rootOf.TryGetValue(locationId, out var rootId))
+                totals[rootId] = totals.GetValueOrDefault(rootId) + count;
+        }
+
+        // Already newest first, so each card keeps the first ones it is handed.
+        var covers = roots.ToDictionary(r => r.Id, _ => new List<string>(photosPerCard));
+        foreach (var photo in photos)
+        {
+            if (rootOf.TryGetValue(photo.LocationId, out var rootId) && covers[rootId].Count < photosPerCard)
+                covers[rootId].Add(photo.FileName);
+        }
+
+        return roots
+            .Select(r => new PlaceCard(r, totals.GetValueOrDefault(r.Id), children[r.Id].Count(), covers[r.Id]))
+            .ToList();
     }
 
     // The location and everything under it. Stops at a repeat, like GetPathAsync, in

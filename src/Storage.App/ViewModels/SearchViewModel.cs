@@ -190,7 +190,7 @@ public partial class SearchViewModel : ObservableObject
             EmptyTitle = "📍 No locations";
             EmptyMessage = IsScopedToLocation
                 ? "Nothing is stored inside this one"
-                : "Add one with ➕ on the Locations tab";
+                : "Add one with + New on the Locations tab";
         }
         else
         {
@@ -255,8 +255,11 @@ public partial class SearchViewModel : ObservableObject
             _suspendReload = false;
         }
 
-        IsOpen = false;
+        // Reloaded before IsOpen flips, so a page that reacts to the toolbar closing
+        // (the Locations tab reloads its cards) starts its own queries after this one has
+        // finished, not alongside it on the same database context.
         await LoadAsync();
+        IsOpen = false;
     }
 
     [RelayCommand]

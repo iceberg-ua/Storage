@@ -41,6 +41,15 @@ public sealed class PlaceTile
 
     public bool HasMosaic => !HasOwnPhoto && Photo1 is not null;
 
+    // Where each photo sits, so one to three photos still fill the cover instead of
+    // leaving blank quarters: one fills it, two split it, three are one tall and two
+    // stacked, four are the 2x2 grid.
+    private int PhotoCount => Card.ItemPhotos.Count;
+    public int Photo1RowSpan => PhotoCount <= 3 ? 2 : 1;
+    public int Photo1ColumnSpan => PhotoCount == 1 ? 2 : 1;
+    public int Photo2RowSpan => PhotoCount == 2 ? 2 : 1;
+    public int Photo3Column => PhotoCount == 3 ? 1 : 0;
+
     public bool HasNoPicture => !HasOwnPhoto && Photo1 is null;
 
     /// <summary>"64 items · 3 inside": everything below it, and how many locations directly inside.</summary>

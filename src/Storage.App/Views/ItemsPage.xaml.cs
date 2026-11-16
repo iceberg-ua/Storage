@@ -26,6 +26,12 @@ public partial class ItemsPage : ContentPage
     protected override async void OnAppearing()
     {
         base.OnAppearing();
+
+        // Asked for by Home's search box. Done here, once the page is on screen, since a
+        // box that is not attached yet ignores Focus.
+        if (_viewModel.TakeFocusSearchRequest())
+            Toolbar.Focus();
+
         await _viewModel.RefreshCommand.ExecuteAsync(null);
     }
 }
