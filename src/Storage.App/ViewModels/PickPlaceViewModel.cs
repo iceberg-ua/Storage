@@ -7,8 +7,33 @@ using StorageLocation = Storage.Core.Models.Location;
 
 namespace Storage.App.ViewModels;
 
-/// <summary>One choice in the picker. A null id is "no location".</summary>
-public sealed record PickRow(int? LocationId, string Name, string Meta, bool CanOpen, bool IsSelected);
+/// <summary>
+/// One choice in the picker. A null id is "no location". Selection flips in place, so
+/// choosing a row does not rebuild the list and jump it back to the top.
+/// </summary>
+public sealed partial class PickRow : ObservableObject
+{
+    public PickRow(int? locationId, string name, string meta, bool canOpen, bool isSelected)
+    {
+        LocationId = locationId;
+        Name = name;
+        Meta = meta;
+        CanOpen = canOpen;
+        _isSelected = isSelected;
+    }
+
+    public int? LocationId { get; }
+    public string Name { get; }
+    public string Meta { get; }
+    public bool CanOpen { get; }
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(Description))]
+    private bool _isSelected;
+
+    /// <summary>What a screen reader says: the name, whether it is chosen, and the line under it.</summary>
+    public string Description => IsSelected ? $"{Name}, selected. {Meta}" : $"{Name}. {Meta}";
+}
 
 /// <summary>
 /// The place picker: one level of the location tree at a time, with the path above it
@@ -24,9 +49,14 @@ public partial class PickPlaceViewModel : ObservableObject
     private readonly ILocationRepository _locationRepository;
     private readonly PlacePicker _picker;
 
+    // The opening this page answers, taken on the first load and kept: the page may
+    // appear again, and must not pick up some later request instead.
+    private PlacePickSession? _session;
     private PlacePickRequest _request = new("Choose a location", null, null, "Use {0}", AllowNone: true);
+
     private Dictionary<int, StorageLocation> _byId = [];
     private ILookup<int?, StorageLocation> _children = Array.Empty<StorageLocation>().ToLookup(l => l.ParentId);
+    private bool _isLoaded;
 
     // The level on show; null is the top.
     private int? _levelId;
@@ -34,6 +64,9 @@ public partial class PickPlaceViewModel : ObservableObject
     // What is chosen. _hasSelection tells "no location chosen" apart from nothing chosen.
     private int? _selectedId;
     private bool _hasSelection;
+
+    /// <summary>Set by Confirm or Close, so a second one — or Back — cannot pop the page underneath too.</summary>
+    public bool IsClosing { get; private set; }
 
     [ObservableProperty]
     private string _title = string.Empty;
@@ -51,10 +84,14 @@ public partial class PickPlaceViewModel : ObservableObject
     private ObservableCollection<PickRow> _rows = [];
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsBrowsing))]
+    [NotifyPropertyChangedFor(nameof(EmptyText))]
     private string _searchText = string.Empty;
 
     /// <summary>The path only means something while browsing, not while showing search matches.</summary>
     public bool IsBrowsing => string.IsNullOrWhiteSpace(SearchText);
+
+    public string EmptyText => IsBrowsing ? "No locations yet" : "No location matches that name";
 
     [ObservableProperty]
     private string _confirmText = "Choose a location";
@@ -68,7 +105,11 @@ public partial class PickPlaceViewModel : ObservableObject
     [RelayCommand]
     private async Task LoadAsync()
     {
-        _request = _picker.Request ?? _request;
+        if (_isLoaded)
+            return;
+
+        _session ??= _picker.TakeOpening();
+        _request = _session?.Request ?? _request;
         Title = _request.Title;
         Subject = _request.Subject;
 
@@ -89,27 +130,29 @@ public partial class PickPlaceViewModel : ObservableObject
             return;
         }
 
+        _isLoaded = true;
+
         // Open on the level holding the current place, so it shows among its siblings.
         var current = _request.CurrentId is int id && _byId.ContainsKey(id) ? id : (int?)null;
         _levelId = current is int c ? _byId[c].ParentId : null;
         _selectedId = current;
         _hasSelection = current is not null || _request.AllowNone;
 
-        Refresh();
+        Rebuild();
     }
 
-    partial void OnSearchTextChanged(string value)
-    {
-        OnPropertyChanged(nameof(IsBrowsing));
-        Refresh();
-    }
+    partial void OnSearchTextChanged(string value) => Rebuild();
 
     [RelayCommand]
     private void Select(PickRow row)
     {
         _selectedId = row.LocationId;
         _hasSelection = true;
-        Refresh();
+
+        foreach (var r in Rows)
+            r.IsSelected = r == row;
+
+        UpdateConfirm();
     }
 
     [RelayCommand]
@@ -119,45 +162,69 @@ public partial class PickPlaceViewModel : ObservableObject
             return;
 
         _levelId = id;
-        SearchText = string.Empty;
-        Refresh();
+        if (IsBrowsing)
+            Rebuild();
+        else
+            SearchText = string.Empty; // rebuilds on the new level
     }
 
     [RelayCommand]
     private void OpenCrumb(PlaceCrumb crumb)
     {
         _levelId = crumb.LocationId;
-        Refresh();
+        Rebuild();
     }
 
-    private bool CanConfirm() => _hasSelection;
+    // Choosing where it already is would do nothing, so the button says so by being off.
+    private bool CanConfirm() => _hasSelection && _selectedId != _request.CurrentId;
 
     [RelayCommand(CanExecute = nameof(CanConfirm))]
     private async Task ConfirmAsync()
     {
-        // Completed before the pop: leaving the page completes with null otherwise.
-        _picker.Complete(new PlacePick(_selectedId));
+        if (IsClosing)
+            return;
+
+        IsClosing = true;
+
+        // Answered before the pop: leaving the page answers null otherwise.
+        _session?.Complete(new PlacePick(_selectedId));
         await Shell.Current.GoToAsync("..");
     }
 
     [RelayCommand]
     private async Task CloseAsync()
     {
-        _picker.Complete(null);
+        if (IsClosing)
+            return;
+
+        IsClosing = true;
+        _session?.Complete(null);
         await Shell.Current.GoToAsync("..");
     }
 
-    /// <summary>The page calls this as it goes, however it goes; only the first completion counts.</summary>
-    public void Abandon() => _picker.Complete(null);
+    /// <summary>The page calls this as it goes, however it goes; after a confirm it does nothing.</summary>
+    public void Abandon() => _session?.Complete(null);
 
-    private void Refresh()
+    // The list itself only changes with the level or the search; selection flips rows in place.
+    private void Rebuild()
     {
+        if (!_isLoaded)
+            return;
+
         Rows = new ObservableCollection<PickRow>(IsBrowsing ? LevelRows() : SearchRows());
         Crumbs = new ObservableCollection<PlaceCrumb>(LevelCrumbs());
+        UpdateConfirm();
+    }
 
-        ConfirmText = !_hasSelection
-            ? "Choose a location"
-            : string.Format(_request.ConfirmFormat, _selectedId is int id ? _byId[id].Name : "no location");
+    private void UpdateConfirm()
+    {
+        if (!_hasSelection)
+            ConfirmText = "Choose a location";
+        else if (_selectedId == _request.CurrentId)
+            ConfirmText = _selectedId is null ? "Already in no location" : "Already here";
+        else
+            ConfirmText = string.Format(_request.ConfirmFormat, _selectedId is int id ? _byId[id].Name : "no location");
+
         ConfirmCommand.NotifyCanExecuteChanged();
     }
 
@@ -167,7 +234,8 @@ public partial class PickPlaceViewModel : ObservableObject
         if (_levelId is int level)
             yield return Row(level, $"{_byId[level].Name} itself", "Not in anything inside it", canOpen: false);
         else if (_request.AllowNone)
-            yield return new PickRow(null, "No location", "Not stored anywhere yet", CanOpen: false, IsSelected: _hasSelection && _selectedId is null);
+            yield return new PickRow(null, "No location", "Not stored anywhere yet", canOpen: false,
+                isSelected: _hasSelection && _selectedId is null);
 
         foreach (var child in _children[_levelId])
             yield return Row(child.Id, child.Name, ChildMeta(child.Id), canOpen: _children[child.Id].Any());
@@ -190,7 +258,7 @@ public partial class PickPlaceViewModel : ObservableObject
             name,
             isCurrent ? $"Now here · {meta}" : meta,
             canOpen,
-            IsSelected: _hasSelection && _selectedId == id);
+            isSelected: _hasSelection && _selectedId == id);
     }
 
     private string ChildMeta(int id)

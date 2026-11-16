@@ -51,12 +51,12 @@ public partial class AddItemViewModel : ObservableObject, IQueryAttributable
 
     // Reconciliation runs when the page is left, not from any one exit handler, so
     // every route out is covered by construction. These two say when "left" is real:
-    // the page also disappears when a photo source is put on top of it, and there is
-    // nothing to discard once a save has committed.
+    // the page also disappears when a photo source or the place picker is put on top of
+    // it, and there is nothing to discard once a save has committed.
     private bool _isAwaitingPhotoSource;
     private bool _isCommitted;
 
-    /// <summary>True while the camera page or the gallery picker covers the form.</summary>
+    /// <summary>True while the camera page, the gallery picker or the place picker covers the form.</summary>
     public bool IsAwaitingPhotoSource => _isAwaitingPhotoSource;
 
     [ObservableProperty]
@@ -82,7 +82,7 @@ public partial class AddItemViewModel : ObservableObject, IQueryAttributable
             if (SelectedLocation is null)
                 return "No location";
 
-            var byId = Locations.ToDictionary(l => l.Id);
+            var byId = _locations.ToDictionary(l => l.Id);
             var names = new List<string>();
             var seen = new HashSet<int>();
             for (int? id = SelectedLocation.Id; id is int current && seen.Add(current) && byId.TryGetValue(current, out var l); id = l.ParentId)
@@ -93,8 +93,9 @@ public partial class AddItemViewModel : ObservableObject, IQueryAttributable
         }
     }
 
-    [ObservableProperty]
-    private ObservableCollection<StorageLocation> _locations = [];
+    // Every location, for turning the picked id into a row and the row into a path.
+    // Nothing binds it: the form shows only the chosen one.
+    private List<StorageLocation> _locations = [];
 
     [ObservableProperty]
     private ObservableCollection<Tag> _itemTags = [];
@@ -204,8 +205,7 @@ public partial class AddItemViewModel : ObservableObject, IQueryAttributable
 
         _isLoaded = true;
 
-        var locations = await _locationRepository.GetAllAsync();
-        Locations = new ObservableCollection<StorageLocation>(locations);
+        _locations = (await _locationRepository.GetAllAsync()).ToList();
 
         var tags = await _tagRepository.GetAllAsync();
         _allTags = tags.ToList();
@@ -223,7 +223,7 @@ public partial class AddItemViewModel : ObservableObject, IQueryAttributable
             Name = item.Name;
             Description = item.Description ?? string.Empty;
             Quantity = item.Quantity;
-            SelectedLocation = Locations.FirstOrDefault(l => l.Id == item.LocationId);
+            SelectedLocation = _locations.FirstOrDefault(l => l.Id == item.LocationId);
             ItemTags = new ObservableCollection<Tag>(item.Tags.OrderBy(t => t.Name));
 
             _savedPhotoFileNames = item.Photos.OrderBy(p => p.SortOrder).Select(p => p.FileName).ToList();
@@ -231,7 +231,7 @@ public partial class AddItemViewModel : ObservableObject, IQueryAttributable
         }
         else if (_preselectedLocationId is int preselected)
         {
-            SelectedLocation = Locations.FirstOrDefault(l => l.Id == preselected);
+            SelectedLocation = _locations.FirstOrDefault(l => l.Id == preselected);
         }
     }
 
@@ -241,15 +241,37 @@ public partial class AddItemViewModel : ObservableObject, IQueryAttributable
     [RelayCommand]
     private async Task PickLocationAsync()
     {
-        var pick = await _placePicker.PickAsync(new PlacePickRequest(
-            "Choose a location",
-            string.IsNullOrWhiteSpace(Name) ? null : Name.Trim(),
-            SelectedLocation?.Id,
-            "Use {0}",
-            AllowNone: true));
+        // The picker covers the page, which then disappears; without this the form would
+        // take that as being left and throw away the photos taken on it.
+        _isAwaitingPhotoSource = true;
+        try
+        {
+            var pick = await _placePicker.PickAsync(new PlacePickRequest(
+                "Choose a location",
+                string.IsNullOrWhiteSpace(Name) ? null : Name.Trim(),
+                SelectedLocation?.Id,
+                "Use {0}",
+                AllowNone: true));
 
-        if (pick is not null)
-            SelectedLocation = Locations.FirstOrDefault(l => l.Id == pick.LocationId);
+            if (pick is null)
+                return;
+
+            // The picker reads the locations afresh, so it can offer one added since this
+            // form loaded its list; reload once rather than call that "no location".
+            if (pick.LocationId is int id && _locations.All(l => l.Id != id))
+                _locations = (await _locationRepository.GetAllAsync()).ToList();
+
+            SelectedLocation = _locations.FirstOrDefault(l => l.Id == pick.LocationId);
+        }
+        catch (Exception ex)
+        {
+            await Shell.Current.DisplayAlertAsync(
+                "Couldn't set the location", $"Try again in a moment.\n\n{ex.Message}".TrimEnd(), "OK");
+        }
+        finally
+        {
+            _isAwaitingPhotoSource = false;
+        }
     }
 
     // The collection is replaced wholesale on load and mutated by the add/remove

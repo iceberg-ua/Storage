@@ -17,39 +17,71 @@ public sealed record PlacePickRequest(
 public sealed record PlacePick(int? LocationId);
 
 /// <summary>
+/// One opening of the picker: its request, and the answer its caller is waiting for.
+/// The page holds on to the session it was opened for, so completing it can never
+/// answer a later request by mistake.
+/// </summary>
+public sealed class PlacePickSession
+{
+    private readonly TaskCompletionSource<PlacePick?> _result =
+        new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+    public PlacePickSession(PlacePickRequest request) => Request = request;
+
+    public PlacePickRequest Request { get; }
+
+    internal Task<PlacePick?> Result => _result.Task;
+
+    /// <summary>Only the first call counts; later ones (the page going away after a confirm) do nothing.</summary>
+    public void Complete(PlacePick? pick) => _result.TrySetResult(pick);
+}
+
+/// <summary>
 /// Opens the place picker and hands back what was chosen, so a caller writes
 /// <c>var pick = await picker.PickAsync(request)</c> instead of passing a route
 /// parameter out and reading it back when its page reappears.
 /// </summary>
 /// <remarks>
-/// A singleton: the picker page reads the request from here and completes it. A picker
-/// left any other way — Back, the close button — completes with null.
+/// A singleton, so the picker page can find the session it was opened for. A picker
+/// left any other way than by confirming — the close button, Back — answers null.
 /// </remarks>
 public sealed class PlacePicker
 {
-    private TaskCompletionSource<PlacePick?>? _pending;
-
-    /// <summary>The request the open picker is showing.</summary>
-    public PlacePickRequest? Request { get; private set; }
+    /// <summary>The session the picker page about to open should show; taken by that page.</summary>
+    public PlacePickSession? Opening { get; private set; }
 
     /// <summary>Returns the place chosen, or null if the picker was closed without one.</summary>
     public async Task<PlacePick?> PickAsync(PlacePickRequest request)
     {
-        // A picker still open from before has lost its caller; close that request out.
-        _pending?.TrySetResult(null);
+        // A session still waiting from before has lost its page; answer it with nothing.
+        Opening?.Complete(null);
 
-        Request = request;
-        var pending = new TaskCompletionSource<PlacePick?>(TaskCreationOptions.RunContinuationsAsynchronously);
-        _pending = pending;
+        var session = new PlacePickSession(request);
+        Opening = session;
 
-        await Shell.Current.GoToAsync("pickplace");
-        return await pending.Task;
+        try
+        {
+            await Shell.Current.GoToAsync("pickplace");
+        }
+        catch (Exception ex)
+        {
+            // Most likely another navigation was already under way. Nothing opened, so
+            // there is nothing to wait for — and an exception escaping a command would
+            // end the app.
+            session.Complete(null);
+            Opening = null;
+            await Shell.Current.DisplayAlertAsync(
+                "Couldn't open the location list", $"Try again in a moment.\n\n{ex.Message}".TrimEnd(), "OK");
+        }
+
+        return await session.Result;
     }
 
-    /// <summary>Called by the picker page. Only the first call for a request counts.</summary>
-    public void Complete(PlacePick? pick)
+    /// <summary>Hands the opening session to the page that shows it, once.</summary>
+    public PlacePickSession? TakeOpening()
     {
-        _pending?.TrySetResult(pick);
-        _pending = null;
+        var session = Opening;
+        Opening = null;
+        return session;
     }
 }
