@@ -756,6 +756,26 @@ public class RepositoryTests : IDisposable
     }
 
     [Fact]
+    public async Task MoveChangesTheLocationAndCanClearIt()
+    {
+        var locationRepo = new LocationRepository(_context);
+        var itemRepo = new ItemRepository(_context);
+        var garage = await locationRepo.AddAsync(new Location { Name = "Garage" });
+        var attic = await locationRepo.AddAsync(new Location { Name = "Attic" });
+        var item = await itemRepo.AddAsync(new Item { Name = "Tyres", LocationId = garage.Id });
+        await itemRepo.GetByIdAsync(item.Id); // loads Location into the tracked copy
+
+        Assert.True(await itemRepo.MoveAsync(item.Id, attic.Id));
+        Assert.Equal("Attic", (await itemRepo.GetByIdAsync(item.Id))!.Location!.Name);
+
+        Assert.True(await itemRepo.MoveAsync(item.Id, null));
+        using var fresh = new StorageDbContext(new DbContextOptionsBuilder<StorageDbContext>().UseSqlite(_connection).Options);
+        Assert.Null((await fresh.Items.SingleAsync(i => i.Id == item.Id)).LocationId);
+
+        Assert.False(await itemRepo.MoveAsync(item.Id + 100, attic.Id));
+    }
+
+    [Fact]
     public async Task SetQuantityRefusesZeroAndReportsAMissingItem()
     {
         var itemRepo = new ItemRepository(_context);

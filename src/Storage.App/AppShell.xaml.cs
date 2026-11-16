@@ -26,6 +26,9 @@ public partial class AppShell : Shell
 		// Pushed with an optional "tagId" to edit an existing tag instead of adding one.
 		Routing.RegisterRoute("edittag", typeof(EditTagPage));
 
+		// Modal. Opened through PlacePicker, which hands the choice back to its caller.
+		Routing.RegisterRoute("pickplace", typeof(PickPlacePage));
+
 		// Pops back with a "photoFileName" for the item form to pick up, on the item
 		// edit page or the create page.
 		Routing.RegisterRoute("camera", typeof(CameraPage));

@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Storage.App.Services;
 using Storage.Core.Models;
 using Storage.Core.Repositories;
 using Storage.Core.Services;
@@ -26,6 +27,7 @@ public partial class AddItemViewModel : ObservableObject, IQueryAttributable
 
     private readonly IItemRepository _itemRepository;
     private readonly ILocationRepository _locationRepository;
+    private readonly PlacePicker _placePicker;
     private readonly ITagRepository _tagRepository;
     private readonly IPhotoService _photoService;
 
@@ -69,7 +71,27 @@ public partial class AddItemViewModel : ObservableObject, IQueryAttributable
     private int _quantity = 1;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(SelectedLocationPath))]
     private StorageLocation? _selectedLocation;
+
+    /// <summary>"Garage › Shelf 2", or "No location": the whole way down, since two shelves can share a name.</summary>
+    public string SelectedLocationPath
+    {
+        get
+        {
+            if (SelectedLocation is null)
+                return "No location";
+
+            var byId = Locations.ToDictionary(l => l.Id);
+            var names = new List<string>();
+            var seen = new HashSet<int>();
+            for (int? id = SelectedLocation.Id; id is int current && seen.Add(current) && byId.TryGetValue(current, out var l); id = l.ParentId)
+                names.Add(l.Name);
+
+            names.Reverse();
+            return string.Join(" › ", names);
+        }
+    }
 
     [ObservableProperty]
     private ObservableCollection<StorageLocation> _locations = [];
@@ -115,12 +137,14 @@ public partial class AddItemViewModel : ObservableObject, IQueryAttributable
         IItemRepository itemRepository,
         ILocationRepository locationRepository,
         ITagRepository tagRepository,
-        IPhotoService photoService)
+        IPhotoService photoService,
+        PlacePicker placePicker)
     {
         _itemRepository = itemRepository;
         _locationRepository = locationRepository;
         _tagRepository = tagRepository;
         _photoService = photoService;
+        _placePicker = placePicker;
 
         // Reassigned through the properties on purpose. A field initializer writes the
         // backing field directly, so the generated setter never runs and the collection
@@ -209,6 +233,23 @@ public partial class AddItemViewModel : ObservableObject, IQueryAttributable
         {
             SelectedLocation = Locations.FirstOrDefault(l => l.Id == preselected);
         }
+    }
+
+    // The place picker, not a flat list: a flat list cannot tell two "Shelf 2"s apart,
+    // and gets long once locations nest. The form's LoadAsync runs again as the picker
+    // closes, but returns early, so nothing typed is lost.
+    [RelayCommand]
+    private async Task PickLocationAsync()
+    {
+        var pick = await _placePicker.PickAsync(new PlacePickRequest(
+            "Choose a location",
+            string.IsNullOrWhiteSpace(Name) ? null : Name.Trim(),
+            SelectedLocation?.Id,
+            "Use {0}",
+            AllowNone: true));
+
+        if (pick is not null)
+            SelectedLocation = Locations.FirstOrDefault(l => l.Id == pick.LocationId);
     }
 
     // The collection is replaced wholesale on load and mutated by the add/remove

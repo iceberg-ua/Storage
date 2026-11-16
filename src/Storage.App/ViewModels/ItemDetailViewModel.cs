@@ -17,6 +17,7 @@ public partial class ItemDetailViewModel : ObservableObject, IQueryAttributable
     private readonly IItemRepository _itemRepository;
     private readonly ILocationRepository _locationRepository;
     private readonly IPhotoService _photoService;
+    private readonly PlacePicker _placePicker;
 
     // Everything this page does with the database, and every way off it, goes through
     // here one at a time. The context is shared by the whole app and allows a single
@@ -87,11 +88,13 @@ public partial class ItemDetailViewModel : ObservableObject, IQueryAttributable
     public ItemDetailViewModel(
         IItemRepository itemRepository,
         ILocationRepository locationRepository,
-        IPhotoService photoService)
+        IPhotoService photoService,
+        PlacePicker placePicker)
     {
         _itemRepository = itemRepository;
         _locationRepository = locationRepository;
         _photoService = photoService;
+        _placePicker = placePicker;
     }
 
     // Shell calls this on the page's BindingContext before the page appears.
@@ -189,6 +192,41 @@ public partial class ItemDetailViewModel : ObservableObject, IQueryAttributable
     [RelayCommand]
     private Task BackAsync() => ExclusiveAsync(() => Shell.Current.GoToAsync(".."));
 
+    // Picked first, outside the gate: the picker is a page of its own, and this page's
+    // OnAppearing reload as it closes must not wait on a gate held by its caller.
+    [RelayCommand]
+    private async Task MoveAsync()
+    {
+        var pick = await _placePicker.PickAsync(new PlacePickRequest(
+            "Move to…",
+            HasLocation ? $"{Name} · now in {LocationPath}" : Name,
+            LocationId,
+            "Move to {0}",
+            AllowNone: true));
+
+        if (pick is null || pick.LocationId == LocationId)
+            return;
+
+        await ExclusiveAsync(async () =>
+        {
+            try
+            {
+                if (!await _itemRepository.MoveAsync(_itemId, pick.LocationId))
+                {
+                    IsMissing = true;
+                    return;
+                }
+            }
+            catch (Exception ex)
+            {
+                await Shell.Current.DisplayAlertAsync(
+                    "Couldn't move the item", $"It is still where it was.\n\n{ex.Message}".TrimEnd(), "OK");
+            }
+
+            await LoadCoreAsync();
+        });
+    }
+
     [RelayCommand]
     private Task EditAsync() => ExclusiveAsync(() => Shell.Current.GoToAsync($"edititem?itemId={_itemId}"));
 
@@ -205,14 +243,16 @@ public partial class ItemDetailViewModel : ObservableObject, IQueryAttributable
         }
     }
 
-    // Delete is the only thing in the menu for now; Move joins it with the place picker.
     [RelayCommand]
     private async Task ShowActionsAsync()
     {
+        const string move = "Move";
         const string delete = "Delete item";
 
-        var choice = await Shell.Current.DisplayActionSheetAsync(Name, "Cancel", delete);
-        if (choice == delete)
+        var choice = await Shell.Current.DisplayActionSheetAsync(Name, "Cancel", delete, move);
+        if (choice == move)
+            await MoveAsync();
+        else if (choice == delete)
             await ExclusiveAsync(DeleteAsync);
     }
 

@@ -50,6 +50,8 @@ public static class MauiProgram
 		builder.Services.AddSingleton<IImageCompressor, MauiImageCompressor>();
 		builder.Services.AddSingleton<IGalleryPicker, MauiGalleryPicker>();
 		builder.Services.AddTransient<LocationDeletion>();
+		// One picker request at a time, shared by whoever opens it and the page itself.
+		builder.Services.AddSingleton<PlacePicker>();
 		builder.Services.AddSingleton<IPhotoService>(sp => new PhotoService(
 			FileSystem.AppDataDirectory,
 			sp.GetRequiredService<IImageCompressor>(),
@@ -67,6 +69,7 @@ public static class MauiProgram
 		builder.Services.AddTransient<ViewModels.CreateViewModel>();
 		builder.Services.AddTransient<ViewModels.PlaceViewModel>();
 		builder.Services.AddTransient<ViewModels.HomeViewModel>();
+		builder.Services.AddTransient<ViewModels.PickPlaceViewModel>();
 
 		// Register Pages
 		builder.Services.AddTransient<Views.ItemsPage>();
@@ -80,6 +83,7 @@ public static class MauiProgram
 		builder.Services.AddTransient<Views.CreatePage>();
 		builder.Services.AddTransient<Views.PlacePage>();
 		builder.Services.AddTransient<Views.HomePage>();
+		builder.Services.AddTransient<Views.PickPlacePage>();
 
 		var app = builder.Build();
 

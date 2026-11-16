@@ -182,6 +182,31 @@ public class ItemRepository : IItemRepository
         return true;
     }
 
+    public async Task<bool> MoveAsync(int itemId, int? locationId)
+    {
+        // Tracked, and discarded on failure, for the same reasons as SetQuantityAsync.
+        var item = await _context.Items.FindAsync(itemId);
+        if (item is null)
+            return false;
+
+        item.LocationId = locationId;
+
+        // The navigation property may still hold the old location, which a later read
+        // of this tracked item would show; the id is what was saved.
+        item.Location = null;
+        try
+        {
+            await _context.SaveChangesAsync();
+        }
+        catch
+        {
+            _context.DiscardChanges();
+            throw;
+        }
+
+        return true;
+    }
+
     public async Task SetItemPhotosAsync(int itemId, IEnumerable<string> fileNames)
     {
         await using var context = await _contextFactory.CreateDbContextAsync();
