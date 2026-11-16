@@ -1,4 +1,3 @@
-using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Storage.Core.Data;
 using Storage.Core.Models;
@@ -6,29 +5,21 @@ using Storage.Core.Repositories;
 
 namespace Storage.Tests;
 
-// Same fixture shape as RepositoryTests: a real SQLite in-memory database, so the
-// NOCASE collation and the unique index on Tag.Name are actually exercised.
+// Same fixture shape as RepositoryTests: a real SQLite database, so the NOCASE
+// collation and the unique index on Tag.Name are actually exercised.
 public class TagRepositoryTests : IDisposable
 {
-    private readonly SqliteConnection _connection;
+    private readonly TestDatabase _db = new();
     private readonly StorageDbContext _context;
     private readonly ItemRepository _itemRepo;
     private readonly TagRepository _tagRepo;
 
     public TagRepositoryTests()
     {
-        _connection = new SqliteConnection("Data Source=:memory:");
-        _connection.Open();
+        _context = _db.CreateDbContext();
 
-        var options = new DbContextOptionsBuilder<StorageDbContext>()
-            .UseSqlite(_connection)
-            .Options;
-
-        _context = new StorageDbContext(options);
-        _context.Database.EnsureCreated();
-
-        _itemRepo = new ItemRepository(_context);
-        _tagRepo = new TagRepository(_context);
+        _itemRepo = new ItemRepository(_db);
+        _tagRepo = new TagRepository(_db);
     }
 
     [Fact]
@@ -38,7 +29,6 @@ public class TagRepositoryTests : IDisposable
 
         await _tagRepo.SetItemTagsAsync(item.Id, ["tools", "power"]);
 
-        _context.ChangeTracker.Clear();
         var fetched = await _itemRepo.GetByIdAsync(item.Id);
 
         Assert.NotNull(fetched);
@@ -74,7 +64,6 @@ public class TagRepositoryTests : IDisposable
 
         await _tagRepo.SetItemTagsAsync(item.Id, ["Tools", "tools", "  TOOLS  "]);
 
-        _context.ChangeTracker.Clear();
         var fetched = await _itemRepo.GetByIdAsync(item.Id);
 
         Assert.Equal("Tools", Assert.Single(fetched!.Tags).Name);
@@ -88,7 +77,6 @@ public class TagRepositoryTests : IDisposable
 
         await _tagRepo.SetItemTagsAsync(item.Id, ["tools", "  ", ""]);
 
-        _context.ChangeTracker.Clear();
         var fetched = await _itemRepo.GetByIdAsync(item.Id);
 
         Assert.Equal("tools", Assert.Single(fetched!.Tags).Name);
@@ -102,7 +90,6 @@ public class TagRepositoryTests : IDisposable
         await _tagRepo.SetItemTagsAsync(item.Id, ["tools", "power"]);
         await _tagRepo.SetItemTagsAsync(item.Id, ["power", "bosch"]);
 
-        _context.ChangeTracker.Clear();
         var fetched = await _itemRepo.GetByIdAsync(item.Id);
 
         Assert.Equal(["bosch", "power"], fetched!.Tags.Select(t => t.Name).Order());
@@ -200,7 +187,6 @@ public class TagRepositoryTests : IDisposable
         tag.Color = TagPalette.Colors[5];
         await _tagRepo.UpdateAsync(tag);
 
-        _context.ChangeTracker.Clear();
         var fetched = await _tagRepo.GetByIdAsync(tag.Id);
 
         Assert.NotNull(fetched);
@@ -250,7 +236,6 @@ public class TagRepositoryTests : IDisposable
         await _tagRepo.SetItemTagsAsync(drill.Id, ["tools"]);
         await _tagRepo.SetItemTagsAsync(saw.Id, ["tools"]);
 
-        _context.ChangeTracker.Clear();
         var tags = await _tagRepo.GetAllWithItemCountsAsync();
 
         Assert.Equal(2, Assert.Single(tags).Items.Count);
@@ -259,6 +244,6 @@ public class TagRepositoryTests : IDisposable
     public void Dispose()
     {
         _context.Dispose();
-        _connection.Dispose();
+        _db.Dispose();
     }
 }

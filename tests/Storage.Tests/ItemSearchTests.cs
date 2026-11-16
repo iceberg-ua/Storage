@@ -1,5 +1,6 @@
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Storage.Core.Data;
 using Storage.Core.Models;
 using Storage.Core.Repositories;
@@ -11,26 +12,14 @@ namespace Storage.Tests;
 // function the interceptor registers on the connection.
 public class ItemSearchTests : IDisposable
 {
-    private readonly SqliteConnection _connection;
+    private readonly TestDatabase _db = new();
     private readonly StorageDbContext _context;
     private readonly ItemRepository _items;
 
     public ItemSearchTests()
     {
-        _connection = new SqliteConnection("Data Source=:memory:");
-        _connection.Open();
-
-        // The interceptor only fires for connections EF opens; this one was opened
-        // here, so the function has to be registered on it directly.
-        UnicodeLowerInterceptor.Register(_connection);
-
-        var options = new DbContextOptionsBuilder<StorageDbContext>()
-            .UseSqlite(_connection)
-            .Options;
-
-        _context = new StorageDbContext(options);
-        _context.Database.EnsureCreated();
-        _items = new ItemRepository(_context);
+        _context = _db.CreateDbContext();
+        _items = new ItemRepository(_db);
     }
 
     private async Task<Item> SeedAsync(
@@ -250,7 +239,7 @@ public class ItemSearchTests : IDisposable
     [Fact]
     public async Task LocationSearchMatchesNamePartially()
     {
-        var locations = new LocationRepository(_context);
+        var locations = new LocationRepository(_db);
         await SeedLocationAsync("Garage");
         await SeedLocationAsync("Attic");
 
@@ -262,7 +251,7 @@ public class ItemSearchTests : IDisposable
     [Fact]
     public async Task LocationSearchMatchesTheDescriptionToo()
     {
-        var locations = new LocationRepository(_context);
+        var locations = new LocationRepository(_db);
         await SeedLocationAsync("Cellar", description: "Spare tyres behind the BOILER");
         await SeedLocationAsync("Boiler room");
         await SeedLocationAsync("Attic");
@@ -278,7 +267,7 @@ public class ItemSearchTests : IDisposable
     [InlineData("ГОРИЩЕ", "горище")]
     public async Task LocationSearchIgnoresCaseBeyondAscii(string stored, string query)
     {
-        var locations = new LocationRepository(_context);
+        var locations = new LocationRepository(_db);
         await SeedLocationAsync(stored);
 
         Assert.Single(await locations.SearchAsync(query));
@@ -287,7 +276,7 @@ public class ItemSearchTests : IDisposable
     [Fact]
     public async Task LocationSearchCanBeScopedToChildren()
     {
-        var locations = new LocationRepository(_context);
+        var locations = new LocationRepository(_db);
         var cellar = await SeedLocationAsync("Cellar");
         await SeedLocationAsync("Shelf A", cellar.Id);
         await SeedLocationAsync("Shelf B");
@@ -302,7 +291,7 @@ public class ItemSearchTests : IDisposable
     [Fact]
     public async Task LocationSearchBlankQueryReturnsAll()
     {
-        var locations = new LocationRepository(_context);
+        var locations = new LocationRepository(_db);
         await SeedLocationAsync("Garage");
         await SeedLocationAsync("Attic");
 
@@ -313,7 +302,7 @@ public class ItemSearchTests : IDisposable
     [Fact]
     public async Task LocationSearchResultsCarryParent()
     {
-        var locations = new LocationRepository(_context);
+        var locations = new LocationRepository(_db);
         var cellar = await SeedLocationAsync("Cellar");
         await SeedLocationAsync("Shelf", cellar.Id);
 
@@ -325,7 +314,7 @@ public class ItemSearchTests : IDisposable
     [Fact]
     public async Task LocationSearchTreatsWildcardsLiterally()
     {
-        var locations = new LocationRepository(_context);
+        var locations = new LocationRepository(_db);
         await SeedLocationAsync("Box_1");
         await SeedLocationAsync("Box21");
 
@@ -334,10 +323,9 @@ public class ItemSearchTests : IDisposable
         Assert.Equal(["Box_1"], results.Select(l => l.Name));
     }
 
-    // The fixture above registers unicode_lower by hand, which is not how the app gets
-    // it — there, EF opens the connection and the interceptor does it. That path has
-    // its own failure mode ("no such function"), so it is worth its own test against a
-    // real file-backed database opened by EF itself.
+    // The fixture above is an in-memory database. The app's is a file, so the
+    // interceptor's path ("no such function" if it fails) is worth its own test against
+    // a real file-backed database opened by EF itself.
     [Fact]
     public async Task InterceptorRegistersTheFunctionOnConnectionsEfOpens()
     {
@@ -356,7 +344,7 @@ public class ItemSearchTests : IDisposable
             context.Items.Add(new Item { Name = "Молоток" });
             await context.SaveChangesAsync();
 
-            var repository = new ItemRepository(context);
+            var repository = new ItemRepository(new PooledDbContextFactory<StorageDbContext>(options));
             var results = await repository.SearchAsync("МОЛОТОК", SearchScope.Name);
 
             Assert.Single(results);
@@ -371,6 +359,6 @@ public class ItemSearchTests : IDisposable
     public void Dispose()
     {
         _context.Dispose();
-        _connection.Dispose();
+        _db.Dispose();
     }
 }

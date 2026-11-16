@@ -46,8 +46,7 @@ public interface ILocationRepository
 
     Task<Location> AddAsync(Location location);
     /// <exception cref="LocationCycleException">
-    /// The location's parent is itself or one of its own descendants. Nothing is
-    /// saved, and a tracked <paramref name="location"/> is reset to its loaded values.
+    /// The location's parent is itself or one of its own descendants. Nothing is saved.
     /// </exception>
     Task UpdateAsync(Location location);
     /// <summary>

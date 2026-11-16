@@ -42,8 +42,9 @@ public partial class App : Application
 
 		try
 		{
-			using var scope = _serviceProvider.CreateScope();
-			var dbContext = scope.ServiceProvider.GetRequiredService<StorageDbContext>();
+			await using var dbContext = await _serviceProvider
+				.GetRequiredService<IDbContextFactory<StorageDbContext>>()
+				.CreateDbContextAsync();
 
 			// Every item photo and every location photo. An owner missing from this
 			// list would have its files swept away as orphans.

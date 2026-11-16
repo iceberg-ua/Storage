@@ -4,18 +4,20 @@ using Storage.Core.Models;
 
 namespace Storage.Core.Repositories;
 
+// A context per call, for the reasons given on ItemRepository.
 public class LocationRepository : ILocationRepository
 {
-    private readonly StorageDbContext _context;
+    private readonly IDbContextFactory<StorageDbContext> _contextFactory;
 
-    public LocationRepository(StorageDbContext context)
+    public LocationRepository(IDbContextFactory<StorageDbContext> contextFactory)
     {
-        _context = context;
+        _contextFactory = contextFactory;
     }
 
     public async Task<IEnumerable<Location>> GetAllAsync()
     {
-        return await _context.Locations
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        return await context.Locations
             .Include(l => l.Parent)
             .OrderBy(l => l.Name)
             .ToListAsync();
@@ -23,7 +25,8 @@ public class LocationRepository : ILocationRepository
 
     public async Task<Location?> GetByIdAsync(int id)
     {
-        return await _context.Locations
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        return await context.Locations
             .Include(l => l.Parent)
             .Include(l => l.Children)
             .Include(l => l.Items)
@@ -32,7 +35,8 @@ public class LocationRepository : ILocationRepository
 
     public async Task<IEnumerable<Location>> GetRootLocationsAsync()
     {
-        return await _context.Locations
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        return await context.Locations
             .Where(l => l.ParentId == null)
             // Folded, like the cards and chips, so every list of locations agrees on
             // where "attic" goes relative to "Garage".
@@ -42,7 +46,8 @@ public class LocationRepository : ILocationRepository
 
     public async Task<IEnumerable<Location>> GetChildrenAsync(int parentId)
     {
-        return await _context.Locations
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        return await context.Locations
             .Where(l => l.ParentId == parentId)
             .OrderBy(l => StorageDbContext.UnicodeLower(l.Name))
             .ToListAsync();
@@ -50,10 +55,12 @@ public class LocationRepository : ILocationRepository
 
     public async Task<IReadOnlyList<LocationSummary>> GetChildSummariesAsync(int parentId)
     {
+        await using var context = await _contextFactory.CreateDbContextAsync();
+
         // Counted in the query, so a shelf of a hundred items costs one number, not a
-        // hundred loaded rows. Untracked for the same reason as GetPathAsync. Ordered on
-        // the folded name: SQLite's default collation would put "bin" after "Shelf".
-        var rows = await _context.Locations
+        // hundred loaded rows. Ordered on the folded name: SQLite's default collation
+        // would put "bin" after "Shelf".
+        var rows = await context.Locations
             .AsNoTracking()
             .Where(l => l.ParentId == parentId)
             .OrderBy(l => StorageDbContext.UnicodeLower(l.Name))
@@ -67,22 +74,24 @@ public class LocationRepository : ILocationRepository
     {
         const int photosPerCard = 4;
 
+        await using var context = await _contextFactory.CreateDbContextAsync();
+
         // Three flat queries, put together in memory: the whole tree, item counts per
         // location, and the primary photo of every item that has one. A card counts
         // through every level below it, which one SQL query per card would make slow,
         // and the app holds a few hundred locations at most.
-        var locations = await _context.Locations
+        var locations = await context.Locations
             .AsNoTracking()
             .OrderBy(l => StorageDbContext.UnicodeLower(l.Name))
             .ToListAsync();
 
-        var itemCounts = await _context.Items
+        var itemCounts = await context.Items
             .Where(i => i.LocationId != null)
             .GroupBy(i => i.LocationId!.Value)
             .Select(g => new { LocationId = g.Key, Count = g.Count() })
             .ToDictionaryAsync(g => g.LocationId, g => g.Count);
 
-        var photos = await _context.Items
+        var photos = await context.Items
             .Where(i => i.LocationId != null && i.Photos.Any())
             // Id breaks ties: two items saved in the same tick keep the order they were added.
             .OrderByDescending(i => i.CreatedAt)
@@ -144,10 +153,16 @@ public class LocationRepository : ILocationRepository
         return seen;
     }
 
-    public Task<int> CountAsync() => _context.Locations.CountAsync();
+    public async Task<int> CountAsync()
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        return await context.Locations.CountAsync();
+    }
 
     public async Task<IReadOnlyList<Location>> GetPathAsync(int id)
     {
+        await using var context = await _contextFactory.CreateDbContextAsync();
+
         var path = new List<Location>();
         var visited = new HashSet<int>();
         int? next = id;
@@ -156,10 +171,7 @@ public class LocationRepository : ILocationRepository
         // the database — stop at the first repeat rather than walking forever.
         while (next is int current && visited.Add(current))
         {
-            // Untracked: the caller may hold this repository for the app's lifetime, and
-            // a tracked query would hand back the instance cached on the first read,
-            // missing a rename or move saved through another context since.
-            var location = await _context.Locations
+            var location = await context.Locations
                 .AsNoTracking()
                 .FirstOrDefaultAsync(l => l.Id == current);
             if (location is null)
@@ -175,9 +187,11 @@ public class LocationRepository : ILocationRepository
 
     public async Task<IReadOnlySet<int>> GetDescendantIdsAsync(int id)
     {
+        await using var context = await _contextFactory.CreateDbContextAsync();
+
         // One query for the whole tree, walked in memory: the app holds a few hundred
         // locations at most, and this avoids a round trip per level.
-        var links = await _context.Locations
+        var links = await context.Locations
             .AsNoTracking()
             .Where(l => l.ParentId != null)
             .Select(l => new { l.Id, ParentId = l.ParentId!.Value })
@@ -204,7 +218,9 @@ public class LocationRepository : ILocationRepository
 
     public async Task<IEnumerable<Location>> SearchAsync(string? query, int? parentId = null)
     {
-        var locations = _context.Locations
+        await using var context = await _contextFactory.CreateDbContextAsync();
+
+        var locations = context.Locations
             .Include(l => l.Parent)
             .AsQueryable();
 
@@ -232,52 +248,44 @@ public class LocationRepository : ILocationRepository
 
     public async Task<Location> AddAsync(Location location)
     {
-        _context.Locations.Add(location);
-        await _context.SaveChangesAsync();
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        // Attach, not Add, as in ItemRepository.AddAsync: a parent loaded through another
+        // call keeps its row instead of being inserted a second time.
+        context.Locations.Attach(location);
+        await context.SaveChangesAsync();
         return location;
     }
 
     public async Task UpdateAsync(Location location)
     {
-        // The caller usually edited an entity this context tracks, and the context lives
-        // as long as the app. A refused or failed change left pending would be written,
-        // or fail again, at the next SaveChanges anywhere, so both paths discard it.
         if (location.ParentId is int parentId &&
             (parentId == location.Id || (await GetDescendantIdsAsync(location.Id)).Contains(parentId)))
         {
-            _context.DiscardChanges();
             throw new LocationCycleException(location.Id, parentId);
         }
 
-        _context.Locations.Update(location);
-        try
-        {
-            await _context.SaveChangesAsync();
-        }
-        catch
-        {
-            _context.DiscardChanges();
-            throw;
-        }
+        await using var context = await _contextFactory.CreateDbContextAsync();
+
+        // The caller's location usually arrives with its parent, children and items
+        // attached. Update() would walk that graph and write every row in it; copying the
+        // scalars onto the stored row writes this one only.
+        var stored = await context.Locations.FindAsync(location.Id)
+            ?? throw new DbUpdateConcurrencyException($"Location {location.Id} no longer exists.");
+
+        context.Entry(stored).CurrentValues.SetValues(location);
+        await context.SaveChangesAsync();
     }
 
     public async Task<Location?> DeleteAsync(int id)
     {
-        var location = await _context.Locations.FindAsync(id);
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var location = await context.Locations.FindAsync(id);
         if (location != null)
         {
-            _context.Locations.Remove(location);
-            try
-            {
-                await _context.SaveChangesAsync();
-            }
-            catch
-            {
-                // As in UpdateAsync: a refused delete (a location with children is
-                // Restrict) left pending would be retried by the next SaveChanges anywhere.
-                _context.DiscardChanges();
-                throw;
-            }
+            // A location with children is Restrict, so SQLite refuses this delete. The
+            // context goes with the call, so the refusal can't be retried by a later save.
+            context.Locations.Remove(location);
+            await context.SaveChangesAsync();
         }
 
         return location;
