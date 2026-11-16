@@ -17,31 +17,21 @@
                              Margin="0,12,0,0"
                              BindingContext="{Binding Search}" />
 
-        <!-- Items stored here, two to a row, under the header. -->
+        <!-- Items stored here, two to a row, under the header. One list only: the
+             locations inside this one are the header's chips, so the search here does
+             not offer to list locations instead. -->
         <CollectionView Grid.Row="1"
                         Margin="8,0"
                         BindingContext="{Binding Search}"
                         ItemsSource="{Binding Items}"
-                        IsVisible="{Binding ShowItemList}"
                         ItemTemplate="{StaticResource ItemTile}"
                         EmptyViewTemplate="{StaticResource EmptyState}">
             <CollectionView.ItemsLayout>
                 <GridItemsLayout Orientation="Vertical" Span="2" />
             </CollectionView.ItemsLayout>
             <CollectionView.Header>
-                <views:PlaceHeader BindingContext="{Binding Source={RelativeSource AncestorType={x:Type vm:PlaceViewModel}}}" />
-            </CollectionView.Header>
-        </CollectionView>
-
-        <!-- Locations, when the search toggle is flipped: the same rows as the tabs. -->
-        <CollectionView Grid.Row="1"
-                        BindingContext="{Binding Search}"
-                        ItemsSource="{Binding Locations}"
-                        IsVisible="{Binding ShowLocationList}"
-                        ItemTemplate="{StaticResource LocationRow}"
-                        EmptyViewTemplate="{StaticResource EmptyState}">
-            <CollectionView.Header>
-                <views:PlaceHeader BindingContext="{Binding Source={RelativeSource AncestorType={x:Type vm:PlaceViewModel}}}" />
+                <!-- BindingContext set in code-behind; see PlaceHeader.xaml. -->
+                <views:PlaceHeader x:Name="Header" />
             </CollectionView.Header>
         </CollectionView>
 
@@ -50,6 +40,24 @@
                 Command="{Binding NewItemCommand}"
                 Margin="16,8,16,16"
                 SemanticProperties.Description="{Binding Name, StringFormat='Add a new item to {0}'}" />
+
+        <!-- Deleted while this page was underneath another one, from a search on a
+             tab. Said plainly, with a way out, instead of popping during OnAppearing. -->
+        <VerticalStackLayout Grid.RowSpan="3"
+                             IsVisible="{Binding IsMissing}"
+                             BackgroundColor="{AppThemeBinding Light={StaticResource Canvas}, Dark={StaticResource CanvasDark}}"
+                             Padding="32"
+                             Spacing="16"
+                             VerticalOptions="Fill">
+            <Label Text="This location no longer exists"
+                   Style="{StaticResource Title}"
+                   HorizontalTextAlignment="Center"
+                   Margin="0,120,0,0" />
+            <Button Text="Back"
+                    Style="{StaticResource SecondaryButton}"
+                    Command="{Binding BackCommand}"
+                    HorizontalOptions="Center" />
+        </VerticalStackLayout>
     </Grid>
 
 </ContentPage>

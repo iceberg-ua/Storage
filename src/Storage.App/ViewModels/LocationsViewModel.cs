@@ -2,7 +2,6 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Storage.App.Services;
 using Storage.Core.Repositories;
-using Storage.Core.Services;
 using StorageLocation = Storage.Core.Models.Location;
 
 namespace Storage.App.ViewModels;
@@ -13,8 +12,7 @@ namespace Storage.App.ViewModels;
 // does not mean knowing which tab to be on first.
 public partial class LocationsViewModel : ObservableObject
 {
-    private readonly ILocationRepository _locationRepository;
-    private readonly IPhotoService _photoService;
+    private readonly LocationDeletion _deletion;
 
     public SearchViewModel Search { get; }
 
@@ -24,10 +22,9 @@ public partial class LocationsViewModel : ObservableObject
     public LocationsViewModel(
         ILocationRepository locationRepository,
         IItemRepository itemRepository,
-        IPhotoService photoService)
+        LocationDeletion deletion)
     {
-        _locationRepository = locationRepository;
-        _photoService = photoService;
+        _deletion = deletion;
 
         // Locations first, since that is what this page is for; the toggle still
         // reaches items without leaving the page.
@@ -59,32 +56,7 @@ public partial class LocationsViewModel : ObservableObject
     [RelayCommand]
     private async Task DeleteLocationAsync(StorageLocation location)
     {
-        var confirm = await Shell.Current.DisplayAlertAsync(
-            "Delete Location",
-            $"Are you sure you want to delete '{location.Name}'?",
-            "Delete",
-            "Cancel");
-
-        if (confirm)
-        {
-            // The file goes only after the row: a delete that fails must not leave the
-            // location pointing at a photo that is no longer there.
-            StorageLocation? deleted;
-            try
-            {
-                deleted = await _locationRepository.DeleteAsync(location.Id);
-            }
-            catch (Exception ex)
-            {
-                // Most likely it still has locations inside it, which the schema refuses.
-                await Shell.Current.DisplayAlertAsync(
-                    "Couldn't delete location", $"Move or delete what is inside it first.\n\n{ex.Message}".TrimEnd(), "OK");
-                return;
-            }
-
-            await _photoService.DeleteAsync(deleted?.PhotoFileName);
-
+        if (await _deletion.ConfirmAndDeleteAsync(location.Id, location.Name))
             Search.Locations.Remove(location);
-        }
     }
 }

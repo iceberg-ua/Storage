@@ -35,10 +35,12 @@ public partial class SearchViewModel : ObservableObject
     public SearchViewModel(
         IItemRepository itemRepository,
         ILocationRepository locationRepository,
-        bool locationsByDefault = false)
+        bool locationsByDefault = false,
+        bool canSearchLocations = true)
     {
         _itemRepository = itemRepository;
         _locationRepository = locationRepository;
+        CanSearchLocations = canSearchLocations;
         _locationsByDefault = locationsByDefault;
         _searchLocations = locationsByDefault;
     }
@@ -98,6 +100,12 @@ public partial class SearchViewModel : ObservableObject
     private bool _searchLocations;
 
     public bool ShowEverywhereToggle => IsScopedToLocation;
+
+    /// <summary>
+    /// Whether the "Search locations" switch is offered. Off on a location's page, which
+    /// already shows the locations inside it and has room for one list, not two.
+    /// </summary>
+    public bool CanSearchLocations { get; }
 
     public bool ShowFieldScope => !SearchLocations;
 
@@ -182,7 +190,7 @@ public partial class SearchViewModel : ObservableObject
             EmptyTitle = "📍 No locations";
             EmptyMessage = IsScopedToLocation
                 ? "Nothing is stored inside this one"
-                : "Tap ➕ to create your first location";
+                : "Add one with ➕ on the Locations tab";
         }
         else
         {

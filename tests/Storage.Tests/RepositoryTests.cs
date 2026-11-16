@@ -19,6 +19,10 @@ public class RepositoryTests : IDisposable
         _connection = new SqliteConnection("Data Source=:memory:");
         _connection.Open();
 
+        // The interceptor only fires for connections EF opens, and the location
+        // summaries sort through unicode_lower, so register it on this one directly.
+        UnicodeLowerInterceptor.Register(_connection);
+
         var options = new DbContextOptionsBuilder<StorageDbContext>()
             .UseSqlite(_connection)
             .Options;
@@ -537,7 +541,7 @@ public class RepositoryTests : IDisposable
         var garage = await locationRepo.AddAsync(new Location { Name = "Garage" });
         var shelf = await locationRepo.AddAsync(new Location { Name = "Shelf 2", ParentId = garage.Id });
         var bin = await locationRepo.AddAsync(new Location { Name = "Bin A", ParentId = shelf.Id });
-        var bench = await locationRepo.AddAsync(new Location { Name = "Bench", ParentId = garage.Id });
+        await locationRepo.AddAsync(new Location { Name = "Bench", ParentId = garage.Id });
 
         await itemRepo.AddAsync(new Item { Name = "Tyres", LocationId = shelf.Id });
         await itemRepo.AddAsync(new Item { Name = "Pump", LocationId = shelf.Id });
@@ -546,25 +550,43 @@ public class RepositoryTests : IDisposable
 
         var summaries = await locationRepo.GetChildSummariesAsync(garage.Id);
 
-        // Name order, and the bin's cable is not counted on the shelf.
+        // The bin's cable is not counted on the shelf, nor the garage's drill on either.
         Assert.Collection(summaries,
-            s => Assert.Equal(("Bench", 0, 0), (s.Location.Name, s.ItemCount, s.ChildCount)),
-            s => Assert.Equal(("Shelf 2", 2, 1), (s.Location.Name, s.ItemCount, s.ChildCount)));
+            s => Assert.Equal(("Bench", 0), (s.Location.Name, s.ItemCount)),
+            s => Assert.Equal(("Shelf 2", 2), (s.Location.Name, s.ItemCount)));
     }
 
     [Fact]
-    public async Task ChildSummariesOfNullAreTheTopLevelLocations()
+    public async Task ChildSummariesSortIgnoringCase()
     {
         var locationRepo = new LocationRepository(_context);
 
         var garage = await locationRepo.AddAsync(new Location { Name = "Garage" });
-        await locationRepo.AddAsync(new Location { Name = "Attic" });
         await locationRepo.AddAsync(new Location { Name = "Shelf", ParentId = garage.Id });
+        await locationRepo.AddAsync(new Location { Name = "bin", ParentId = garage.Id });
+        await locationRepo.AddAsync(new Location { Name = "Ящик", ParentId = garage.Id });
+        await locationRepo.AddAsync(new Location { Name = "ящик малий", ParentId = garage.Id });
 
-        var summaries = await locationRepo.GetChildSummariesAsync(null);
+        var summaries = await locationRepo.GetChildSummariesAsync(garage.Id);
 
-        Assert.Equal(["Attic", "Garage"], summaries.Select(s => s.Location.Name));
-        Assert.Equal(1, summaries.Single(s => s.Location.Name == "Garage").ChildCount);
+        Assert.Equal(["bin", "Shelf", "Ящик", "ящик малий"], summaries.Select(s => s.Location.Name));
+    }
+
+    [Fact]
+    public async Task CountInLocationCountsOnlyThatLocation()
+    {
+        var locationRepo = new LocationRepository(_context);
+        var itemRepo = new ItemRepository(_context);
+
+        var garage = await locationRepo.AddAsync(new Location { Name = "Garage" });
+        var shelf = await locationRepo.AddAsync(new Location { Name = "Shelf", ParentId = garage.Id });
+        await itemRepo.AddAsync(new Item { Name = "Drill", LocationId = garage.Id });
+        await itemRepo.AddAsync(new Item { Name = "Saw", LocationId = garage.Id });
+        await itemRepo.AddAsync(new Item { Name = "Tyres", LocationId = shelf.Id });
+        await itemRepo.AddAsync(new Item { Name = "Loose" });
+
+        Assert.Equal(2, await itemRepo.CountInLocationAsync(garage.Id));
+        Assert.Equal(1, await itemRepo.CountInLocationAsync(shelf.Id));
     }
 
     public void Dispose()

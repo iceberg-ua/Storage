@@ -7,6 +7,9 @@ using Storage.Core.Repositories;
 
 namespace Storage.App.ViewModels;
 
+/// <summary>One step of the path at the top of a location's page; a null id is the Locations tab.</summary>
+public sealed record PlaceCrumb(string Name, int? LocationId, bool IsFirst);
+
 /// <summary>
 /// One location's page, pushed with a "locationId": its photo, where it sits, the
 /// locations directly inside it, and the items stored in it. Every level of the tree is
@@ -14,13 +17,16 @@ namespace Storage.App.ViewModels;
 /// </summary>
 /// <remarks>
 /// The items list is a <see cref="SearchViewModel"/> scoped to this location, the same
-/// object the tabs use, so the search toolbar here behaves exactly as it does there.
+/// object the tabs use, so the search toolbar here behaves as it does there. It does not
+/// offer the switch to locations: the ones inside this one are the chips at the top.
 /// </remarks>
 public partial class PlaceViewModel : ObservableObject, IQueryAttributable
 {
     private readonly ILocationRepository _locationRepository;
+    private readonly IItemRepository _itemRepository;
+    private readonly LocationDeletion _deletion;
 
-    private int _locationId;
+    public int LocationId { get; private set; }
 
     public SearchViewModel Search { get; }
 
@@ -28,32 +34,38 @@ public partial class PlaceViewModel : ObservableObject, IQueryAttributable
     private string _name = string.Empty;
 
     [ObservableProperty]
-    private string? _description;
-
-    [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasPhoto))]
     private string? _photoFileName;
 
     public bool HasPhoto => PhotoFileName is not null;
 
-    /// <summary>The ancestors, top first, e.g. "Garage › Shelf 2"; "Locations" at the top level.</summary>
+    /// <summary>"Locations › Garage › Shelf 2": everything above this location, each one tappable.</summary>
     [ObservableProperty]
-    private string _parentPath = string.Empty;
+    private ObservableCollection<PlaceCrumb> _crumbs = [];
 
     /// <summary>"3 items", plus the description when there is one.</summary>
     [ObservableProperty]
     private string _summary = string.Empty;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HasSubPlaces))]
     private ObservableCollection<LocationSummary> _subPlaces = [];
 
-    public bool HasSubPlaces => SubPlaces.Count > 0;
+    /// <summary>
+    /// The location was deleted while this page was underneath another one. The page says
+    /// so and offers Back rather than popping itself while it is still appearing.
+    /// </summary>
+    [ObservableProperty]
+    private bool _isMissing;
 
-    public PlaceViewModel(ILocationRepository locationRepository, IItemRepository itemRepository)
+    public PlaceViewModel(
+        ILocationRepository locationRepository,
+        IItemRepository itemRepository,
+        LocationDeletion deletion)
     {
         _locationRepository = locationRepository;
-        Search = new SearchViewModel(itemRepository, locationRepository);
+        _itemRepository = itemRepository;
+        _deletion = deletion;
+        Search = new SearchViewModel(itemRepository, locationRepository, canSearchLocations: false);
     }
 
     public void ApplyQueryAttributes(IDictionary<string, object> query)
@@ -61,7 +73,7 @@ public partial class PlaceViewModel : ObservableObject, IQueryAttributable
         if (query.TryGetValue("locationId", out var locationId) &&
             int.TryParse(Convert.ToString(locationId), out var parsed))
         {
-            _locationId = parsed;
+            LocationId = parsed;
             Search.ScopeTo(parsed);
         }
     }
@@ -71,34 +83,39 @@ public partial class PlaceViewModel : ObservableObject, IQueryAttributable
     [RelayCommand]
     private async Task LoadAsync()
     {
-        // Untracked, so an edit saved through another context is not hidden behind a
-        // cached instance.
-        var path = await _locationRepository.GetPathAsync(_locationId);
-        if (path.Count == 0)
+        try
         {
-            // Deleted from its own edit form, which then popped back here. The user
-            // has just done that on purpose, so there is nothing to announce.
-            await Shell.Current.GoToAsync("..");
-            return;
+            // Untracked, so an edit saved through another context is not hidden behind
+            // a cached instance.
+            var path = await _locationRepository.GetPathAsync(LocationId);
+            IsMissing = path.Count == 0;
+            if (IsMissing)
+                return;
+
+            var location = path[^1];
+            Name = location.Name;
+            PhotoFileName = location.PhotoFileName;
+            Crumbs = new ObservableCollection<PlaceCrumb>(
+                path.SkipLast(1)
+                    .Select(l => new PlaceCrumb(l.Name, l.Id, IsFirst: false))
+                    .Prepend(new PlaceCrumb("Locations", null, IsFirst: true)));
+
+            // Counted on its own rather than taken from the list, which holds matches
+            // instead while a search is under way.
+            Summary = FormatSummary(await _itemRepository.CountInLocationAsync(LocationId), location.Description);
+
+            SubPlaces = new ObservableCollection<LocationSummary>(
+                await _locationRepository.GetChildSummariesAsync(LocationId));
+
+            await Search.LoadAsync();
         }
-
-        var location = path[^1];
-        Name = location.Name;
-        Description = location.Description;
-        PhotoFileName = location.PhotoFileName;
-        ParentPath = path.Count == 1
-            ? "Locations"
-            : string.Join(" › ", path.Take(path.Count - 1).Select(l => l.Name));
-
-        SubPlaces = new ObservableCollection<LocationSummary>(
-            await _locationRepository.GetChildSummariesAsync(_locationId));
-
-        await Search.LoadAsync();
-
-        // At rest the list is exactly what is stored here, so its length is the count.
-        // While a search is under way it is the matches, and the count is left as it was.
-        if (!Search.IsActive && Search.ShowItemList)
-            Summary = FormatSummary(Search.Items.Count, Description);
+        catch (Exception ex)
+        {
+            // The page calls this from OnAppearing, an async void handler, where an
+            // exception would take the app down.
+            await Shell.Current.DisplayAlertAsync(
+                "Couldn't open this location", $"Go back and try again.\n\n{ex.Message}".TrimEnd(), "OK");
+        }
     }
 
     private static string FormatSummary(int itemCount, string? description)
@@ -112,16 +129,36 @@ public partial class PlaceViewModel : ObservableObject, IQueryAttributable
         Shell.Current.GoToAsync(Routes.Place(subPlace.Location.Id));
 
     [RelayCommand]
-    private Task BackAsync() => Shell.Current.GoToAsync("..");
+    private Task OpenCrumbAsync(PlaceCrumb crumb) => PlaceNavigation.ShowAsync(crumb.LocationId);
 
     [RelayCommand]
-    private Task EditAsync() => Shell.Current.GoToAsync(Routes.EditLocation(_locationId));
+    private Task BackAsync() => Shell.Current.GoToAsync("..");
+
+    // Edit and Delete share one menu: Delete is rare and should not sit one tap away
+    // in the header, next to search.
+    [RelayCommand]
+    private async Task ShowActionsAsync()
+    {
+        const string edit = "Edit";
+        const string delete = "Delete location";
+
+        var choice = await Shell.Current.DisplayActionSheetAsync(Name, "Cancel", delete, edit);
+        if (choice == edit)
+        {
+            await Shell.Current.GoToAsync(Routes.EditLocation(LocationId));
+        }
+        else if (choice == delete && await _deletion.ConfirmAndDeleteAsync(LocationId, Name))
+        {
+            // A tap, not OnAppearing, so the page is settled and can pop itself.
+            await Shell.Current.GoToAsync("..");
+        }
+    }
 
     [RelayCommand]
     private Task AddSubPlaceAsync() =>
-        Shell.Current.GoToAsync(Routes.Create(CreateKind.Location, _locationId));
+        Shell.Current.GoToAsync(Routes.Create(CreateKind.Location, LocationId));
 
     [RelayCommand]
     private Task NewItemAsync() =>
-        Shell.Current.GoToAsync(Routes.Create(CreateKind.Item, _locationId));
+        Shell.Current.GoToAsync(Routes.Create(CreateKind.Item, LocationId));
 }

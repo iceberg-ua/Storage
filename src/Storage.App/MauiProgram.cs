@@ -47,6 +47,7 @@ public static class MauiProgram
 		// Register services
 		builder.Services.AddSingleton<IImageCompressor, MauiImageCompressor>();
 		builder.Services.AddSingleton<IGalleryPicker, MauiGalleryPicker>();
+		builder.Services.AddTransient<LocationDeletion>();
 		builder.Services.AddSingleton<IPhotoService>(sp => new PhotoService(
 			FileSystem.AppDataDirectory,
 			sp.GetRequiredService<IImageCompressor>(),

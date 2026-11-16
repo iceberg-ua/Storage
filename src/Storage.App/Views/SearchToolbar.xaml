@@ -39,7 +39,7 @@
                         SemanticProperties.Description="Search the whole inventory instead of this location" />
             </Grid>
 
-            <Grid ColumnDefinitions="*,Auto">
+            <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding CanSearchLocations}">
                 <Label Grid.Column="0"
                        Text="Search locations"
                        FontSize="13"

@@ -8,7 +8,9 @@
 
     <!-- The top of a location's page, used as the header of its lists so it scrolls
          away with them instead of holding a third of the screen. Its BindingContext is
-         the page's view model; the list it sits in is bound to the search. -->
+         the page's view model, set from the page's code: the list it sits in is bound
+         to the search, and a RelativeSource lookup from inside a CollectionView header
+         is not reliable on Android. -->
     <VerticalStackLayout Padding="8,16,8,8" Spacing="16">
 
         <!-- The photo when there is one, with the actions over it; without one, the
@@ -38,15 +40,40 @@
                         Command="{Binding Search.ToggleCommand}"
                         SemanticProperties.Description="{Binding Search.ToggleDescription}" />
                 <Button Grid.Column="3"
-                        Text="✏️"
+                        Text="⋯"
                         Style="{StaticResource RoundIconButton}"
-                        Command="{Binding EditCommand}"
-                        SemanticProperties.Description="{Binding Name, StringFormat='Edit {0}'}" />
+                        Command="{Binding ShowActionsCommand}"
+                        SemanticProperties.Description="{Binding Name, StringFormat='Edit or delete {0}'}" />
             </Grid>
         </Grid>
 
         <VerticalStackLayout Spacing="4" Padding="8,0">
-            <Label Text="{Binding ParentPath}" Style="{StaticResource Caption}" />
+            <!-- The way here, each step a link: going up three levels is one tap, not
+                 three presses of Back. -->
+            <FlexLayout BindableLayout.ItemsSource="{Binding Crumbs}" Wrap="Wrap">
+                <BindableLayout.ItemTemplate>
+                    <DataTemplate x:DataType="vm:PlaceCrumb">
+                        <HorizontalStackLayout>
+                            <Label Text=" › "
+                                   Style="{StaticResource Caption}"
+                                   IsVisible="{Binding IsFirst, Converter={StaticResource InvertedBoolConverter}}"
+                                   VerticalOptions="Center" />
+                            <Label Text="{Binding Name}"
+                                   Style="{StaticResource Caption}"
+                                   FontFamily="JakartaSemiBold"
+                                   TextColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}"
+                                   Padding="0,6"
+                                   VerticalOptions="Center"
+                                   SemanticProperties.Description="{Binding Name, StringFormat='Go to {0}'}">
+                                <Label.GestureRecognizers>
+                                    <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:PlaceViewModel}}, Path=OpenCrumbCommand}"
+                                                          CommandParameter="{Binding .}" />
+                                </Label.GestureRecognizers>
+                            </Label>
+                        </HorizontalStackLayout>
+                    </DataTemplate>
+                </BindableLayout.ItemTemplate>
+            </FlexLayout>
             <Label Text="{Binding Name}"
                    Style="{StaticResource Display}"
                    SemanticProperties.HeadingLevel="Level1" />
