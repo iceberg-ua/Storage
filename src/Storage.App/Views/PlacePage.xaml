@@ -19,25 +19,30 @@
 
         <!-- Items stored here, two to a row, under the header. One list only: the
              locations inside this one are the header's chips, so the search here does
-             not offer to list locations instead. -->
-        <CollectionView Grid.Row="1"
-                        Margin="8,0"
-                        BindingContext="{Binding Search}"
-                        ItemsSource="{Binding Items}"
-                        ItemTemplate="{StaticResource ItemTile}"
-                        EmptyViewTemplate="{StaticResource EmptyState}">
-            <CollectionView.ItemsLayout>
-                <GridItemsLayout Orientation="Vertical" Span="2" />
-            </CollectionView.ItemsLayout>
-            <CollectionView.Header>
-                <!-- BindingContext set in code-behind; see PlaceHeader.xaml. -->
-                <views:PlaceHeader x:Name="Header" />
-            </CollectionView.Header>
-        </CollectionView>
+             not offer to list locations instead. The wrapper hides it, rather than just
+             covering it, while the location is missing, so a screen reader does not
+             reach the list underneath the message. -->
+        <Grid Grid.Row="1"
+              IsVisible="{Binding IsMissing, Converter={StaticResource InvertedBoolConverter}}">
+            <CollectionView Margin="8,0"
+                            BindingContext="{Binding Search}"
+                            ItemsSource="{Binding Items}"
+                            ItemTemplate="{StaticResource ItemTile}"
+                            EmptyViewTemplate="{StaticResource EmptyState}">
+                <CollectionView.ItemsLayout>
+                    <GridItemsLayout Orientation="Vertical" Span="2" />
+                </CollectionView.ItemsLayout>
+                <CollectionView.Header>
+                    <!-- BindingContext set in code-behind; see PlaceHeader.xaml. -->
+                    <views:PlaceHeader x:Name="Header" />
+                </CollectionView.Header>
+            </CollectionView>
+        </Grid>
 
         <Button Grid.Row="2"
                 Text="New item here"
                 Command="{Binding NewItemCommand}"
+                IsVisible="{Binding IsMissing, Converter={StaticResource InvertedBoolConverter}}"
                 Margin="16,8,16,16"
                 SemanticProperties.Description="{Binding Name, StringFormat='Add a new item to {0}'}" />
 

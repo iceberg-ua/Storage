@@ -127,6 +127,34 @@ public class ItemRepository : IItemRepository
         await _context.SaveChangesAsync();
     }
 
+    public async Task<bool> SetQuantityAsync(int itemId, int quantity)
+    {
+        ArgumentOutOfRangeException.ThrowIfLessThan(quantity, 1);
+
+        // Through the tracked instance rather than ExecuteUpdate: the edit form reads the
+        // item from this same context, and a bulk update would leave the copy it holds
+        // showing the old quantity, which its next save would then write back.
+        var item = await _context.Items.FindAsync(itemId);
+        if (item is null)
+            return false;
+
+        item.Quantity = quantity;
+        try
+        {
+            await _context.SaveChangesAsync();
+        }
+        catch
+        {
+            // As in LocationRepository.UpdateAsync: left pending, the failed quantity
+            // would show on the next read of this tracked item and be written by the
+            // next SaveChanges anywhere.
+            _context.DiscardChanges();
+            throw;
+        }
+
+        return true;
+    }
+
     public async Task SetItemPhotosAsync(int itemId, IEnumerable<string> fileNames)
     {
         var item = await _context.Items
