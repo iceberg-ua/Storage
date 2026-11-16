@@ -706,63 +706,41 @@ public class RepositoryTests : IDisposable
     [Fact]
     public async Task SetQuantityChangesOnlyTheQuantity()
     {
-        var itemRepo = new ItemRepository(_context);
+        var itemRepo = new ItemRepository(_db);
         var item = await itemRepo.AddAsync(new Item { Name = "Tyres", Description = "Winter set" });
 
         Assert.True(await itemRepo.SetQuantityAsync(item.Id, 4));
 
-        // Read back through a fresh context, so this checks the row, not the tracked copy.
-        using var fresh = new StorageDbContext(new DbContextOptionsBuilder<StorageDbContext>().UseSqlite(_connection).Options);
-        var saved = await fresh.Items.SingleAsync(i => i.Id == item.Id);
+        var saved = await _context.Items.SingleAsync(i => i.Id == item.Id);
         Assert.Equal((4, "Tyres", "Winter set"), (saved.Quantity, saved.Name, saved.Description));
-    }
-
-    [Fact]
-    public async Task FailedSetQuantityLeavesNothingPending()
-    {
-        // A context over the same database whose first save throws.
-        var failOnce = new FailFirstSave();
-        using var context = new StorageDbContext(new DbContextOptionsBuilder<StorageDbContext>()
-            .UseSqlite(_connection)
-            .AddInterceptors(failOnce)
-            .Options);
-        var itemRepo = new ItemRepository(context);
-        var item = await new ItemRepository(_context).AddAsync(new Item { Name = "Tyres", Quantity = 2 });
-
-        await Assert.ThrowsAsync<InvalidOperationException>(() => itemRepo.SetQuantityAsync(item.Id, 5));
-
-        // The tracked copy is back to the saved value, and nothing waits for the next save.
-        Assert.False(context.ChangeTracker.HasChanges());
-        Assert.Equal(2, (await itemRepo.GetByIdAsync(item.Id))!.Quantity);
-    }
-
-    private sealed class FailFirstSave : Microsoft.EntityFrameworkCore.Diagnostics.SaveChangesInterceptor
-    {
-        private bool _failed;
-
-        public override ValueTask<Microsoft.EntityFrameworkCore.Diagnostics.InterceptionResult<int>> SavingChangesAsync(
-            Microsoft.EntityFrameworkCore.Diagnostics.DbContextEventData eventData,
-            Microsoft.EntityFrameworkCore.Diagnostics.InterceptionResult<int> result,
-            CancellationToken cancellationToken = default)
-        {
-            if (!_failed)
-            {
-                _failed = true;
-                throw new InvalidOperationException("Simulated failed save");
-            }
-
-            return base.SavingChangesAsync(eventData, result, cancellationToken);
-        }
     }
 
     [Fact]
     public async Task SetQuantityRefusesZeroAndReportsAMissingItem()
     {
-        var itemRepo = new ItemRepository(_context);
+        var itemRepo = new ItemRepository(_db);
         var item = await itemRepo.AddAsync(new Item { Name = "Tyres" });
 
         await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => itemRepo.SetQuantityAsync(item.Id, 0));
         Assert.False(await itemRepo.SetQuantityAsync(item.Id + 100, 2));
+    }
+
+    [Fact]
+    public async Task MoveChangesTheLocationAndCanClearIt()
+    {
+        var locationRepo = new LocationRepository(_db);
+        var itemRepo = new ItemRepository(_db);
+        var garage = await locationRepo.AddAsync(new Location { Name = "Garage" });
+        var attic = await locationRepo.AddAsync(new Location { Name = "Attic" });
+        var item = await itemRepo.AddAsync(new Item { Name = "Tyres", LocationId = garage.Id });
+
+        Assert.True(await itemRepo.MoveAsync(item.Id, attic.Id));
+        Assert.Equal("Attic", (await itemRepo.GetByIdAsync(item.Id))!.Location!.Name);
+
+        Assert.True(await itemRepo.MoveAsync(item.Id, null));
+        Assert.Null((await itemRepo.GetByIdAsync(item.Id))!.LocationId);
+
+        Assert.False(await itemRepo.MoveAsync(item.Id + 100, attic.Id));
     }
 
     [Fact]

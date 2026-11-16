@@ -158,28 +158,24 @@ public class ItemRepository : IItemRepository
     {
         ArgumentOutOfRangeException.ThrowIfLessThan(quantity, 1);
 
-        // Through the tracked instance rather than ExecuteUpdate: the edit form reads the
-        // item from this same context, and a bulk update would leave the copy it holds
-        // showing the old quantity, which its next save would then write back.
-        var item = await _context.Items.FindAsync(itemId);
-        if (item is null)
-            return false;
+        // One UPDATE in a context of its own: no entity to load, and nothing left behind
+        // in a shared tracker if it fails.
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var updated = await context.Items
+            .Where(i => i.Id == itemId)
+            .ExecuteUpdateAsync(set => set.SetProperty(i => i.Quantity, quantity));
 
-        item.Quantity = quantity;
-        try
-        {
-            await _context.SaveChangesAsync();
-        }
-        catch
-        {
-            // As in LocationRepository.UpdateAsync: left pending, the failed quantity
-            // would show on the next read of this tracked item and be written by the
-            // next SaveChanges anywhere.
-            _context.DiscardChanges();
-            throw;
-        }
+        return updated > 0;
+    }
 
-        return true;
+    public async Task<bool> MoveAsync(int itemId, int? locationId)
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var updated = await context.Items
+            .Where(i => i.Id == itemId)
+            .ExecuteUpdateAsync(set => set.SetProperty(i => i.LocationId, locationId));
+
+        return updated > 0;
     }
 
     public async Task SetItemPhotosAsync(int itemId, IEnumerable<string> fileNames)

@@ -17,12 +17,14 @@ public partial class ItemDetailViewModel : ObservableObject, IQueryAttributable
     private readonly IItemRepository _itemRepository;
     private readonly ILocationRepository _locationRepository;
     private readonly IPhotoService _photoService;
+    private readonly PlacePicker _placePicker;
 
-    // Everything this page does with the database, and every way off it, goes through
-    // here one at a time. The context is shared by the whole app and allows a single
-    // operation: a save still running when the user taps Edit would otherwise collide
-    // with the edit form's load, and quantity taps that queue up must not overlap.
+    // The page's writes and its reload, one at a time: quantity taps that queue up are
+    // written in order, and a reload never shows a value a pending write is about to
+    // replace. Ways off the page wait for it too (see LeaveAsync).
     private readonly SemaphoreSlim _gate = new(1, 1);
+
+    private bool _isLeaving;
 
     private int _itemId;
 
@@ -87,11 +89,13 @@ public partial class ItemDetailViewModel : ObservableObject, IQueryAttributable
     public ItemDetailViewModel(
         IItemRepository itemRepository,
         ILocationRepository locationRepository,
-        IPhotoService photoService)
+        IPhotoService photoService,
+        PlacePicker placePicker)
     {
         _itemRepository = itemRepository;
         _locationRepository = locationRepository;
         _photoService = photoService;
+        _placePicker = placePicker;
     }
 
     // Shell calls this on the page's BindingContext before the page appears.
@@ -170,8 +174,7 @@ public partial class ItemDetailViewModel : ObservableObject, IQueryAttributable
             }
             catch (Exception ex)
             {
-                // The repository has discarded the failed change, so this reload shows
-                // the saved value rather than the one that failed.
+                // The failed write changed nothing, so this reload shows the saved value.
                 await Shell.Current.DisplayAlertAsync(
                     "Couldn't change the quantity", $"It is back to what was saved.\n\n{ex.Message}".TrimEnd(), "OK");
                 await LoadCoreAsync();
@@ -179,18 +182,72 @@ public partial class ItemDetailViewModel : ObservableObject, IQueryAttributable
         });
     }
 
-    // Every way off the page waits for a pending save, so the page it lands on does
-    // not start its load while that save still holds the context.
-
     // To that location's page, popping back to it when it is already underneath.
     [RelayCommand]
-    private Task OpenLocationAsync() => ExclusiveAsync(() => PlaceNavigation.ShowAsync(LocationId));
+    private Task OpenLocationAsync() => LeaveAsync(() => PlaceNavigation.ShowAsync(LocationId));
 
     [RelayCommand]
-    private Task BackAsync() => ExclusiveAsync(() => Shell.Current.GoToAsync(".."));
+    private Task BackAsync() => LeaveAsync(() => Shell.Current.GoToAsync(".."));
 
     [RelayCommand]
-    private Task EditAsync() => ExclusiveAsync(() => Shell.Current.GoToAsync($"edititem?itemId={_itemId}"));
+    private Task EditAsync() => LeaveAsync(() => Shell.Current.GoToAsync($"edititem?itemId={_itemId}"));
+
+    [RelayCommand]
+    private Task MoveAsync() => LeaveAsync(async () =>
+    {
+        var pick = await _placePicker.PickAsync(new PlacePickRequest(
+            "Move to…",
+            HasLocation ? $"{Name} · now in {LocationPath}" : Name,
+            LocationId,
+            "Move to {0}",
+            AllowNone: true));
+
+        if (pick is null || pick.LocationId == LocationId)
+            return;
+
+        await ExclusiveAsync(async () =>
+        {
+            try
+            {
+                if (!await _itemRepository.MoveAsync(_itemId, pick.LocationId))
+                {
+                    IsMissing = true;
+                    return;
+                }
+            }
+            catch (Exception ex)
+            {
+                await Shell.Current.DisplayAlertAsync(
+                    "Couldn't move the item", $"It is still where it was.\n\n{ex.Message}".TrimEnd(), "OK");
+            }
+
+            await LoadCoreAsync();
+        });
+    });
+
+    // Every way off the page, the picker included, goes through here. One at a time:
+    // Move and Edit tapped together must not both go through, or an edit form opened
+    // under the picker would save its old location back over the move. A second tap is
+    // ignored until the first has finished — for Move, until the picker has closed and
+    // the move is written. And only after any quantity save still queued, so the next
+    // page reads what the user last saw.
+    private async Task LeaveAsync(Func<Task> leave)
+    {
+        if (_isLeaving)
+            return;
+
+        _isLeaving = true;
+        try
+        {
+            await _gate.WaitAsync();
+            _gate.Release();
+            await leave();
+        }
+        finally
+        {
+            _isLeaving = false;
+        }
+    }
 
     private async Task ExclusiveAsync(Func<Task> work)
     {
@@ -205,15 +262,17 @@ public partial class ItemDetailViewModel : ObservableObject, IQueryAttributable
         }
     }
 
-    // Delete is the only thing in the menu for now; Move joins it with the place picker.
     [RelayCommand]
     private async Task ShowActionsAsync()
     {
+        const string move = "Move";
         const string delete = "Delete item";
 
-        var choice = await Shell.Current.DisplayActionSheetAsync(Name, "Cancel", delete);
-        if (choice == delete)
-            await ExclusiveAsync(DeleteAsync);
+        var choice = await Shell.Current.DisplayActionSheetAsync(Name, "Cancel", delete, move);
+        if (choice == move)
+            await MoveAsync();
+        else if (choice == delete)
+            await LeaveAsync(() => ExclusiveAsync(DeleteAsync));
     }
 
     private async Task DeleteAsync()

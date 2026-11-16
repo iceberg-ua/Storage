@@ -43,6 +43,12 @@ public interface IItemRepository
     Task<bool> SetQuantityAsync(int itemId, int quantity);
 
     /// <summary>
+    /// Puts the item in <paramref name="locationId"/>, or in no location when it is null.
+    /// Returns false when the item no longer exists.
+    /// </summary>
+    Task<bool> MoveAsync(int itemId, int? locationId);
+
+    /// <summary>
     /// Replaces the item's photos with <paramref name="fileNames"/>, in the order
     /// given — the first becomes the primary. Files on disk are not touched; that is
     /// the caller's job, once the write has committed.

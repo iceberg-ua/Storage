@@ -163,16 +163,24 @@
             </VerticalStackLayout>
         </ScrollView>
 
-        <!-- The one big action. Delete is not down here: the edit form's Save sits in
-             this spot and pops straight back to this page, so a double tap on Save
-             would land on whatever is here. -->
-        <Button Grid.Row="1"
-                Text="Edit"
-                Style="{StaticResource StrongButton}"
-                Command="{Binding EditCommand}"
-                IsVisible="{Binding IsMissing, Converter={StaticResource InvertedBoolConverter}}"
-                Margin="20,8,20,16"
-                SemanticProperties.Description="{Binding Name, StringFormat='Edit {0}'}" />
+        <!-- Move and Edit, the two changes made from here. Delete is not down here: the
+             edit form's Save sits in this spot and pops straight back to this page, so a
+             double tap on Save would land on whatever is here. -->
+        <Grid Grid.Row="1"
+              ColumnDefinitions="*,*"
+              ColumnSpacing="10"
+              Padding="20,8,20,16"
+              IsVisible="{Binding IsMissing, Converter={StaticResource InvertedBoolConverter}}">
+            <Button Text="Move"
+                    Style="{StaticResource SecondaryButton}"
+                    Command="{Binding MoveCommand}"
+                    SemanticProperties.Description="{Binding Name, StringFormat='Move {0} to another location'}" />
+            <Button Grid.Column="1"
+                    Text="Edit"
+                    Style="{StaticResource StrongButton}"
+                    Command="{Binding EditCommand}"
+                    SemanticProperties.Description="{Binding Name, StringFormat='Edit {0}'}" />
+        </Grid>
 
         <!-- Deleted while this page was underneath another one. Said plainly, with a
              way out, instead of popping during OnAppearing. -->
