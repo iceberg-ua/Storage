@@ -36,6 +36,13 @@ public interface IItemRepository
     Task UpdateAsync(Item item);
 
     /// <summary>
+    /// Sets just the quantity, for the stepper on the item's page. Returns false when the
+    /// item no longer exists.
+    /// </summary>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="quantity"/> is below 1.</exception>
+    Task<bool> SetQuantityAsync(int itemId, int quantity);
+
+    /// <summary>
     /// Replaces the item's photos with <paramref name="fileNames"/>, in the order
     /// given — the first becomes the primary. Files on disk are not touched; that is
     /// the caller's job, once the write has committed.

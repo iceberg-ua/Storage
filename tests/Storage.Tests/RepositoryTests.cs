@@ -652,6 +652,30 @@ public class RepositoryTests : IDisposable
     }
 
     [Fact]
+    public async Task SetQuantityChangesOnlyTheQuantity()
+    {
+        var itemRepo = new ItemRepository(_context);
+        var item = await itemRepo.AddAsync(new Item { Name = "Tyres", Description = "Winter set" });
+
+        Assert.True(await itemRepo.SetQuantityAsync(item.Id, 4));
+
+        // Read back through a fresh context, so this checks the row, not the tracked copy.
+        using var fresh = new StorageDbContext(new DbContextOptionsBuilder<StorageDbContext>().UseSqlite(_connection).Options);
+        var saved = await fresh.Items.SingleAsync(i => i.Id == item.Id);
+        Assert.Equal((4, "Tyres", "Winter set"), (saved.Quantity, saved.Name, saved.Description));
+    }
+
+    [Fact]
+    public async Task SetQuantityRefusesZeroAndReportsAMissingItem()
+    {
+        var itemRepo = new ItemRepository(_context);
+        var item = await itemRepo.AddAsync(new Item { Name = "Tyres" });
+
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => itemRepo.SetQuantityAsync(item.Id, 0));
+        Assert.False(await itemRepo.SetQuantityAsync(item.Id + 100, 2));
+    }
+
+    [Fact]
     public async Task RootLocationsSortLikeTheCards()
     {
         var locationRepo = new LocationRepository(_context);
