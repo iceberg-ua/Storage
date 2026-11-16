@@ -61,6 +61,76 @@ public class LocationRepository : ILocationRepository
         return rows.Select(r => new LocationSummary(r.Location, r.Items)).ToList();
     }
 
+    public async Task<IReadOnlyList<PlaceCard>> GetTopLevelCardsAsync()
+    {
+        const int photosPerCard = 4;
+
+        // Three flat queries, put together in memory: the whole tree, item counts per
+        // location, and the primary photo of every item that has one. A card counts
+        // through every level below it, which one SQL query per card would make slow,
+        // and the app holds a few hundred locations at most.
+        var locations = await _context.Locations
+            .AsNoTracking()
+            .OrderBy(l => StorageDbContext.UnicodeLower(l.Name))
+            .ToListAsync();
+
+        var itemCounts = await _context.Items
+            .Where(i => i.LocationId != null)
+            .GroupBy(i => i.LocationId!.Value)
+            .Select(g => new { LocationId = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(g => g.LocationId, g => g.Count);
+
+        var photos = await _context.Items
+            .Where(i => i.LocationId != null && i.Photos.Any())
+            // Id breaks ties: two items saved in the same tick keep the order they were added.
+            .OrderByDescending(i => i.CreatedAt)
+            .ThenByDescending(i => i.Id)
+            .Select(i => new
+            {
+                LocationId = i.LocationId!.Value,
+                FileName = i.Photos.OrderBy(p => p.SortOrder).Select(p => p.FileName).First()
+            })
+            .ToListAsync();
+
+        var children = locations.ToLookup(l => l.ParentId);
+
+        var cards = new List<PlaceCard>();
+        foreach (var root in children[null])
+        {
+            var subtree = Subtree(root.Id, children);
+            cards.Add(new PlaceCard(
+                root,
+                subtree.Sum(id => itemCounts.GetValueOrDefault(id)),
+                children[root.Id].Count(),
+                photos.Where(p => subtree.Contains(p.LocationId))
+                    .Select(p => p.FileName)
+                    .Take(photosPerCard)
+                    .ToList()));
+        }
+
+        return cards;
+    }
+
+    // The location and everything under it. Stops at a repeat, like GetPathAsync, in
+    // case a cycle written before saves rejected them is still in the database.
+    private static HashSet<int> Subtree(int rootId, ILookup<int?, Location> children)
+    {
+        var seen = new HashSet<int>();
+        var pending = new Stack<int>([rootId]);
+        while (pending.TryPop(out var id))
+        {
+            if (!seen.Add(id))
+                continue;
+
+            foreach (var child in children[id])
+                pending.Push(child.Id);
+        }
+
+        return seen;
+    }
+
+    public Task<int> CountAsync() => _context.Locations.CountAsync();
+
     public async Task<IReadOnlyList<Location>> GetPathAsync(int id)
     {
         var path = new List<Location>();

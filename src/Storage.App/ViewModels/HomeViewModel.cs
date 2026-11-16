@@ -1,0 +1,91 @@
+using System.Collections.ObjectModel;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using Storage.App.Services;
+using Storage.Core.Models;
+using Storage.Core.Repositories;
+
+namespace Storage.App.ViewModels;
+
+/// <summary>
+/// The tab the app opens on: how much is stored, a way into search, what was added
+/// lately, and the top-level locations as cards. It answers "where do I start" without
+/// the user first choosing between a list of locations and a list of items.
+/// </summary>
+public partial class HomeViewModel : ObservableObject
+{
+    private const int RecentCount = 10;
+
+    private readonly IItemRepository _itemRepository;
+    private readonly ILocationRepository _locationRepository;
+
+    /// <summary>"248 items · 14 locations".</summary>
+    [ObservableProperty]
+    private string _summary = string.Empty;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasRecentItems))]
+    private ObservableCollection<Item> _recentItems = [];
+
+    public bool HasRecentItems => RecentItems.Count > 0;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasPlaces))]
+    [NotifyPropertyChangedFor(nameof(HasNoPlaces))]
+    private ObservableCollection<PlaceTile> _places = [];
+
+    public bool HasPlaces => Places.Count > 0;
+
+    public bool HasNoPlaces => !HasPlaces;
+
+    public HomeViewModel(IItemRepository itemRepository, ILocationRepository locationRepository)
+    {
+        _itemRepository = itemRepository;
+        _locationRepository = locationRepository;
+    }
+
+    // Every appearance: whatever was added, moved or deleted on another screen shows
+    // here the moment the user comes back.
+    [RelayCommand]
+    private async Task LoadAsync()
+    {
+        try
+        {
+            var itemCount = await _itemRepository.CountAsync();
+            var locationCount = await _locationRepository.CountAsync();
+            Summary = $"{Plural(itemCount, "item")} · {Plural(locationCount, "location")}";
+
+            RecentItems = new ObservableCollection<Item>(await _itemRepository.GetRecentAsync(RecentCount));
+            Places = new ObservableCollection<PlaceTile>(
+                (await _locationRepository.GetTopLevelCardsAsync()).Select(c => new PlaceTile(c)));
+        }
+        catch (Exception ex)
+        {
+            // Called from OnAppearing, an async void handler, where an exception would
+            // end the app.
+            await Shell.Current.DisplayAlertAsync(
+                "Couldn't load your inventory", $"Try again in a moment.\n\n{ex.Message}".TrimEnd(), "OK");
+        }
+    }
+
+    private static string Plural(int count, string noun) => count == 1 ? $"1 {noun}" : $"{count} {noun}s";
+
+    // Until search has a page of its own, the box here opens the Items tab's search.
+    [RelayCommand]
+    private Task OpenSearchAsync() => Shell.Current.GoToAsync("//items?search=open");
+
+    [RelayCommand]
+    private Task SeeAllItemsAsync() => Shell.Current.GoToAsync("//items");
+
+    [RelayCommand]
+    private Task OpenItemAsync(Item item) => Shell.Current.GoToAsync($"itemdetail?itemId={item.Id}");
+
+    [RelayCommand]
+    private Task OpenPlaceAsync(PlaceTile place) => Shell.Current.GoToAsync(Routes.Place(place.LocationId));
+
+    [RelayCommand]
+    private Task NewLocationAsync() => Shell.Current.GoToAsync(Routes.Create(CreateKind.Location));
+
+    [RelayCommand]
+    private Task NewItemAsync() => Shell.Current.GoToAsync(Routes.Create(CreateKind.Item));
+}

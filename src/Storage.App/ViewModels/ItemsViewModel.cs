@@ -9,7 +9,7 @@ namespace Storage.App.ViewModels;
 // location is that location's own page. Everything to do with the list itself —
 // searching it, browsing it, what it shows when empty — lives in Search, which the
 // Locations tab and the location page compose the same way.
-public partial class ItemsViewModel : ObservableObject
+public partial class ItemsViewModel : ObservableObject, IQueryAttributable
 {
     public SearchViewModel Search { get; }
 
@@ -19,6 +19,17 @@ public partial class ItemsViewModel : ObservableObject
     public ItemsViewModel(IItemRepository itemRepository, ILocationRepository locationRepository)
     {
         Search = new SearchViewModel(itemRepository, locationRepository);
+    }
+
+    // Home's search box lands here with "search=open" until search has a page of its own.
+    public void ApplyQueryAttributes(IDictionary<string, object> query)
+    {
+        if (query.TryGetValue("search", out var search) && Convert.ToString(search) == "open")
+            Search.IsOpen = true;
+
+        // Shell keeps a tab's query, so it is cleared once read: otherwise every later
+        // visit to the tab would open the toolbar again.
+        query.Clear();
     }
 
     [RelayCommand]

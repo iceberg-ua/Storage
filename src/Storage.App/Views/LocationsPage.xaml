@@ -5,52 +5,145 @@
              xmlns:views="clr-namespace:Storage.App.Views"
              x:Class="Storage.App.Views.LocationsPage"
              x:DataType="vm:LocationsViewModel"
-             Title="Locations">
+             Title="Locations"
+             Shell.NavBarIsVisible="False">
+
+    <ContentPage.Resources>
+        <!-- A top-level location as a row: cover, name, description on one line, and
+             what is inside it. Swipe left to delete: this is the page that manages them. -->
+        <DataTemplate x:Key="PlaceRow" x:DataType="vm:PlaceTile">
+            <SwipeView Margin="20,0,20,10">
+                <SwipeView.RightItems>
+                    <SwipeItems>
+                        <SwipeItemView Command="{Binding Source={RelativeSource AncestorType={x:Type vm:LocationsViewModel}}, Path=DeletePlaceCommand}"
+                                       CommandParameter="{Binding .}">
+                            <Grid BackgroundColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}"
+                                  WidthRequest="96">
+                                <Label Text="Delete"
+                                       FontFamily="JakartaBold"
+                                       TextColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource Ink}}"
+                                       HorizontalOptions="Center"
+                                       VerticalOptions="Center" />
+                            </Grid>
+                        </SwipeItemView>
+                    </SwipeItems>
+                </SwipeView.RightItems>
+
+                <Border Style="{StaticResource Card}"
+                        StrokeShape="RoundRectangle 22"
+                        Padding="10,10,14,10"
+                        SemanticProperties.Description="{Binding Name, StringFormat='Open {0}'}">
+                    <Border.GestureRecognizers>
+                        <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:LocationsViewModel}}, Path=OpenPlaceCommand}"
+                                              CommandParameter="{Binding .}" />
+                    </Border.GestureRecognizers>
+                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="14">
+                        <Border WidthRequest="64"
+                                HeightRequest="64"
+                                StrokeThickness="0"
+                                StrokeShape="RoundRectangle 16">
+                            <views:PlaceCover />
+                        </Border>
+                        <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
+                            <Label Text="{Binding Name}"
+                                   Style="{StaticResource StrongLabel}"
+                                   FontSize="16"
+                                   MaxLines="1"
+                                   LineBreakMode="TailTruncation" />
+                            <Label Text="{Binding Description}"
+                                   Style="{StaticResource Caption}"
+                                   MaxLines="1"
+                                   LineBreakMode="TailTruncation"
+                                   IsVisible="{Binding Description, Converter={StaticResource IsNotNullConverter}}" />
+                            <Label Text="{Binding Meta}"
+                                   Style="{StaticResource Caption}"
+                                   FontFamily="JakartaSemiBold"
+                                   FontSize="12"
+                                   TextColor="{AppThemeBinding Light={StaticResource OnPrimarySoft}, Dark={StaticResource OnPrimarySoftDark}}" />
+                        </VerticalStackLayout>
+                        <Label Grid.Column="2"
+                               Text="›"
+                               Style="{StaticResource Caption}"
+                               FontSize="22"
+                               VerticalOptions="Center" />
+                    </Grid>
+                </Border>
+            </SwipeView>
+        </DataTemplate>
+    </ContentPage.Resources>
 
     <Grid RowDefinitions="Auto,Auto,*,Auto">
-        <!-- Header: search, then add a location. Items come from "New item" below. -->
-        <HorizontalStackLayout Grid.Row="0"
-                               Margin="10"
-                               Spacing="10"
-                               HorizontalOptions="End">
-            <Button Text="{Binding Search.ToggleIcon}"
-                    Style="{StaticResource IconButton}"
+        <!-- Header: what there is, then search and add. Items come from "New item" below. -->
+        <Grid Grid.Row="0"
+              ColumnDefinitions="*,Auto,Auto"
+              ColumnSpacing="8"
+              Padding="20,28,20,16">
+            <VerticalStackLayout Spacing="2" VerticalOptions="End">
+                <Label Text="{Binding Summary}" Style="{StaticResource Caption}" FontFamily="JakartaSemiBold" />
+                <Label Text="Locations"
+                       Style="{StaticResource Display}"
+                       SemanticProperties.HeadingLevel="Level1" />
+            </VerticalStackLayout>
+            <Button Grid.Column="1"
+                    Text="{Binding Search.ToggleIcon}"
+                    Style="{StaticResource RoundIconButton}"
                     Command="{Binding Search.ToggleCommand}"
+                    VerticalOptions="End"
                     SemanticProperties.Description="{Binding Search.ToggleDescription}"
                     ToolTipProperties.Text="{Binding Search.ToggleDescription}" />
-            <Button Text="➕"
-                    Style="{StaticResource IconButton}"
+            <Button Grid.Column="2"
+                    Text="+ New"
+                    Style="{StaticResource StrongButton}"
+                    FontSize="14"
+                    Padding="16,0"
+                    MinimumHeightRequest="44"
+                    HeightRequest="44"
+                    CornerRadius="22"
+                    VerticalOptions="End"
                     Command="{Binding NavigateToCreateCommand}"
-                    SemanticProperties.Description="Add a location"
-                    ToolTipProperties.Text="Add a location" />
-        </HorizontalStackLayout>
+                    SemanticProperties.Description="Add a location" />
+        </Grid>
 
-        <!-- The same toolbar the items page uses, so the search does not change shape
+        <!-- The same toolbar the other pages use, so the search does not change shape
              depending on which tab it was opened from. -->
         <views:SearchToolbar x:Name="Toolbar"
                              Grid.Row="1"
                              BindingContext="{Binding Search}" />
 
-        <!-- Locations: the top-level ones when browsing, the matches when searching.
-             Opening one pushes its own page, which shows what is nested inside it.
-             Swipe-to-delete lives here only — this is the page that manages them. -->
+        <!-- Browsing: the cards. -->
         <RefreshView Grid.Row="2"
-                     BindingContext="{Binding Search}"
-                     IsVisible="{Binding ShowLocationList}"
-                     IsRefreshing="{Binding Source={RelativeSource AncestorType={x:Type vm:LocationsViewModel}}, Path=IsLoading}"
-                     Command="{Binding Source={RelativeSource AncestorType={x:Type vm:LocationsViewModel}}, Path=LoadLocationsCommand}">
-            <CollectionView ItemsSource="{Binding Locations}"
-                            ItemTemplate="{StaticResource DeletableLocationRow}"
-                            EmptyViewTemplate="{StaticResource EmptyState}" />
+                     IsVisible="{Binding IsBrowsing}"
+                     IsRefreshing="{Binding IsLoading}"
+                     Command="{Binding LoadLocationsCommand}">
+            <CollectionView ItemsSource="{Binding Places}"
+                            ItemTemplate="{StaticResource PlaceRow}">
+                <CollectionView.EmptyView>
+                    <VerticalStackLayout Padding="32" Spacing="8" VerticalOptions="Center">
+                        <Label Text="No locations yet"
+                               Style="{StaticResource Title}"
+                               HorizontalTextAlignment="Center" />
+                        <Label Text="Tap + New to add the first place you keep things."
+                               Style="{StaticResource Caption}"
+                               HorizontalTextAlignment="Center" />
+                    </VerticalStackLayout>
+                </CollectionView.EmptyView>
+            </CollectionView>
         </RefreshView>
 
-        <!-- Items, when the toggle is flipped: found without leaving this page. -->
-        <CollectionView Grid.Row="2"
-                        BindingContext="{Binding Search}"
-                        ItemsSource="{Binding Items}"
-                        IsVisible="{Binding ShowItemList}"
-                        ItemTemplate="{StaticResource ItemRow}"
-                        EmptyViewTemplate="{StaticResource EmptyState}" />
+        <!-- Searching: matching locations at any level, or items when the toggle is
+             flipped. The same rows as in every other search. -->
+        <Grid Grid.Row="2"
+              BindingContext="{Binding Search}"
+              IsVisible="{Binding IsOpen}">
+            <CollectionView ItemsSource="{Binding Locations}"
+                            IsVisible="{Binding ShowLocationList}"
+                            ItemTemplate="{StaticResource DeletableLocationRow}"
+                            EmptyViewTemplate="{StaticResource EmptyState}" />
+            <CollectionView ItemsSource="{Binding Items}"
+                            IsVisible="{Binding ShowItemList}"
+                            ItemTemplate="{StaticResource ItemRow}"
+                            EmptyViewTemplate="{StaticResource EmptyState}" />
+        </Grid>
 
         <!-- Its own row under the lists, not floating over them, so it never covers a
              row's swipe action and the lists need no spacer at the end. -->

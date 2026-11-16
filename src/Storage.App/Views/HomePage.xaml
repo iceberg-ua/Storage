@@ -1,0 +1,178 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:Storage.App.ViewModels"
+             xmlns:views="clr-namespace:Storage.App.Views"
+             xmlns:models="clr-namespace:Storage.Core.Models;assembly=Storage.Core"
+             x:Class="Storage.App.Views.HomePage"
+             x:DataType="vm:HomeViewModel"
+             Title="Home"
+             Shell.NavBarIsVisible="False">
+
+    <Grid RowDefinitions="*,Auto">
+        <ScrollView Grid.Row="0">
+            <VerticalStackLayout Padding="20,28,20,16" Spacing="24">
+
+                <VerticalStackLayout Spacing="2">
+                    <Label Text="{Binding Summary}" Style="{StaticResource Caption}" FontFamily="JakartaSemiBold" />
+                    <Label Text="Storage"
+                           Style="{StaticResource Display}"
+                           SemanticProperties.HeadingLevel="Level1" />
+                </VerticalStackLayout>
+
+                <!-- A box that looks like the search field and opens it: typing starts
+                     on the screen that shows the results. -->
+                <Border Style="{StaticResource Card}"
+                        StrokeShape="RoundRectangle 28"
+                        Padding="18,0"
+                        HeightRequest="56"
+                        SemanticProperties.Description="Search items and locations">
+                    <Border.GestureRecognizers>
+                        <TapGestureRecognizer Command="{Binding OpenSearchCommand}" />
+                    </Border.GestureRecognizers>
+                    <HorizontalStackLayout Spacing="12" VerticalOptions="Center">
+                        <Label Text="🔍" FontSize="18" VerticalOptions="Center" />
+                        <Label Text="Search items and locations"
+                               Style="{StaticResource Caption}"
+                               FontSize="16"
+                               VerticalOptions="Center" />
+                    </HorizontalStackLayout>
+                </Border>
+
+                <!-- Recently added: hidden until there is something to show. -->
+                <VerticalStackLayout Spacing="8" IsVisible="{Binding HasRecentItems}">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <Label Text="Recently added"
+                               Style="{StaticResource SectionTitle}"
+                               VerticalOptions="Center"
+                               SemanticProperties.HeadingLevel="Level2" />
+                        <Button Grid.Column="1"
+                                Text="See all"
+                                Style="{StaticResource TextButton}"
+                                Command="{Binding SeeAllItemsCommand}" />
+                    </Grid>
+
+                    <CollectionView ItemsSource="{Binding RecentItems}"
+                                    HeightRequest="190"
+                                    Margin="0,0,-20,0"
+                                    HorizontalScrollBarVisibility="Never">
+                        <CollectionView.ItemsLayout>
+                            <LinearItemsLayout Orientation="Horizontal" ItemSpacing="12" />
+                        </CollectionView.ItemsLayout>
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate x:DataType="models:Item">
+                                <VerticalStackLayout WidthRequest="116" Spacing="8">
+                                    <VerticalStackLayout.GestureRecognizers>
+                                        <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:HomeViewModel}}, Path=OpenItemCommand}"
+                                                              CommandParameter="{Binding .}" />
+                                    </VerticalStackLayout.GestureRecognizers>
+                                    <Border HeightRequest="132"
+                                            StrokeThickness="0"
+                                            StrokeShape="RoundRectangle 18"
+                                            BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceSunken}, Dark={StaticResource SurfaceSunkenDark}}">
+                                        <Grid>
+                                            <Label Text="📦"
+                                                   FontSize="24"
+                                                   HorizontalOptions="Center"
+                                                   VerticalOptions="Center" />
+                                            <Image Source="{Binding PrimaryPhotoFileName, Converter={StaticResource PhotoSourceConverter}}"
+                                                   Aspect="AspectFill"
+                                                   IsVisible="{Binding PrimaryPhotoFileName, Converter={StaticResource IsNotNullConverter}}"
+                                                   SemanticProperties.Description="{Binding Name, StringFormat='Photo of {0}'}" />
+                                        </Grid>
+                                    </Border>
+                                    <VerticalStackLayout Spacing="1">
+                                        <Label Text="{Binding Name}"
+                                               Style="{StaticResource StrongLabel}"
+                                               FontSize="14"
+                                               MaxLines="1"
+                                               LineBreakMode="TailTruncation" />
+                                        <Label Text="{Binding Location.Name}"
+                                               Style="{StaticResource Caption}"
+                                               FontSize="12"
+                                               MaxLines="1"
+                                               LineBreakMode="TailTruncation"
+                                               IsVisible="{Binding Location, Converter={StaticResource IsNotNullConverter}}" />
+                                    </VerticalStackLayout>
+                                </VerticalStackLayout>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+                </VerticalStackLayout>
+
+                <VerticalStackLayout Spacing="8">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <Label Text="Locations"
+                               Style="{StaticResource SectionTitle}"
+                               VerticalOptions="Center"
+                               SemanticProperties.HeadingLevel="Level2" />
+                        <Button Grid.Column="1"
+                                Text="+ New location"
+                                Style="{StaticResource TextButton}"
+                                Command="{Binding NewLocationCommand}" />
+                    </Grid>
+
+                    <!-- Two to a row. A wrapping layout rather than a CollectionView: it
+                         sits inside the page's ScrollView, and there are only ever a
+                         handful of top-level locations. -->
+                    <FlexLayout BindableLayout.ItemsSource="{Binding Places}"
+                                Wrap="Wrap"
+                                Margin="-6,0"
+                                IsVisible="{Binding HasPlaces}">
+                        <BindableLayout.ItemTemplate>
+                            <DataTemplate x:DataType="vm:PlaceTile">
+                                <ContentView FlexLayout.Basis="50%" Padding="6">
+                                    <Border Style="{StaticResource Card}"
+                                            StrokeShape="RoundRectangle 22"
+                                            Padding="8,8,8,12"
+                                            SemanticProperties.Description="{Binding Name, StringFormat='Open {0}'}">
+                                        <Border.GestureRecognizers>
+                                            <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:HomeViewModel}}, Path=OpenPlaceCommand}"
+                                                                  CommandParameter="{Binding .}" />
+                                        </Border.GestureRecognizers>
+                                        <VerticalStackLayout Spacing="10">
+                                            <Border HeightRequest="92"
+                                                    StrokeThickness="0"
+                                                    StrokeShape="RoundRectangle 16">
+                                                <views:PlaceCover />
+                                            </Border>
+                                            <VerticalStackLayout Spacing="2" Padding="6,0">
+                                                <Label Text="{Binding Name}"
+                                                       Style="{StaticResource StrongLabel}"
+                                                       MaxLines="1"
+                                                       LineBreakMode="TailTruncation" />
+                                                <Label Text="{Binding Meta}"
+                                                       Style="{StaticResource Caption}"
+                                                       FontSize="12" />
+                                            </VerticalStackLayout>
+                                        </VerticalStackLayout>
+                                    </Border>
+                                </ContentView>
+                            </DataTemplate>
+                        </BindableLayout.ItemTemplate>
+                    </FlexLayout>
+
+                    <!-- First run: say what a location is for, and offer to make one. -->
+                    <Border Style="{StaticResource Card}" IsVisible="{Binding HasNoPlaces}">
+                        <VerticalStackLayout Spacing="12">
+                            <Label Text="No locations yet" Style="{StaticResource StrongLabel}" />
+                            <Label Text="A location is anywhere you keep things: a garage, a shelf, a box."
+                                   Style="{StaticResource Caption}" />
+                            <Button Text="Add a location"
+                                    Style="{StaticResource SecondaryButton}"
+                                    Command="{Binding NewLocationCommand}"
+                                    HorizontalOptions="Start" />
+                        </VerticalStackLayout>
+                    </Border>
+                </VerticalStackLayout>
+            </VerticalStackLayout>
+        </ScrollView>
+
+        <Button Grid.Row="1"
+                Text="New item"
+                Command="{Binding NewItemCommand}"
+                Margin="20,8,20,16"
+                SemanticProperties.Description="Add a new item" />
+    </Grid>
+
+</ContentPage>
