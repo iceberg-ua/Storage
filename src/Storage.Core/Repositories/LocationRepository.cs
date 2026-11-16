@@ -249,7 +249,9 @@ public class LocationRepository : ILocationRepository
     public async Task<Location> AddAsync(Location location)
     {
         await using var context = await _contextFactory.CreateDbContextAsync();
-        context.Locations.Add(location);
+        // Attach, not Add, as in ItemRepository.AddAsync: a parent loaded through another
+        // call keeps its row instead of being inserted a second time.
+        context.Locations.Attach(location);
         await context.SaveChangesAsync();
         return location;
     }

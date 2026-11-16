@@ -130,7 +130,11 @@ public class ItemRepository : IItemRepository
     {
         await using var context = await _contextFactory.CreateDbContextAsync();
         item.CreatedAt = DateTime.UtcNow;
-        context.Items.Add(item);
+
+        // Attach, not Add: a location or tags the caller loaded through another call
+        // carry their ids and stay as they are, while anything without an id yet — the
+        // item, a new tag, its photos — is inserted. Add would insert them all.
+        context.Items.Attach(item);
         await context.SaveChangesAsync();
         return item;
     }

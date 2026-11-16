@@ -86,7 +86,6 @@ public class RepositoryTests : IDisposable
 
         var item = await itemRepo.AddAsync(new Item { Name = "Screwdriver" });
 
-        _context.ChangeTracker.Clear();
         var fetched = await itemRepo.GetByIdAsync(item.Id);
 
         Assert.NotNull(fetched);
@@ -135,7 +134,6 @@ public class RepositoryTests : IDisposable
         location.Name = "Wine Cellar";
         await locationRepo.UpdateAsync(location);
 
-        _context.ChangeTracker.Clear();
         var fetched = await locationRepo.GetByIdAsync(location.Id);
 
         Assert.NotNull(fetched);
@@ -143,23 +141,51 @@ public class RepositoryTests : IDisposable
     }
 
     [Fact]
-    public async Task FailedLocationUpdateDoesNotBlockLaterSaves()
+    public async Task UpdateOfAMissingLocationThrows()
     {
         var locationRepo = new LocationRepository(_db);
 
         var cellar = await locationRepo.AddAsync(new Location { Name = "Cellar" });
 
-        // The row goes behind EF's back, so the update below matches nothing.
+        // Deleted elsewhere while the edit screen was open.
         await _context.Locations.Where(l => l.Id == cellar.Id).ExecuteDeleteAsync();
 
         cellar.Name = "Wine Cellar";
-        cellar.Description = "Left of the boiler";
         await Assert.ThrowsAsync<DbUpdateConcurrencyException>(() => locationRepo.UpdateAsync(cellar));
 
-        // Left pending, the failed change would be retried here and throw again.
-        await locationRepo.AddAsync(new Location { Name = "Attic" });
+        // Not quietly re-created by the update.
+        Assert.Empty(_context.Locations.AsNoTracking());
+    }
 
-        Assert.Equal(["Attic"], _context.Locations.AsNoTracking().Select(l => l.Name));
+    [Fact]
+    public async Task AddingAnItemWithLoadedRelationsDoesNotInsertThemAgain()
+    {
+        var locationRepo = new LocationRepository(_db);
+        var itemRepo = new ItemRepository(_db);
+        var tagRepo = new TagRepository(_db);
+
+        await locationRepo.AddAsync(new Location { Name = "Garage" });
+        await tagRepo.AddAsync("tools", TagPalette.Default);
+
+        // Both loaded by earlier calls, so their contexts are long gone.
+        var garage = (await locationRepo.GetAllAsync()).Single();
+        var tools = (await tagRepo.GetAllAsync()).Single();
+
+        var drill = await itemRepo.AddAsync(new Item
+        {
+            Name = "Drill",
+            Location = garage,
+            Tags = [tools, new Tag { Name = "power", Color = TagPalette.Default }],
+            Photos = [new ItemPhoto { FileName = "drill.jpg" }]
+        });
+
+        Assert.Equal(1, await _context.Locations.CountAsync());
+        Assert.Equal(["power", "tools"], _context.Tags.AsNoTracking().Select(t => t.Name).Order());
+
+        var fetched = await itemRepo.GetByIdAsync(drill.Id);
+        Assert.Equal(garage.Id, fetched!.LocationId);
+        Assert.Equal(2, fetched.Tags.Count);
+        Assert.Equal("drill.jpg", fetched.PrimaryPhotoFileName);
     }
 
     [Fact]
@@ -170,19 +196,16 @@ public class RepositoryTests : IDisposable
         var location = await locationRepo.AddAsync(
             new Location { Name = "Cellar", Description = "Behind the stairs" });
 
-        _context.ChangeTracker.Clear();
         var fetched = await locationRepo.GetByIdAsync(location.Id);
         Assert.Equal("Behind the stairs", fetched!.Description);
 
         fetched.Description = "Left of the boiler";
         await locationRepo.UpdateAsync(fetched);
-        _context.ChangeTracker.Clear();
         Assert.Equal("Left of the boiler", (await locationRepo.GetByIdAsync(location.Id))!.Description);
 
         fetched = await locationRepo.GetByIdAsync(location.Id);
         fetched!.Description = null;
         await locationRepo.UpdateAsync(fetched);
-        _context.ChangeTracker.Clear();
         Assert.Null((await locationRepo.GetByIdAsync(location.Id))!.Description);
     }
 
@@ -194,19 +217,16 @@ public class RepositoryTests : IDisposable
         var location = await locationRepo.AddAsync(
             new Location { Name = "Garage Shelf", PhotoFileName = "shelf.jpg" });
 
-        _context.ChangeTracker.Clear();
         var fetched = await locationRepo.GetByIdAsync(location.Id);
         Assert.Equal("shelf.jpg", fetched!.PhotoFileName);
 
         fetched.PhotoFileName = "shelf-tidied.jpg";
         await locationRepo.UpdateAsync(fetched);
-        _context.ChangeTracker.Clear();
         Assert.Equal("shelf-tidied.jpg", (await locationRepo.GetByIdAsync(location.Id))!.PhotoFileName);
 
         fetched = await locationRepo.GetByIdAsync(location.Id);
         fetched!.PhotoFileName = null;
         await locationRepo.UpdateAsync(fetched);
-        _context.ChangeTracker.Clear();
         Assert.Null((await locationRepo.GetByIdAsync(location.Id))!.PhotoFileName);
     }
 
@@ -237,7 +257,7 @@ public class RepositoryTests : IDisposable
         // ParentId and SQLite's foreign key refuses the delete.
         await Assert.ThrowsAsync<DbUpdateException>(() => locationRepo.DeleteAsync(garage.Id));
 
-        // Left pending, the refused delete would be retried here and throw again.
+        // A later save still works, and the refused delete took nothing with it.
         await locationRepo.AddAsync(new Location { Name = "Attic" });
 
         Assert.Equal(["Attic", "Garage", "Shelf"], _context.Locations.AsNoTracking().Select(l => l.Name).Order());
@@ -271,7 +291,6 @@ public class RepositoryTests : IDisposable
         var shelf = await locationRepo.AddAsync(new Location { Name = "Shelf A", ParentId = garage.Id });
         var box = await locationRepo.AddAsync(new Location { Name = "Box 1", ParentId = shelf.Id });
 
-        _context.ChangeTracker.Clear();
         var path = await locationRepo.GetPathAsync(box.Id);
 
         Assert.Equal(["Garage", "Shelf A", "Box 1"], path.Select(l => l.Name));
@@ -426,7 +445,7 @@ public class RepositoryTests : IDisposable
         var refused = await Assert.ThrowsAsync<LocationCycleException>(() => locationRepo.UpdateAsync(garage));
         Assert.Equal((garage.Id, box.Id), (refused.LocationId, refused.ParentId));
 
-        // An unrelated save afterwards must not write the refused change.
+        // Nothing of the refused change reaches the database, even after a later save.
         await locationRepo.AddAsync(new Location { Name = "Attic" });
 
         var stored = await _context.Locations.AsNoTracking().SingleAsync(l => l.Id == garage.Id);
@@ -462,7 +481,6 @@ public class RepositoryTests : IDisposable
         bin.ParentId = shelf.Id;
         await locationRepo.UpdateAsync(bin);
 
-        _context.ChangeTracker.Clear();
         var path = await locationRepo.GetPathAsync(bin.Id);
         Assert.Equal(["Garage", "Shelf A", "Bin"], path.Select(l => l.Name));
     }
@@ -474,8 +492,6 @@ public class RepositoryTests : IDisposable
         await _context.Locations
             .Where(l => l.Id == child.Id)
             .ExecuteUpdateAsync(s => s.SetProperty(l => l.ParentId, parent.Id));
-
-        _context.ChangeTracker.Clear();
     }
 
     [Fact]
@@ -487,7 +503,6 @@ public class RepositoryTests : IDisposable
 
         await itemRepo.SetItemPhotosAsync(item.Id, ["front.jpg", "back.jpg", "serial.jpg"]);
 
-        _context.ChangeTracker.Clear();
         var fetched = await itemRepo.GetByIdAsync(item.Id);
 
         Assert.NotNull(fetched);
@@ -511,7 +526,6 @@ public class RepositoryTests : IDisposable
         // they should come back in — otherwise insertion order would pass for sorting.
         await itemRepo.SetItemPhotosAsync(item.Id, ["back.jpg", "front.jpg"]);
 
-        _context.ChangeTracker.Clear();
         var fetched = (await itemRepo.GetAllAsync()).Single();
 
         Assert.Equal(["back.jpg", "front.jpg"], fetched.Photos.Select(p => p.FileName));
@@ -529,7 +543,6 @@ public class RepositoryTests : IDisposable
         // The middle one removed and the survivors swapped.
         await itemRepo.SetItemPhotosAsync(item.Id, ["serial.jpg", "front.jpg"]);
 
-        _context.ChangeTracker.Clear();
         var fetched = await itemRepo.GetByIdAsync(item.Id);
 
         Assert.NotNull(fetched);
@@ -549,7 +562,6 @@ public class RepositoryTests : IDisposable
 
         await itemRepo.SetItemPhotosAsync(item.Id, ["front.jpg", "  ", "front.jpg", "back.jpg", ""]);
 
-        _context.ChangeTracker.Clear();
         var fetched = await itemRepo.GetByIdAsync(item.Id);
 
         // A blank names no file, and the same file twice is one photo shown twice.
