@@ -4,18 +4,22 @@ using Storage.Core.Models;
 
 namespace Storage.Core.Repositories;
 
+// Every call opens its own short-lived context. Pages load in parallel (Home is still
+// fetching when the Items tab asks), and a DbContext allows one operation at a time —
+// one per call also means no stale cached entities and no failed change left pending.
 public class ItemRepository : IItemRepository
 {
-    private readonly StorageDbContext _context;
+    private readonly IDbContextFactory<StorageDbContext> _contextFactory;
 
-    public ItemRepository(StorageDbContext context)
+    public ItemRepository(IDbContextFactory<StorageDbContext> contextFactory)
     {
-        _context = context;
+        _contextFactory = contextFactory;
     }
 
     public async Task<IEnumerable<Item>> GetAllAsync()
     {
-        return await _context.Items
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        return await context.Items
             .Include(i => i.Location)
             .Include(i => i.Tags)
             // Ordered in the include: the first photo is the primary, so the order is
@@ -27,7 +31,8 @@ public class ItemRepository : IItemRepository
 
     public async Task<Item?> GetByIdAsync(int id)
     {
-        return await _context.Items
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        return await context.Items
             .Include(i => i.Location)
             .Include(i => i.Tags)
             .Include(i => i.Photos.OrderBy(p => p.SortOrder))
@@ -36,7 +41,8 @@ public class ItemRepository : IItemRepository
 
     public async Task<IEnumerable<Item>> GetByLocationIdAsync(int locationId)
     {
-        return await _context.Items
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        return await context.Items
             .Include(i => i.Location)
             .Include(i => i.Tags)
             .Include(i => i.Photos.OrderBy(p => p.SortOrder))
@@ -45,14 +51,22 @@ public class ItemRepository : IItemRepository
             .ToListAsync();
     }
 
-    public Task<int> CountInLocationAsync(int locationId) =>
-        _context.Items.CountAsync(i => i.LocationId == locationId);
+    public async Task<int> CountInLocationAsync(int locationId)
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        return await context.Items.CountAsync(i => i.LocationId == locationId);
+    }
 
-    public Task<int> CountAsync() => _context.Items.CountAsync();
+    public async Task<int> CountAsync()
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        return await context.Items.CountAsync();
+    }
 
     public async Task<IReadOnlyList<Item>> GetRecentAsync(int count)
     {
-        return await _context.Items
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        return await context.Items
             .Include(i => i.Location)
             .Include(i => i.Photos.OrderBy(p => p.SortOrder))
             .OrderByDescending(i => i.CreatedAt)
@@ -63,9 +77,11 @@ public class ItemRepository : IItemRepository
 
     public async Task<IEnumerable<Item>> SearchAsync(string? query, SearchScope scope, int? locationId = null)
     {
+        await using var context = await _contextFactory.CreateDbContextAsync();
+
         // Same shape as GetAllAsync, so a search result row renders exactly like a
         // browsed one — thumbnail, location and tag chips all present.
-        var items = _context.Items
+        var items = context.Items
             .Include(i => i.Location)
             .Include(i => i.Tags)
             .Include(i => i.Photos.OrderBy(p => p.SortOrder))
@@ -112,24 +128,32 @@ public class ItemRepository : IItemRepository
 
     public async Task<Item> AddAsync(Item item)
     {
+        await using var context = await _contextFactory.CreateDbContextAsync();
         item.CreatedAt = DateTime.UtcNow;
-        _context.Items.Add(item);
-        await _context.SaveChangesAsync();
+        context.Items.Add(item);
+        await context.SaveChangesAsync();
         return item;
     }
 
     public async Task UpdateAsync(Item item)
     {
-        // Marks this row and nothing else. Update() walks the graph, so now that items
-        // carry tags and photos it would mark those rows modified too — those writes
-        // belong to ITagRepository.SetItemTagsAsync and SetItemPhotosAsync.
-        _context.Entry(item).State = EntityState.Modified;
-        await _context.SaveChangesAsync();
+        await using var context = await _contextFactory.CreateDbContextAsync();
+
+        // The caller's item came from another, already disposed context, often with its
+        // location, tags and photos attached. Copying only the scalar values onto the
+        // stored row leaves that graph alone — those writes belong to
+        // ITagRepository.SetItemTagsAsync and SetItemPhotosAsync.
+        var stored = await context.Items.FindAsync(item.Id)
+            ?? throw new DbUpdateConcurrencyException($"Item {item.Id} no longer exists.");
+
+        context.Entry(stored).CurrentValues.SetValues(item);
+        await context.SaveChangesAsync();
     }
 
     public async Task SetItemPhotosAsync(int itemId, IEnumerable<string> fileNames)
     {
-        var item = await _context.Items
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var item = await context.Items
             .Include(i => i.Photos)
             .FirstOrDefaultAsync(i => i.Id == itemId);
 
@@ -151,18 +175,19 @@ public class ItemRepository : IItemRepository
         for (var i = 0; i < names.Count; i++)
             item.Photos.Add(new ItemPhoto { FileName = names[i], SortOrder = i });
 
-        await _context.SaveChangesAsync();
+        await context.SaveChangesAsync();
     }
 
     public async Task DeleteAsync(int id)
     {
-        var item = await _context.Items.FindAsync(id);
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var item = await context.Items.FindAsync(id);
         if (item != null)
         {
             // The ItemPhotos rows go with it by cascade; the files they name are the
             // caller's to remove, since only it knows the write succeeded.
-            _context.Items.Remove(item);
-            await _context.SaveChangesAsync();
+            context.Items.Remove(item);
+            await context.SaveChangesAsync();
         }
     }
 }

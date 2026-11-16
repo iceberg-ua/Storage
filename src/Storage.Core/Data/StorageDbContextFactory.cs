@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore.Design;
 namespace Storage.Core.Data;
 
 // Used only by the EF Core CLI (dotnet ef) at design time to build migrations.
-// The app itself constructs the context through DI in MauiProgram.cs.
+// The app gets its contexts from the IDbContextFactory registered in MauiProgram.cs.
 public class StorageDbContextFactory : IDesignTimeDbContextFactory<StorageDbContext>
 {
     public StorageDbContext CreateDbContext(string[] args)

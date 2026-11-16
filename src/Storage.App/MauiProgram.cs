@@ -32,17 +32,19 @@ public static class MauiProgram
 
 		// Configure SQLite database
 		var dbPath = Path.Combine(FileSystem.AppDataDirectory, "storage.db");
-		builder.Services.AddDbContext<StorageDbContext>(options =>
+		// A factory, not one shared context: each repository call takes a context of its
+		// own, so pages loading at the same time don't collide on it.
+		builder.Services.AddDbContextFactory<StorageDbContext>(options =>
 			options
 				.UseSqlite($"Data Source={dbPath}")
 				// Gives every connection the unicode_lower function that search relies
 				// on to ignore case outside the ASCII range.
 				.AddInterceptors(new UnicodeLowerInterceptor()));
 
-		// Register repositories
-		builder.Services.AddScoped<IItemRepository, ItemRepository>();
-		builder.Services.AddScoped<ILocationRepository, LocationRepository>();
-		builder.Services.AddScoped<ITagRepository, TagRepository>();
+		// Register repositories — stateless now that each call opens its own context
+		builder.Services.AddSingleton<IItemRepository, ItemRepository>();
+		builder.Services.AddSingleton<ILocationRepository, LocationRepository>();
+		builder.Services.AddSingleton<ITagRepository, TagRepository>();
 
 		// Register services
 		builder.Services.AddSingleton<IImageCompressor, MauiImageCompressor>();
@@ -82,9 +84,8 @@ public static class MauiProgram
 		var app = builder.Build();
 
 		// Apply any pending migrations (creates the SQLite DB on first run)
-		using (var scope = app.Services.CreateScope())
+		using (var db = app.Services.GetRequiredService<IDbContextFactory<StorageDbContext>>().CreateDbContext())
 		{
-			var db = scope.ServiceProvider.GetRequiredService<StorageDbContext>();
 			db.Database.Migrate();
 		}
 

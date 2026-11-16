@@ -4,25 +4,28 @@ using Storage.Core.Models;
 
 namespace Storage.Core.Repositories;
 
+// A context per call, for the reasons given on ItemRepository.
 public class TagRepository : ITagRepository
 {
-    private readonly StorageDbContext _context;
+    private readonly IDbContextFactory<StorageDbContext> _contextFactory;
 
-    public TagRepository(StorageDbContext context)
+    public TagRepository(IDbContextFactory<StorageDbContext> contextFactory)
     {
-        _context = context;
+        _contextFactory = contextFactory;
     }
 
     public async Task<IEnumerable<Tag>> GetAllAsync()
     {
-        return await _context.Tags
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        return await context.Tags
             .OrderBy(t => t.Name)
             .ToListAsync();
     }
 
     public async Task<IEnumerable<Tag>> GetAllWithItemCountsAsync()
     {
-        return await _context.Tags
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        return await context.Tags
             .Include(t => t.Items)
             .OrderBy(t => t.Name)
             .ToListAsync();
@@ -30,45 +33,57 @@ public class TagRepository : ITagRepository
 
     public async Task<Tag?> GetByIdAsync(int id)
     {
-        return await _context.Tags.FirstOrDefaultAsync(t => t.Id == id);
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        return await context.Tags.FirstOrDefaultAsync(t => t.Id == id);
     }
 
     public async Task<Tag> AddAsync(string name, string color)
     {
+        await using var context = await _contextFactory.CreateDbContextAsync();
         var tag = new Tag { Name = name.Trim(), Color = color };
-        _context.Tags.Add(tag);
-        await _context.SaveChangesAsync();
+        context.Tags.Add(tag);
+        await context.SaveChangesAsync();
         return tag;
     }
 
     public async Task UpdateAsync(Tag tag)
     {
-        _context.Entry(tag).State = EntityState.Modified;
-        await _context.SaveChangesAsync();
+        await using var context = await _contextFactory.CreateDbContextAsync();
+
+        // Scalars only, onto the stored row: a tag loaded with its items must not drag
+        // them into this save.
+        var stored = await context.Tags.FindAsync(tag.Id)
+            ?? throw new DbUpdateConcurrencyException($"Tag {tag.Id} no longer exists.");
+
+        context.Entry(stored).CurrentValues.SetValues(tag);
+        await context.SaveChangesAsync();
     }
 
     public async Task DeleteAsync(int id)
     {
-        var tag = await _context.Tags.FindAsync(id);
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var tag = await context.Tags.FindAsync(id);
         if (tag != null)
         {
-            _context.Tags.Remove(tag);
-            await _context.SaveChangesAsync();
+            context.Tags.Remove(tag);
+            await context.SaveChangesAsync();
         }
     }
 
     public async Task<bool> NameExistsAsync(string name, int? excludingId = null)
     {
+        await using var context = await _contextFactory.CreateDbContextAsync();
         var trimmed = name.Trim();
 
         // Name is NOCASE, so this equality ignores case in SQLite.
-        return await _context.Tags
+        return await context.Tags
             .AnyAsync(t => t.Name == trimmed && (excludingId == null || t.Id != excludingId));
     }
 
     public async Task SetItemTagsAsync(int itemId, IEnumerable<string> tagNames)
     {
-        var item = await _context.Items
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var item = await context.Items
             .Include(i => i.Tags)
             .FirstOrDefaultAsync(i => i.Id == itemId);
 
@@ -85,13 +100,13 @@ public class TagRepository : ITagRepository
 
         // One query for the whole set. The Name column is NOCASE, so this IN
         // comparison matches regardless of how the caller capitalised things.
-        var existing = await _context.Tags
+        var existing = await context.Tags
             .Where(t => names.Contains(t.Name))
             .ToListAsync();
 
         // Walks forward as tags are created, so two new tags in one save land on
         // different swatches rather than sharing the count they started from.
-        var paletteIndex = await _context.Tags.CountAsync();
+        var paletteIndex = await context.Tags.CountAsync();
 
         item.Tags.Clear();
 
@@ -110,6 +125,6 @@ public class TagRepository : ITagRepository
 
         // Tags no longer on any item are left in place — they stay available for
         // reuse and in autocomplete. Removing them is the Tags screen's job.
-        await _context.SaveChangesAsync();
+        await context.SaveChangesAsync();
     }
 }

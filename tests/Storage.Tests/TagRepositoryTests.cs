@@ -1,4 +1,3 @@
-using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Storage.Core.Data;
 using Storage.Core.Models;
@@ -6,29 +5,21 @@ using Storage.Core.Repositories;
 
 namespace Storage.Tests;
 
-// Same fixture shape as RepositoryTests: a real SQLite in-memory database, so the
-// NOCASE collation and the unique index on Tag.Name are actually exercised.
+// Same fixture shape as RepositoryTests: a real SQLite database, so the NOCASE
+// collation and the unique index on Tag.Name are actually exercised.
 public class TagRepositoryTests : IDisposable
 {
-    private readonly SqliteConnection _connection;
+    private readonly TestDatabase _db = new();
     private readonly StorageDbContext _context;
     private readonly ItemRepository _itemRepo;
     private readonly TagRepository _tagRepo;
 
     public TagRepositoryTests()
     {
-        _connection = new SqliteConnection("Data Source=:memory:");
-        _connection.Open();
+        _context = _db.CreateDbContext();
 
-        var options = new DbContextOptionsBuilder<StorageDbContext>()
-            .UseSqlite(_connection)
-            .Options;
-
-        _context = new StorageDbContext(options);
-        _context.Database.EnsureCreated();
-
-        _itemRepo = new ItemRepository(_context);
-        _tagRepo = new TagRepository(_context);
+        _itemRepo = new ItemRepository(_db);
+        _tagRepo = new TagRepository(_db);
     }
 
     [Fact]
@@ -259,6 +250,6 @@ public class TagRepositoryTests : IDisposable
     public void Dispose()
     {
         _context.Dispose();
-        _connection.Dispose();
+        _db.Dispose();
     }
 }

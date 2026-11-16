@@ -1,4 +1,3 @@
-using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Storage.Core.Data;
 using Storage.Core.Models;
@@ -6,35 +5,23 @@ using Storage.Core.Repositories;
 
 namespace Storage.Tests;
 
-// Exercises the repositories against a real SQLite in-memory database so the
-// actual provider, schema (via EnsureCreated), and FK relationships are tested.
+// Exercises the repositories against a real SQLite database (see TestDatabase). The
+// repositories get the factory, as in the app; _context is a separate one the tests
+// use to seed and inspect rows behind the repositories' backs.
 public class RepositoryTests : IDisposable
 {
-    private readonly SqliteConnection _connection;
+    private readonly TestDatabase _db = new();
     private readonly StorageDbContext _context;
 
     public RepositoryTests()
     {
-        // A ":memory:" SQLite DB lives only as long as the connection is open.
-        _connection = new SqliteConnection("Data Source=:memory:");
-        _connection.Open();
-
-        // The interceptor only fires for connections EF opens, and the location
-        // summaries sort through unicode_lower, so register it on this one directly.
-        UnicodeLowerInterceptor.Register(_connection);
-
-        var options = new DbContextOptionsBuilder<StorageDbContext>()
-            .UseSqlite(_connection)
-            .Options;
-
-        _context = new StorageDbContext(options);
-        _context.Database.EnsureCreated();
+        _context = _db.CreateDbContext();
     }
 
     [Fact]
     public async Task CanInsertAndQueryLocation()
     {
-        var locationRepo = new LocationRepository(_context);
+        var locationRepo = new LocationRepository(_db);
 
         var saved = await locationRepo.AddAsync(new Location { Name = "Basement" });
 
@@ -47,8 +34,8 @@ public class RepositoryTests : IDisposable
     [Fact]
     public async Task CanInsertItemReferencingLocation()
     {
-        var locationRepo = new LocationRepository(_context);
-        var itemRepo = new ItemRepository(_context);
+        var locationRepo = new LocationRepository(_db);
+        var itemRepo = new ItemRepository(_db);
 
         var location = await locationRepo.AddAsync(new Location { Name = "Garage Shelf 2" });
 
@@ -76,8 +63,8 @@ public class RepositoryTests : IDisposable
     [Fact]
     public async Task GetByLocationIdReturnsOnlyMatchingItems()
     {
-        var locationRepo = new LocationRepository(_context);
-        var itemRepo = new ItemRepository(_context);
+        var locationRepo = new LocationRepository(_db);
+        var itemRepo = new ItemRepository(_db);
 
         var garage = await locationRepo.AddAsync(new Location { Name = "Garage" });
         var attic = await locationRepo.AddAsync(new Location { Name = "Attic" });
@@ -95,7 +82,7 @@ public class RepositoryTests : IDisposable
     [Fact]
     public async Task ItemDefaultsToQuantityOne()
     {
-        var itemRepo = new ItemRepository(_context);
+        var itemRepo = new ItemRepository(_db);
 
         var item = await itemRepo.AddAsync(new Item { Name = "Screwdriver" });
 
@@ -109,8 +96,8 @@ public class RepositoryTests : IDisposable
     [Fact]
     public async Task UpdateItemPersistsChanges()
     {
-        var locationRepo = new LocationRepository(_context);
-        var itemRepo = new ItemRepository(_context);
+        var locationRepo = new LocationRepository(_db);
+        var itemRepo = new ItemRepository(_db);
 
         var shed = await locationRepo.AddAsync(new Location { Name = "Shed" });
         var loft = await locationRepo.AddAsync(new Location { Name = "Loft" });
@@ -129,8 +116,6 @@ public class RepositoryTests : IDisposable
         item.LocationId = loft.Id;
         await itemRepo.UpdateAsync(item);
 
-        // Drop the tracked instances so the assertions read from the database.
-        _context.ChangeTracker.Clear();
         var fetched = await itemRepo.GetByIdAsync(item.Id);
 
         Assert.NotNull(fetched);
@@ -143,7 +128,7 @@ public class RepositoryTests : IDisposable
     [Fact]
     public async Task UpdateLocationPersistsChanges()
     {
-        var locationRepo = new LocationRepository(_context);
+        var locationRepo = new LocationRepository(_db);
 
         var location = await locationRepo.AddAsync(new Location { Name = "Cellar" });
 
@@ -160,7 +145,7 @@ public class RepositoryTests : IDisposable
     [Fact]
     public async Task FailedLocationUpdateDoesNotBlockLaterSaves()
     {
-        var locationRepo = new LocationRepository(_context);
+        var locationRepo = new LocationRepository(_db);
 
         var cellar = await locationRepo.AddAsync(new Location { Name = "Cellar" });
 
@@ -174,15 +159,13 @@ public class RepositoryTests : IDisposable
         // Left pending, the failed change would be retried here and throw again.
         await locationRepo.AddAsync(new Location { Name = "Attic" });
 
-        Assert.Equal("Cellar", cellar.Name);
-        Assert.Null(cellar.Description);
         Assert.Equal(["Attic"], _context.Locations.AsNoTracking().Select(l => l.Name));
     }
 
     [Fact]
     public async Task LocationDescriptionIsSavedChangedAndCleared()
     {
-        var locationRepo = new LocationRepository(_context);
+        var locationRepo = new LocationRepository(_db);
 
         var location = await locationRepo.AddAsync(
             new Location { Name = "Cellar", Description = "Behind the stairs" });
@@ -206,7 +189,7 @@ public class RepositoryTests : IDisposable
     [Fact]
     public async Task LocationPhotoIsSavedReplacedAndCleared()
     {
-        var locationRepo = new LocationRepository(_context);
+        var locationRepo = new LocationRepository(_db);
 
         var location = await locationRepo.AddAsync(
             new Location { Name = "Garage Shelf", PhotoFileName = "shelf.jpg" });
@@ -230,7 +213,7 @@ public class RepositoryTests : IDisposable
     [Fact]
     public async Task DeleteLocationHandsBackItsPhotoForTheCallerToRemove()
     {
-        var locationRepo = new LocationRepository(_context);
+        var locationRepo = new LocationRepository(_db);
 
         var location = await locationRepo.AddAsync(
             new Location { Name = "Attic", PhotoFileName = "attic.jpg" });
@@ -245,14 +228,13 @@ public class RepositoryTests : IDisposable
     [Fact]
     public async Task RefusedLocationDeleteDoesNotBlockLaterSaves()
     {
-        var locationRepo = new LocationRepository(_context);
+        var locationRepo = new LocationRepository(_db);
 
         var garage = await locationRepo.AddAsync(new Location { Name = "Garage" });
         await locationRepo.AddAsync(new Location { Name = "Shelf", ParentId = garage.Id });
 
-        // With the child untracked, EF can't null its ParentId, so SQLite's foreign key
-        // refuses the delete. (A tracked child is detached from its parent instead.)
-        _context.ChangeTracker.Clear();
+        // The delete's own context has never loaded the child, so EF can't null its
+        // ParentId and SQLite's foreign key refuses the delete.
         await Assert.ThrowsAsync<DbUpdateException>(() => locationRepo.DeleteAsync(garage.Id));
 
         // Left pending, the refused delete would be retried here and throw again.
@@ -264,8 +246,8 @@ public class RepositoryTests : IDisposable
     [Fact]
     public async Task ReferencedPhotosIncludeLocationPhotos()
     {
-        var locationRepo = new LocationRepository(_context);
-        var itemRepo = new ItemRepository(_context);
+        var locationRepo = new LocationRepository(_db);
+        var itemRepo = new ItemRepository(_db);
 
         // The orphan sweep keeps only what this returns, so a location photo missing
         // from it would be deleted on the next launch.
@@ -283,7 +265,7 @@ public class RepositoryTests : IDisposable
     [Fact]
     public async Task GetPathReturnsTheChainRootFirst()
     {
-        var locationRepo = new LocationRepository(_context);
+        var locationRepo = new LocationRepository(_db);
 
         var garage = await locationRepo.AddAsync(new Location { Name = "Garage" });
         var shelf = await locationRepo.AddAsync(new Location { Name = "Shelf A", ParentId = garage.Id });
@@ -296,22 +278,18 @@ public class RepositoryTests : IDisposable
     }
 
     [Fact]
-    public async Task GetPathSeesARenameSavedThroughAnotherContext()
+    public async Task GetPathSeesARenameSavedThroughAnotherRepository()
     {
-        // The app's LocationContext holds its repository for good, while the edit
-        // screen saves through a context of its own — the header must still update.
-        var longLived = new LocationRepository(_context);
+        // A location's page holds its repository for good, while the edit screen saves
+        // through one of its own — the header must still update.
+        var longLived = new LocationRepository(_db);
         var shelf = await longLived.AddAsync(new Location { Name = "Shelf A" });
         await longLived.GetPathAsync(shelf.Id);
 
-        using (var editContext = new StorageDbContext(
-            new DbContextOptionsBuilder<StorageDbContext>().UseSqlite(_connection).Options))
-        {
-            var editRepo = new LocationRepository(editContext);
-            var edited = await editRepo.GetByIdAsync(shelf.Id);
-            edited!.Name = "Shelf B";
-            await editRepo.UpdateAsync(edited);
-        }
+        var editRepo = new LocationRepository(_db);
+        var edited = await editRepo.GetByIdAsync(shelf.Id);
+        edited!.Name = "Shelf B";
+        await editRepo.UpdateAsync(edited);
 
         var path = await longLived.GetPathAsync(shelf.Id);
 
@@ -319,9 +297,72 @@ public class RepositoryTests : IDisposable
     }
 
     [Fact]
+    public async Task ReadsSeeRowsChangedSinceTheLastRead()
+    {
+        var itemRepo = new ItemRepository(_db);
+        var item = await itemRepo.AddAsync(new Item { Name = "Drill" });
+        await itemRepo.GetByIdAsync(item.Id);
+
+        // A long-lived context would hand back the instance it cached on the read above.
+        await _context.Items
+            .Where(i => i.Id == item.Id)
+            .ExecuteUpdateAsync(s => s.SetProperty(i => i.Name, "Hammer Drill"));
+
+        Assert.Equal("Hammer Drill", (await itemRepo.GetByIdAsync(item.Id))!.Name);
+    }
+
+    [Fact]
+    public async Task PagesCanLoadAtTheSameTime()
+    {
+        // What Home and the Items tab do when one is opened while the other still
+        // loads: one repository instance each, several queries in flight at once.
+        var locationRepo = new LocationRepository(_db);
+        var itemRepo = new ItemRepository(_db);
+
+        var garage = await locationRepo.AddAsync(new Location { Name = "Garage" });
+        for (var i = 0; i < 20; i++)
+            await itemRepo.AddAsync(new Item { Name = $"Thing {i}", LocationId = garage.Id });
+
+        var loads = Enumerable.Range(0, 10).SelectMany(_ => new Task[]
+        {
+            itemRepo.GetAllAsync(),
+            itemRepo.CountAsync(),
+            itemRepo.GetRecentAsync(5),
+            locationRepo.GetTopLevelCardsAsync(),
+            locationRepo.CountAsync()
+        });
+
+        await Task.WhenAll(loads);
+    }
+
+    [Fact]
+    public async Task UpdateWritesOnlyTheLocationNotWhatItWasLoadedWith()
+    {
+        var locationRepo = new LocationRepository(_db);
+        var itemRepo = new ItemRepository(_db);
+
+        var garage = await locationRepo.AddAsync(new Location { Name = "Garage" });
+        var shelf = await locationRepo.AddAsync(new Location { Name = "Shelf", ParentId = garage.Id });
+        await itemRepo.AddAsync(new Item { Name = "Drill", LocationId = shelf.Id });
+
+        // Loaded with parent, children and items, as the edit screen does. Edits to
+        // that graph are not this save's to write.
+        var loaded = await locationRepo.GetByIdAsync(shelf.Id);
+        loaded!.Name = "Top Shelf";
+        loaded.Parent!.Name = "Not saved";
+        loaded.Items.Single().Name = "Not saved either";
+        await locationRepo.UpdateAsync(loaded);
+
+        Assert.Equal(
+            ["Garage", "Top Shelf"],
+            _context.Locations.AsNoTracking().Select(l => l.Name).Order());
+        Assert.Equal("Drill", (await _context.Items.AsNoTracking().SingleAsync()).Name);
+    }
+
+    [Fact]
     public async Task GetPathOfAMissingLocationIsEmpty()
     {
-        var locationRepo = new LocationRepository(_context);
+        var locationRepo = new LocationRepository(_db);
 
         Assert.Empty(await locationRepo.GetPathAsync(999));
     }
@@ -329,7 +370,7 @@ public class RepositoryTests : IDisposable
     [Fact]
     public async Task GetPathStopsAtACycle()
     {
-        var locationRepo = new LocationRepository(_context);
+        var locationRepo = new LocationRepository(_db);
 
         var a = await locationRepo.AddAsync(new Location { Name = "A" });
         var b = await locationRepo.AddAsync(new Location { Name = "B", ParentId = a.Id });
@@ -344,7 +385,7 @@ public class RepositoryTests : IDisposable
     [Fact]
     public async Task GetDescendantIdsReturnsEveryLevelButNotSiblingsOrItself()
     {
-        var locationRepo = new LocationRepository(_context);
+        var locationRepo = new LocationRepository(_db);
 
         var garage = await locationRepo.AddAsync(new Location { Name = "Garage" });
         var shelf = await locationRepo.AddAsync(new Location { Name = "Shelf A", ParentId = garage.Id });
@@ -361,7 +402,7 @@ public class RepositoryTests : IDisposable
     [Fact]
     public async Task GetDescendantIdsStopsAtACycle()
     {
-        var locationRepo = new LocationRepository(_context);
+        var locationRepo = new LocationRepository(_db);
 
         var a = await locationRepo.AddAsync(new Location { Name = "A" });
         var b = await locationRepo.AddAsync(new Location { Name = "B", ParentId = a.Id });
@@ -374,7 +415,7 @@ public class RepositoryTests : IDisposable
     [Fact]
     public async Task UpdateRejectsMovingALocationUnderItsOwnDescendant()
     {
-        var locationRepo = new LocationRepository(_context);
+        var locationRepo = new LocationRepository(_db);
 
         var garage = await locationRepo.AddAsync(new Location { Name = "Garage" });
         var shelf = await locationRepo.AddAsync(new Location { Name = "Shelf A", ParentId = garage.Id });
@@ -385,8 +426,7 @@ public class RepositoryTests : IDisposable
         var refused = await Assert.ThrowsAsync<LocationCycleException>(() => locationRepo.UpdateAsync(garage));
         Assert.Equal((garage.Id, box.Id), (refused.LocationId, refused.ParentId));
 
-        // The context outlives the refused update, as the app's does: an unrelated
-        // save afterwards must not write the refused change.
+        // An unrelated save afterwards must not write the refused change.
         await locationRepo.AddAsync(new Location { Name = "Attic" });
 
         var stored = await _context.Locations.AsNoTracking().SingleAsync(l => l.Id == garage.Id);
@@ -397,7 +437,7 @@ public class RepositoryTests : IDisposable
     [Fact]
     public async Task UpdateRejectsMakingALocationItsOwnParent()
     {
-        var locationRepo = new LocationRepository(_context);
+        var locationRepo = new LocationRepository(_db);
 
         var garage = await locationRepo.AddAsync(new Location { Name = "Garage" });
 
@@ -413,7 +453,7 @@ public class RepositoryTests : IDisposable
     [Fact]
     public async Task UpdateAllowsMovingALocationUnderASibling()
     {
-        var locationRepo = new LocationRepository(_context);
+        var locationRepo = new LocationRepository(_db);
 
         var garage = await locationRepo.AddAsync(new Location { Name = "Garage" });
         var shelf = await locationRepo.AddAsync(new Location { Name = "Shelf A", ParentId = garage.Id });
@@ -441,7 +481,7 @@ public class RepositoryTests : IDisposable
     [Fact]
     public async Task SetItemPhotosStoresThemInTheGivenOrderWithTheFirstAsPrimary()
     {
-        var itemRepo = new ItemRepository(_context);
+        var itemRepo = new ItemRepository(_db);
 
         var item = await itemRepo.AddAsync(new Item { Name = "Cordless Drill" });
 
@@ -462,7 +502,7 @@ public class RepositoryTests : IDisposable
     [Fact]
     public async Task GetAllReturnsPhotosInSortOrder()
     {
-        var itemRepo = new ItemRepository(_context);
+        var itemRepo = new ItemRepository(_db);
 
         var item = await itemRepo.AddAsync(new Item { Name = "Cordless Drill" });
         await itemRepo.SetItemPhotosAsync(item.Id, ["front.jpg", "back.jpg"]);
@@ -481,7 +521,7 @@ public class RepositoryTests : IDisposable
     [Fact]
     public async Task SetItemPhotosReplacesTheWholeSetAndRenumbersIt()
     {
-        var itemRepo = new ItemRepository(_context);
+        var itemRepo = new ItemRepository(_db);
 
         var item = await itemRepo.AddAsync(new Item { Name = "Cordless Drill" });
         await itemRepo.SetItemPhotosAsync(item.Id, ["front.jpg", "back.jpg", "serial.jpg"]);
@@ -503,7 +543,7 @@ public class RepositoryTests : IDisposable
     [Fact]
     public async Task SetItemPhotosDropsBlanksAndRepeats()
     {
-        var itemRepo = new ItemRepository(_context);
+        var itemRepo = new ItemRepository(_db);
 
         var item = await itemRepo.AddAsync(new Item { Name = "Cordless Drill" });
 
@@ -520,7 +560,7 @@ public class RepositoryTests : IDisposable
     [Fact]
     public async Task DeletingAnItemDeletesItsPhotoRows()
     {
-        var itemRepo = new ItemRepository(_context);
+        var itemRepo = new ItemRepository(_db);
 
         var item = await itemRepo.AddAsync(new Item { Name = "Cordless Drill" });
         await itemRepo.SetItemPhotosAsync(item.Id, ["front.jpg", "back.jpg"]);
@@ -535,8 +575,8 @@ public class RepositoryTests : IDisposable
     [Fact]
     public async Task ChildSummariesCountOnlyWhatIsDirectlyInside()
     {
-        var locationRepo = new LocationRepository(_context);
-        var itemRepo = new ItemRepository(_context);
+        var locationRepo = new LocationRepository(_db);
+        var itemRepo = new ItemRepository(_db);
 
         var garage = await locationRepo.AddAsync(new Location { Name = "Garage" });
         var shelf = await locationRepo.AddAsync(new Location { Name = "Shelf 2", ParentId = garage.Id });
@@ -559,7 +599,7 @@ public class RepositoryTests : IDisposable
     [Fact]
     public async Task ChildSummariesSortIgnoringCase()
     {
-        var locationRepo = new LocationRepository(_context);
+        var locationRepo = new LocationRepository(_db);
 
         var garage = await locationRepo.AddAsync(new Location { Name = "Garage" });
         await locationRepo.AddAsync(new Location { Name = "Shelf", ParentId = garage.Id });
@@ -575,8 +615,8 @@ public class RepositoryTests : IDisposable
     [Fact]
     public async Task CountInLocationCountsOnlyThatLocation()
     {
-        var locationRepo = new LocationRepository(_context);
-        var itemRepo = new ItemRepository(_context);
+        var locationRepo = new LocationRepository(_db);
+        var itemRepo = new ItemRepository(_db);
 
         var garage = await locationRepo.AddAsync(new Location { Name = "Garage" });
         var shelf = await locationRepo.AddAsync(new Location { Name = "Shelf", ParentId = garage.Id });
@@ -592,8 +632,8 @@ public class RepositoryTests : IDisposable
     [Fact]
     public async Task TopLevelCardsCountThroughEveryLevelBelow()
     {
-        var locationRepo = new LocationRepository(_context);
-        var itemRepo = new ItemRepository(_context);
+        var locationRepo = new LocationRepository(_db);
+        var itemRepo = new ItemRepository(_db);
 
         var garage = await locationRepo.AddAsync(new Location { Name = "Garage" });
         var shelf = await locationRepo.AddAsync(new Location { Name = "Shelf", ParentId = garage.Id });
@@ -621,8 +661,8 @@ public class RepositoryTests : IDisposable
     [Fact]
     public async Task TopLevelCardsTakeTheNewestFourPrimaryPhotosFromBelow()
     {
-        var locationRepo = new LocationRepository(_context);
-        var itemRepo = new ItemRepository(_context);
+        var locationRepo = new LocationRepository(_db);
+        var itemRepo = new ItemRepository(_db);
 
         var garage = await locationRepo.AddAsync(new Location { Name = "Garage" });
         var shelf = await locationRepo.AddAsync(new Location { Name = "Shelf", ParentId = garage.Id });
@@ -654,7 +694,7 @@ public class RepositoryTests : IDisposable
     [Fact]
     public async Task RootLocationsSortLikeTheCards()
     {
-        var locationRepo = new LocationRepository(_context);
+        var locationRepo = new LocationRepository(_db);
         await locationRepo.AddAsync(new Location { Name = "Garage" });
         await locationRepo.AddAsync(new Location { Name = "attic" });
 
@@ -667,7 +707,7 @@ public class RepositoryTests : IDisposable
     [Fact]
     public async Task RecentItemsAreTheNewestFirst()
     {
-        var itemRepo = new ItemRepository(_context);
+        var itemRepo = new ItemRepository(_db);
         for (var i = 0; i < 5; i++)
             await itemRepo.AddAsync(new Item { Name = $"Thing {i}" });
 
@@ -679,8 +719,8 @@ public class RepositoryTests : IDisposable
     [Fact]
     public async Task CountsCoverEveryLevel()
     {
-        var locationRepo = new LocationRepository(_context);
-        var itemRepo = new ItemRepository(_context);
+        var locationRepo = new LocationRepository(_db);
+        var itemRepo = new ItemRepository(_db);
 
         var garage = await locationRepo.AddAsync(new Location { Name = "Garage" });
         var shelf = await locationRepo.AddAsync(new Location { Name = "Shelf", ParentId = garage.Id });
@@ -694,6 +734,6 @@ public class RepositoryTests : IDisposable
     public void Dispose()
     {
         _context.Dispose();
-        _connection.Dispose();
+        _db.Dispose();
     }
 }
