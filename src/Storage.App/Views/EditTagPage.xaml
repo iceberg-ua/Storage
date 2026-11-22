@@ -68,22 +68,24 @@
                 <VerticalStackLayout Spacing="10">
                     <Label Text="Colour" Style="{StaticResource FieldLabel}" />
 
-                    <!-- Five across. Fixed palette first: every swatch is dark enough for
-                         white chip text, so tags stay legible by construction. The chosen
-                         one has a tick and a ring with a canvas gap inside it. -->
+                    <!-- Five across at any width: each swatch takes a fifth of the row and
+                         sits in the middle of it, so ten make two even rows. Fixed palette
+                         first: every swatch is dark enough for white chip text, so tags stay
+                         legible by construction. The chosen one has a tick and a ring with
+                         a canvas gap inside it. -->
                     <FlexLayout BindableLayout.ItemsSource="{Binding Swatches}"
                                 Wrap="Wrap"
-                                Direction="Row"
-                                JustifyContent="SpaceBetween">
+                                Direction="Row">
                         <BindableLayout.ItemTemplate>
                             <DataTemplate x:DataType="vm:PaletteSwatch">
-                                <Border Margin="0,0,0,12"
-                                        WidthRequest="60"
-                                        HeightRequest="60"
+                                <ContentView FlexLayout.Basis="20%" Padding="0,0,0,12">
+                                <Border WidthRequest="56"
+                                        HeightRequest="56"
+                                        HorizontalOptions="Center"
                                         Padding="3"
                                         StrokeThickness="3"
                                         Stroke="Transparent"
-                                        StrokeShape="RoundRectangle 30"
+                                        StrokeShape="Ellipse"
                                         BackgroundColor="Transparent"
                                         SemanticProperties.Description="{Binding Description}">
                                     <Border.GestureRecognizers>
@@ -96,7 +98,7 @@
                                         </DataTrigger>
                                     </Border.Triggers>
                                     <Border StrokeThickness="0"
-                                            StrokeShape="RoundRectangle 24"
+                                            StrokeShape="Ellipse"
                                             BackgroundColor="{Binding Color, Converter={StaticResource HexToColorConverter}}"
                                             AutomationProperties.IsInAccessibleTree="False">
                                         <Label Text="✓"
@@ -108,6 +110,7 @@
                                                IsVisible="{Binding IsSelected}" />
                                     </Border>
                                 </Border>
+                                </ContentView>
                             </DataTemplate>
                         </BindableLayout.ItemTemplate>
                     </FlexLayout>

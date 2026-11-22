@@ -60,16 +60,23 @@
                                         </SwipeItems>
                                     </SwipeView.RightItems>
 
-                                    <Grid RowDefinitions="64,1"
+                                    <Grid RowDefinitions="1,64"
                                           ColumnDefinitions="*,52"
                                           BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}">
 
                                         <!-- The row opens the tag's items. -->
-                                        <Grid ColumnDefinitions="Auto,*"
+                                        <BoxView Grid.ColumnSpan="2"
+                                                 HeightRequest="1"
+                                                 IsVisible="{Binding HasDivider}"
+                                                 Color="{AppThemeBinding Light={StaticResource Hairline}, Dark={StaticResource HairlineDark}}" />
+
+                                        <Grid Grid.Row="1"
+                                              ColumnDefinitions="Auto,*"
                                               ColumnSpacing="14"
                                               Padding="14,0,0,0"
                                               BackgroundColor="Transparent"
-                                              SemanticProperties.Description="{Binding Description}">
+                                              SemanticProperties.Description="{Binding Description}"
+                                              SemanticProperties.Hint="Shows the items with this tag">
                                             <Grid.GestureRecognizers>
                                                 <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:TagsViewModel}}, Path=OpenTagCommand}"
                                                                       CommandParameter="{Binding .}" />
@@ -101,7 +108,8 @@
                                         </Grid>
 
                                         <!-- The pencil opens the tag itself: name, colour, delete. -->
-                                        <Button Grid.Column="1"
+                                        <Button Grid.Row="1"
+                                                Grid.Column="1"
                                                 Text="✎"
                                                 Style="{StaticResource TextButton}"
                                                 TextColor="{AppThemeBinding Light={StaticResource InkMuted}, Dark={StaticResource InkMutedDark}}"
@@ -111,11 +119,6 @@
                                                 Command="{Binding Source={RelativeSource AncestorType={x:Type vm:TagsViewModel}}, Path=EditTagCommand}"
                                                 CommandParameter="{Binding .}"
                                                 SemanticProperties.Description="{Binding Tag.Name, StringFormat='Edit tag {0}'}" />
-
-                                        <BoxView Grid.Row="1"
-                                                 Grid.ColumnSpan="2"
-                                                 HeightRequest="1"
-                                                 Color="{AppThemeBinding Light={StaticResource Hairline}, Dark={StaticResource HairlineDark}}" />
                                     </Grid>
                                 </SwipeView>
                             </DataTemplate>

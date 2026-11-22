@@ -110,8 +110,14 @@ public partial class EditTagViewModel : ObservableObject, IQueryAttributable
     private async Task LoadAsync()
     {
         // OnAppearing fires again when a pushed page is popped — don't discard edits in progress.
+        // The count is the exception: Show items can lead to an item that gains or loses
+        // this tag, so it is read again on the way back. The form's fields are left alone.
         if (_isLoaded)
+        {
+            if (IsEditMode)
+                ItemCount = await _tagRepository.CountItemsAsync(_tagId);
             return;
+        }
 
         _isLoaded = true;
 

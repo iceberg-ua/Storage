@@ -259,6 +259,11 @@ public class TagRepositoryTests : IDisposable
         Assert.Equal(0, await _tagRepo.CountItemsAsync(9999));
     }
 
+    // The tag page pairs the two by index; a colour added without a name would throw there.
+    [Fact]
+    public void EveryPaletteColourHasAName() =>
+        Assert.Equal(TagPalette.Colors.Length, TagPalette.Names.Length);
+
     public void Dispose()
     {
         _context.Dispose();

@@ -25,8 +25,8 @@ public partial class TagsViewModel : ObservableObject
     /// <summary>Only once loaded, so "No tags yet" does not flash by.</summary>
     public bool HasNoTags => IsLoaded && !HasTags;
 
-    /// <summary>"7 tags · tap one to see its items", above the title.</summary>
-    public string Summary => Tags.Count switch
+    /// <summary>"7 tags · tap one to see its items", above the title. Empty until loaded.</summary>
+    public string Summary => !IsLoaded ? string.Empty : Tags.Count switch
     {
         0 => "Group items across locations",
         1 => "1 tag · tap it to see its items",
@@ -35,6 +35,7 @@ public partial class TagsViewModel : ObservableObject
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasNoTags))]
+    [NotifyPropertyChangedFor(nameof(Summary))]
     private bool _isLoaded;
 
     [ObservableProperty]
@@ -53,7 +54,7 @@ public partial class TagsViewModel : ObservableObject
         try
         {
             var tags = await _tagRepository.GetAllWithItemCountsAsync();
-            Tags = new ObservableCollection<TagRow>(tags.Select(t => new TagRow(t)));
+            Tags = Rows(tags);
             IsLoaded = true;
         }
         catch (Exception ex)
@@ -84,19 +85,25 @@ public partial class TagsViewModel : ObservableObject
         if (!await _deletion.ConfirmAndDeleteAsync(row.Tag.Id, row.Tag.Name, row.ItemCount))
             return;
 
-        Tags.Remove(row);
-        OnPropertyChanged(nameof(HasTags));
-        OnPropertyChanged(nameof(HasNoTags));
-        OnPropertyChanged(nameof(Summary));
+        // Rebuilt rather than removed from, so whichever row is now first loses its divider.
+        Tags = Rows(Tags.Where(r => r != row).Select(r => r.Tag));
     }
+
+    private static ObservableCollection<TagRow> Rows(IEnumerable<Tag> tags) =>
+        new(tags.Select((t, i) => new TagRow(t, IsFirst: i == 0)));
 }
 
-/// <summary>One row of the Tags tab: the tag, and how many items it is on, in words.</summary>
-public sealed record TagRow(Tag Tag)
+/// <summary>
+/// One row of the Tags tab: the tag, and how many items it is on, in words. The divider
+/// sits above each row but the first, so none is left against the card's bottom edge.
+/// </summary>
+public sealed record TagRow(Tag Tag, bool IsFirst)
 {
     public int ItemCount => Tag.Items.Count;
 
     public string CountText => ItemCount == 1 ? "1 item" : $"{ItemCount} items";
 
-    public string Description => $"{Tag.Name}, {CountText}. Double tap to see them";
+    public bool HasDivider => !IsFirst;
+
+    public string Description => $"{Tag.Name}, {CountText}";
 }
