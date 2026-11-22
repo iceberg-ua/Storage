@@ -59,7 +59,7 @@ public static class MauiProgram
 			sp.GetRequiredService<ILogger<PhotoService>>()));
 
 		// Register ViewModels
-		builder.Services.AddTransient<ViewModels.ItemsViewModel>();
+		builder.Services.AddTransient<ViewModels.FindViewModel>();
 		builder.Services.AddTransient<ViewModels.AddItemViewModel>();
 		builder.Services.AddTransient<ViewModels.ItemDetailViewModel>();
 		builder.Services.AddTransient<ViewModels.LocationsViewModel>();
@@ -72,7 +72,7 @@ public static class MauiProgram
 		builder.Services.AddTransient<ViewModels.PickPlaceViewModel>();
 
 		// Register Pages
-		builder.Services.AddTransient<Views.ItemsPage>();
+		builder.Services.AddTransient<Views.FindPage>();
 		builder.Services.AddTransient<Views.AddItemPage>();
 		builder.Services.AddTransient<Views.ItemDetailPage>();
 		builder.Services.AddTransient<Views.LocationsPage>();

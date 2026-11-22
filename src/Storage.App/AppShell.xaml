@@ -22,11 +22,12 @@
             ContentTemplate="{DataTemplate views:LocationsPage}"
             Route="locations" />
 
+        <!-- Every item, and finding one: what the Items tab used to list, under a search. -->
         <ShellContent
-            Title="Items"
-            Icon="tab_items.png"
-            ContentTemplate="{DataTemplate views:ItemsPage}"
-            Route="items" />
+            Title="Find"
+            Icon="tab_find.png"
+            ContentTemplate="{DataTemplate views:FindPage}"
+            Route="find" />
 
         <ShellContent
             Title="Tags"

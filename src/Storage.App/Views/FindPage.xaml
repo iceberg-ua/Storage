@@ -1,0 +1,371 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:Storage.App.ViewModels"
+             xmlns:models="clr-namespace:Storage.Core.Models;assembly=Storage.Core"
+             x:Class="Storage.App.Views.FindPage"
+             x:DataType="vm:FindViewModel"
+             Title="Find"
+             Shell.NavBarIsVisible="False">
+
+    <ContentPage.Resources>
+        <!-- A tag filter in force: the tag's own fill, and a cross to take it off. -->
+        <DataTemplate x:Key="TagFilterChip" x:DataType="models:Tag">
+            <Border Style="{StaticResource Chip}"
+                    HeightRequest="36"
+                    Padding="12,0,6,0"
+                    Margin="0,0,8,8"
+                    BackgroundColor="{Binding Color, Converter={StaticResource HexToColorConverter}}">
+                <HorizontalStackLayout Spacing="4" VerticalOptions="Center">
+                    <Label Text="{Binding Name, StringFormat='tag: {0}'}"
+                           FontFamily="JakartaBold"
+                           FontSize="14"
+                           VerticalOptions="Center"
+                           TextColor="{Binding Color, Converter={StaticResource HexToTextColorConverter}}" />
+                    <Button Text="✕"
+                            Style="{StaticResource TextButton}"
+                            FontSize="12"
+                            Padding="0"
+                            WidthRequest="28"
+                            MinimumWidthRequest="28"
+                            MinimumHeightRequest="28"
+                            TextColor="{Binding Color, Converter={StaticResource HexToTextColorConverter}}"
+                            Command="{Binding Source={RelativeSource AncestorType={x:Type vm:FindViewModel}}, Path=RemoveTagFilterCommand}"
+                            CommandParameter="{Binding .}"
+                            SemanticProperties.Description="{Binding Name, StringFormat='Remove the tag filter {0}'}" />
+                </HorizontalStackLayout>
+            </Border>
+        </DataTemplate>
+    </ContentPage.Resources>
+
+    <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,*,Auto" Padding="20,20,20,0" RowSpacing="12">
+
+        <!-- The box, with Back beside it when this page was pushed from somewhere. -->
+        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+            <Button Text="←"
+                    Style="{StaticResource RoundIconButton}"
+                    Command="{Binding BackCommand}"
+                    IsVisible="{Binding IsPushed}"
+                    SemanticProperties.Description="Back" />
+            <Border Grid.Column="1"
+                    Style="{StaticResource FieldSurface}"
+                    StrokeShape="RoundRectangle 28"
+                    StrokeThickness="2"
+                    Stroke="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}">
+                <Entry x:Name="Input"
+                       Text="{Binding Text}"
+                       Placeholder="Search items and locations"
+                       ClearButtonVisibility="WhileEditing"
+                       ReturnType="Search"
+                       VerticalOptions="Center"
+                       SemanticProperties.Description="Search items and locations" />
+            </Border>
+        </Grid>
+
+        <!-- The place filter in force, or a way to add one. -->
+        <HorizontalStackLayout Grid.Row="1" Spacing="8">
+            <Border Style="{StaticResource PlaceChip}"
+                    Padding="12,0,6,0"
+                    IsVisible="{Binding HasPlaceFilter}">
+                <HorizontalStackLayout Spacing="4" VerticalOptions="Center">
+                    <Label Text="{Binding PlaceFilterLabel}"
+                           Style="{StaticResource StrongLabel}"
+                           FontSize="14"
+                           VerticalOptions="Center"
+                           LineBreakMode="TailTruncation"
+                           TextColor="{AppThemeBinding Light={StaticResource OnPrimarySoft}, Dark={StaticResource OnPrimarySoftDark}}" />
+                    <Button Text="✕"
+                            Style="{StaticResource TextButton}"
+                            FontSize="12"
+                            Padding="0"
+                            WidthRequest="28"
+                            MinimumWidthRequest="28"
+                            MinimumHeightRequest="28"
+                            Command="{Binding RemovePlaceFilterCommand}"
+                            SemanticProperties.Description="Remove the place filter and search everywhere" />
+                </HorizontalStackLayout>
+            </Border>
+            <Border Style="{StaticResource SuggestionChip}"
+                    HeightRequest="36"
+                    IsVisible="{Binding HasPlaceFilter, Converter={StaticResource InvertedBoolConverter}}"
+                    SemanticProperties.Description="Search in one place only"
+                    SemanticProperties.Hint="Opens the list of locations">
+                <Border.GestureRecognizers>
+                    <TapGestureRecognizer Command="{Binding PickPlaceFilterCommand}" />
+                </Border.GestureRecognizers>
+                <Label Text="+ in: a place" Style="{StaticResource StrongLabel}" FontSize="14" VerticalOptions="Center" />
+            </Border>
+        </HorizontalStackLayout>
+
+        <!-- Tag filters in force: a wrapping row of their own, so three or four of them
+             wrap instead of running off the edge with their crosses. -->
+        <FlexLayout Grid.Row="2"
+                    Wrap="Wrap"
+                    Margin="0,0,0,-8"
+                    BindableLayout.ItemsSource="{Binding TagFilters}"
+                    BindableLayout.ItemTemplate="{StaticResource TagFilterChip}" />
+
+        <!-- While typing: tags and places whose names match, as filters to add. -->
+        <VerticalStackLayout Grid.Row="3" Spacing="6" IsVisible="{Binding HasSuggestions}">
+            <Label Text="Add a filter" Style="{StaticResource Caption}" />
+            <FlexLayout BindableLayout.ItemsSource="{Binding Suggestions}" Wrap="Wrap">
+                <BindableLayout.ItemTemplate>
+                    <DataTemplate x:DataType="vm:FindSuggestion">
+                        <Border Style="{StaticResource SuggestionChip}"
+                                HeightRequest="36"
+                                Margin="0,0,8,8"
+                                SemanticProperties.Description="{Binding Label, StringFormat='Add the filter {0}'}">
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:FindViewModel}}, Path=ApplySuggestionCommand}"
+                                                      CommandParameter="{Binding .}" />
+                            </Border.GestureRecognizers>
+                            <Label Text="{Binding Label}" Style="{StaticResource StrongLabel}" FontSize="14" VerticalOptions="Center" />
+                        </Border>
+                    </DataTemplate>
+                </BindableLayout.ItemTemplate>
+            </FlexLayout>
+        </VerticalStackLayout>
+
+        <!-- Items | Places, with what each holds. -->
+        <Border Grid.Row="4" Style="{StaticResource SegmentTrack}">
+            <Grid ColumnDefinitions="*,*">
+                <Button Text="{Binding ItemsTabText}"
+                        Style="{StaticResource Segment}"
+                        Command="{Binding ShowItemsCommand}"
+                        SemanticProperties.Description="{Binding ItemsTabDescription}">
+                    <Button.Triggers>
+                        <DataTrigger TargetType="Button" Binding="{Binding ShowingItems}" Value="True">
+                            <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+                            <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}" />
+                            <Setter Property="FontFamily" Value="JakartaBold" />
+                        </DataTrigger>
+                    </Button.Triggers>
+                </Button>
+                <Button Grid.Column="1"
+                        Text="{Binding PlacesTabText}"
+                        Style="{StaticResource Segment}"
+                        Command="{Binding ShowPlacesCommand}"
+                        SemanticProperties.Description="{Binding PlacesTabDescription}">
+                    <Button.Triggers>
+                        <DataTrigger TargetType="Button" Binding="{Binding ShowingPlaces}" Value="True">
+                            <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+                            <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}" />
+                            <Setter Property="FontFamily" Value="JakartaBold" />
+                        </DataTrigger>
+                    </Button.Triggers>
+                </Button>
+            </Grid>
+        </Border>
+
+        <!-- Pull to refresh over either list, as the Items tab had. -->
+        <RefreshView Grid.Row="5"
+                     Margin="-20,0"
+                     IsRefreshing="{Binding IsRefreshing}"
+                     Command="{Binding RefreshCommand}">
+            <Grid>
+                <!-- Items: the matches, or at rest the whole inventory under recent searches and tags. -->
+                <CollectionView ItemsSource="{Binding ItemResults}"
+                                IsVisible="{Binding ShowingItems}"
+                                Footer="{Binding .}">
+                    <CollectionView.Header>
+                        <!-- BindingContext set in code-behind: a RelativeSource lookup from
+                             inside a CollectionView header is unreliable on Android, so the
+                             commands below find the view model on this element instead. -->
+                        <VerticalStackLayout x:Name="IdleHeader"
+                                             Padding="20,4,20,8"
+                                             Spacing="20"
+                                             IsVisible="{Binding IsIdle}">
+                            <VerticalStackLayout Spacing="8" IsVisible="{Binding HasRecent}">
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <Label Text="Recent searches" Style="{StaticResource Caption}" FontFamily="JakartaBold" VerticalOptions="Center" />
+                                    <Button Grid.Column="1" Text="Clear" Style="{StaticResource TextButton}" Command="{Binding ClearRecentCommand}" />
+                                </Grid>
+                                <VerticalStackLayout BindableLayout.ItemsSource="{Binding Recent}" Spacing="8">
+                                    <BindableLayout.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:RecentSearch">
+                                            <Border Style="{StaticResource Card}"
+                                                    Padding="16,12"
+                                                    SemanticProperties.Description="{Binding Label, StringFormat='Search again: {0}'}">
+                                                <Border.GestureRecognizers>
+                                                    <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:FindViewModel}}, Path=RunRecentCommand}"
+                                                                          CommandParameter="{Binding .}" />
+                                                </Border.GestureRecognizers>
+                                                <HorizontalStackLayout Spacing="10">
+                                                    <Label Text="🕑" VerticalOptions="Center" AutomationProperties.IsInAccessibleTree="False" />
+                                                    <Label Text="{Binding Label}" VerticalOptions="Center" LineBreakMode="TailTruncation" />
+                                                </HorizontalStackLayout>
+                                            </Border>
+                                        </DataTemplate>
+                                    </BindableLayout.ItemTemplate>
+                                </VerticalStackLayout>
+                            </VerticalStackLayout>
+
+                            <VerticalStackLayout Spacing="8" IsVisible="{Binding HasBrowseTags}">
+                                <Label Text="Browse by tag" Style="{StaticResource Caption}" FontFamily="JakartaBold" />
+                                <FlexLayout BindableLayout.ItemsSource="{Binding BrowseTags}" Wrap="Wrap">
+                                    <BindableLayout.ItemTemplate>
+                                        <DataTemplate x:DataType="models:Tag">
+                                            <Border Style="{StaticResource Chip}"
+                                                    HeightRequest="36"
+                                                    Margin="0,0,8,8"
+                                                    BackgroundColor="{Binding Color, Converter={StaticResource HexToColorConverter}}"
+                                                    SemanticProperties.Description="{Binding Name, StringFormat='Show items tagged {0}'}">
+                                                <Border.GestureRecognizers>
+                                                    <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:FindViewModel}}, Path=AddTagFilterCommand}"
+                                                                          CommandParameter="{Binding .}" />
+                                                </Border.GestureRecognizers>
+                                                <Label Text="{Binding Name}"
+                                                       FontFamily="JakartaBold"
+                                                       FontSize="14"
+                                                       VerticalOptions="Center"
+                                                       TextColor="{Binding Color, Converter={StaticResource HexToTextColorConverter}}" />
+                                            </Border>
+                                        </DataTemplate>
+                                    </BindableLayout.ItemTemplate>
+                                </FlexLayout>
+                            </VerticalStackLayout>
+
+                            <Label Text="Everything stored" Style="{StaticResource SectionTitle}" SemanticProperties.HeadingLevel="Level2" />
+                        </VerticalStackLayout>
+                    </CollectionView.Header>
+
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate x:DataType="vm:FindItemRow">
+                            <Border Style="{StaticResource Card}"
+                                    Padding="8,8,16,8"
+                                    Margin="20,0,20,10"
+                                    SemanticProperties.Description="{Binding Description}">
+                                <Border.GestureRecognizers>
+                                    <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:FindViewModel}}, Path=OpenItemCommand}"
+                                                          CommandParameter="{Binding .}" />
+                                </Border.GestureRecognizers>
+                                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="14">
+                                    <Border WidthRequest="60"
+                                            HeightRequest="60"
+                                            StrokeThickness="0"
+                                            StrokeShape="RoundRectangle 14"
+                                            BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceSunken}, Dark={StaticResource SurfaceSunkenDark}}">
+                                        <Grid>
+                                            <Label Text="📦" HorizontalOptions="Center" VerticalOptions="Center" AutomationProperties.IsInAccessibleTree="False" />
+                                            <Image Source="{Binding Item.PrimaryPhotoFileName, Converter={StaticResource PhotoSourceConverter}}"
+                                                   Aspect="AspectFill"
+                                                   IsVisible="{Binding Item.PrimaryPhotoFileName, Converter={StaticResource IsNotNullConverter}}" />
+                                        </Grid>
+                                    </Border>
+                                    <VerticalStackLayout Grid.Column="1" Spacing="3" VerticalOptions="Center">
+                                        <!-- The name, with the part that matched highlighted. -->
+                                        <Label Style="{StaticResource StrongLabel}" MaxLines="2" LineBreakMode="TailTruncation">
+                                            <Label.FormattedText>
+                                                <FormattedString>
+                                                    <Span Text="{Binding Before}" />
+                                                    <Span Text="{Binding Match}"
+                                                          BackgroundColor="{AppThemeBinding Light=#FCE7A6, Dark=#6B5510}" />
+                                                    <Span Text="{Binding After}" />
+                                                </FormattedString>
+                                            </Label.FormattedText>
+                                        </Label>
+                                        <Label Text="{Binding Path, StringFormat='📍 {0}'}"
+                                               Style="{StaticResource Caption}"
+                                               LineBreakMode="TailTruncation"
+                                               IsVisible="{Binding HasPath}" />
+                                    </VerticalStackLayout>
+                                    <Border Grid.Column="2"
+                                            Style="{StaticResource Chip}"
+                                            HeightRequest="26"
+                                            Padding="10,0"
+                                            VerticalOptions="Center"
+                                            BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceSunken}, Dark={StaticResource SurfaceSunkenDark}}"
+                                            IsVisible="{Binding ShowQuantity}">
+                                        <Label Text="{Binding Item.Quantity, StringFormat='×{0}'}" Style="{StaticResource StrongLabel}" FontSize="13" VerticalOptions="Center" />
+                                    </Border>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+
+                    <CollectionView.FooterTemplate>
+                        <DataTemplate x:DataType="vm:FindViewModel">
+                            <Button Text="{Binding OutsideText}"
+                                    Style="{StaticResource TextButton}"
+                                    IsVisible="{Binding HasOutside}"
+                                    Command="{Binding RemovePlaceFilterCommand}"
+                                    Margin="20,0,20,16" />
+                        </DataTemplate>
+                    </CollectionView.FooterTemplate>
+
+                    <CollectionView.EmptyView>
+                        <Label Text="{Binding EmptyText}"
+                               Style="{StaticResource Caption}"
+                               HorizontalTextAlignment="Center"
+                               Margin="32" />
+                    </CollectionView.EmptyView>
+                </CollectionView>
+
+                <!-- Places matching the text, anywhere or under the place filter; at rest,
+                     every location. Swipe to delete, as on the Locations tab. -->
+                <CollectionView ItemsSource="{Binding PlaceResults}"
+                                IsVisible="{Binding ShowingPlaces}">
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate x:DataType="vm:FindPlaceRow">
+                            <SwipeView Margin="20,0,20,10">
+                                <SwipeView.RightItems>
+                                    <SwipeItems>
+                                        <SwipeItemView Command="{Binding Source={RelativeSource AncestorType={x:Type vm:FindViewModel}}, Path=DeletePlaceCommand}"
+                                                       CommandParameter="{Binding .}">
+                                            <Grid BackgroundColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}"
+                                                  WidthRequest="96">
+                                                <Label Text="Delete"
+                                                       FontFamily="JakartaBold"
+                                                       TextColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource Ink}}"
+                                                       HorizontalOptions="Center"
+                                                       VerticalOptions="Center" />
+                                            </Grid>
+                                        </SwipeItemView>
+                                    </SwipeItems>
+                                </SwipeView.RightItems>
+
+                                <Border Style="{StaticResource Card}"
+                                        Padding="16,12"
+                                        SemanticProperties.Description="{Binding Description}">
+                                    <Border.GestureRecognizers>
+                                        <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:FindViewModel}}, Path=OpenPlaceCommand}"
+                                                              CommandParameter="{Binding .}" />
+                                    </Border.GestureRecognizers>
+                                    <VerticalStackLayout Spacing="3">
+                                        <Label Style="{StaticResource StrongLabel}">
+                                            <Label.FormattedText>
+                                                <FormattedString>
+                                                    <Span Text="{Binding Before}" />
+                                                    <Span Text="{Binding Match}"
+                                                          BackgroundColor="{AppThemeBinding Light=#FCE7A6, Dark=#6B5510}" />
+                                                    <Span Text="{Binding After}" />
+                                                </FormattedString>
+                                            </Label.FormattedText>
+                                        </Label>
+                                        <Label Text="{Binding Path, StringFormat='Inside {0}'}"
+                                               Style="{StaticResource Caption}"
+                                               IsVisible="{Binding HasPath}" />
+                                    </VerticalStackLayout>
+                                </Border>
+                            </SwipeView>
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+                    <CollectionView.EmptyView>
+                        <Label Text="{Binding PlacesEmptyText}"
+                               Style="{StaticResource Caption}"
+                               HorizontalTextAlignment="Center"
+                               Margin="32" />
+                    </CollectionView.EmptyView>
+                </CollectionView>
+            </Grid>
+        </RefreshView>
+
+        <!-- As on the other tabs. With a place filter, the new item starts in that place. -->
+        <Button Grid.Row="6"
+                Text="New item"
+                Command="{Binding NewItemCommand}"
+                Margin="0,8,0,16"
+                SemanticProperties.Description="Add a new item" />
+    </Grid>
+
+</ContentPage>

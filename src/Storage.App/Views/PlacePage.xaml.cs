@@ -1,4 +1,3 @@
-using System.ComponentModel;
 using Storage.App.ViewModels;
 
 namespace Storage.App.Views;
@@ -13,22 +12,14 @@ public partial class PlacePage : ContentPage
         _viewModel = viewModel;
         BindingContext = _viewModel;
 
-        // The header sits inside a list bound to the search, so it is pointed at the
-        // page's view model directly rather than finding it by a RelativeSource lookup.
+        // The header sits inside the list, so it is pointed at the page's view model
+        // directly rather than found by a RelativeSource lookup from inside the header,
+        // which is unreliable on Android.
         Header.BindingContext = _viewModel;
-
-        _viewModel.Search.PropertyChanged += OnSearchPropertyChanged;
     }
 
     /// <summary>Which location this page shows, for jumping back to it from a deeper one.</summary>
     public int LocationId => _viewModel.LocationId;
-
-    // Same as the tabs: opening the toolbar puts the caret in it.
-    private void OnSearchPropertyChanged(object? sender, PropertyChangedEventArgs e)
-    {
-        if (e.PropertyName == nameof(SearchViewModel.IsOpen) && _viewModel.Search.IsOpen)
-            Toolbar.Focus();
-    }
 
     // Every appearance, not just the first: the edit form and the create page both pop
     // back here, and what they changed should show at once. LoadAsync catches its own

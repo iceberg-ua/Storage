@@ -32,6 +32,16 @@ public interface IItemRepository
     /// </summary>
     Task<IEnumerable<Item>> SearchAsync(string? query, SearchScope scope, int? locationId = null);
 
+    /// <summary>
+    /// The items matching every part of <paramref name="query"/>, newest first, with
+    /// their location, tags and photos. Text matches as <see cref="SearchAsync"/> does
+    /// with <see cref="SearchScope.Everything"/>.
+    /// </summary>
+    Task<IReadOnlyList<Item>> FindAsync(ItemQuery query);
+
+    /// <summary>How many items <see cref="FindAsync"/> would return, without loading them.</summary>
+    Task<int> CountMatchesAsync(ItemQuery query);
+
     Task<Item> AddAsync(Item item);
     Task UpdateAsync(Item item);
 

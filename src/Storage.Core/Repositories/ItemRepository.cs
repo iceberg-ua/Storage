@@ -75,6 +75,44 @@ public class ItemRepository : IItemRepository
             .ToListAsync();
     }
 
+    public async Task<IReadOnlyList<Item>> FindAsync(ItemQuery query)
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var items = await MatchingAsync(context, query);
+
+        return await items
+            .Include(i => i.Location)
+            .Include(i => i.Tags)
+            .Include(i => i.Photos.OrderBy(p => p.SortOrder))
+            .OrderByDescending(i => i.CreatedAt)
+            .ThenByDescending(i => i.Id)
+            .ToListAsync();
+    }
+
+    public async Task<int> CountMatchesAsync(ItemQuery query)
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        return await (await MatchingAsync(context, query)).CountAsync();
+    }
+
+    private static async Task<IQueryable<Item>> MatchingAsync(StorageDbContext context, ItemQuery query)
+    {
+        var items = MatchingText(context.Items, query.Text, SearchScope.Everything);
+
+        if (query.WithinLocationId is int root)
+        {
+            // Everything inside it too: "in: Garage" means the shelves in the garage.
+            var within = await LocationTree.SubtreeIdsAsync(context, root);
+            items = items.Where(i => i.LocationId != null && within.Contains(i.LocationId.Value));
+        }
+
+        // Every tag, not any: each tag chip narrows the list further.
+        foreach (var tagId in query.TagIds.Distinct())
+            items = items.Where(i => i.Tags.Any(t => t.Id == tagId));
+
+        return items;
+    }
+
     public async Task<IEnumerable<Item>> SearchAsync(string? query, SearchScope scope, int? locationId = null)
     {
         await using var context = await _contextFactory.CreateDbContextAsync();
@@ -90,6 +128,13 @@ public class ItemRepository : IItemRepository
         if (locationId is int id)
             items = items.Where(i => i.LocationId == id);
 
+        return await MatchingText(items, query, scope)
+            .OrderByDescending(i => i.CreatedAt)
+            .ToListAsync();
+    }
+
+    private static IQueryable<Item> MatchingText(IQueryable<Item> items, string? query, SearchScope scope)
+    {
         var term = query?.Trim();
 
         // An empty box is not "match nothing", it is "no filter at all".
@@ -121,9 +166,7 @@ public class ItemRepository : IItemRepository
             };
         }
 
-        return await items
-            .OrderByDescending(i => i.CreatedAt)
-            .ToListAsync();
+        return items;
     }
 
     public async Task<Item> AddAsync(Item item)

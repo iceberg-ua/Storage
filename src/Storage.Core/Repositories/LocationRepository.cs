@@ -246,6 +246,33 @@ public class LocationRepository : ILocationRepository
             .ToListAsync();
     }
 
+    public async Task<IReadOnlyList<Location>> FindAsync(string? text, int? withinLocationId)
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync();
+
+        IQueryable<Location> locations = context.Locations.AsNoTracking();
+
+        if (withinLocationId is int root)
+        {
+            var within = await LocationTree.SubtreeIdsAsync(context, root);
+            within.Remove(root);
+            locations = locations.Where(l => within.Contains(l.Id));
+        }
+
+        var term = text?.Trim();
+        if (!string.IsNullOrEmpty(term))
+        {
+            var pattern = LikePattern.Contains(term);
+            locations = locations.Where(l =>
+                EF.Functions.Like(StorageDbContext.UnicodeLower(l.Name)!, pattern, LikePattern.Escape) ||
+                EF.Functions.Like(StorageDbContext.UnicodeLower(l.Description)!, pattern, LikePattern.Escape));
+        }
+
+        return await locations
+            .OrderBy(l => StorageDbContext.UnicodeLower(l.Name))
+            .ToListAsync();
+    }
+
     public async Task<Location> AddAsync(Location location)
     {
         await using var context = await _contextFactory.CreateDbContextAsync();
