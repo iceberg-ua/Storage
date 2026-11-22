@@ -31,18 +31,18 @@
                             HeightRequest="84"
                             StrokeThickness="0"
                             StrokeShape="RoundRectangle 14"
-                            BackgroundColor="{AppThemeBinding Light={StaticResource PrimarySoft}, Dark={StaticResource PrimarySoftDark}}"
+                            BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceSunken}, Dark={StaticResource SurfaceSunkenDark}}"
                             SemanticProperties.Description="{Binding PhotoFrameDescription}">
                         <Border.GestureRecognizers>
                             <TapGestureRecognizer Command="{Binding TakePhotoCommand}" />
                         </Border.GestureRecognizers>
                         <Grid AutomationProperties.IsInAccessibleTree="False">
-                            <Label Text="📷"
-                                   FontSize="26"
-                                   Opacity="0.6"
-                                   HorizontalOptions="Center"
-                                   VerticalOptions="Center"
-                                   IsVisible="{Binding HasPhoto, Converter={StaticResource InvertedBoolConverter}}" />
+                            <controls:Icon Glyph="{x:Static controls:Icons.Photo}"
+                                           Size="26"
+                                           Weight="1.6"
+                                           Opacity="0.35"
+                                           Color="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}"
+                                           IsVisible="{Binding HasPhoto, Converter={StaticResource InvertedBoolConverter}}" />
                             <Image Source="{Binding PhotoFileName, Converter={StaticResource PhotoSourceConverter}}"
                                    Aspect="AspectFill"
                                    IsVisible="{Binding HasPhoto}" />
@@ -52,23 +52,34 @@
                     <VerticalStackLayout Grid.Column="1" Spacing="8" VerticalOptions="Center">
                         <Label Text="Shown at the top of the location and on its card"
                                Style="{StaticResource Caption}"
-                               FontSize="12" />
+                               FontSize="12"
+                               LineHeight="1.4" />
                         <HorizontalStackLayout Spacing="6">
-                            <Button Text="📷"
-                                    Style="{StaticResource SoftPrimaryButton}"
-                                    Command="{Binding TakePhotoCommand}"
-                                    Padding="12,0"
-                                    SemanticProperties.Description="Take a photo" />
-                            <Button Text="🖼️"
-                                    Style="{StaticResource SoftPrimaryButton}"
-                                    Command="{Binding ChooseFromGalleryCommand}"
-                                    Padding="12,0"
-                                    SemanticProperties.Description="Choose a photo from the gallery" />
-                            <Button Text="Remove"
-                                    Style="{StaticResource DangerTextButton}"
-                                    Command="{Binding RemovePhotoCommand}"
-                                    IsVisible="{Binding HasPhoto}"
-                                    SemanticProperties.Description="Remove the photo" />
+                            <controls:IconButton Glyph="{x:Static controls:Icons.Camera}"
+                                                 Style="{StaticResource SoftPill}"
+                                                 HeightRequest="36"
+                                                 MinimumHeightRequest="36"
+                                                 StrokeShape="RoundRectangle 18"
+                                                 Padding="14,0"
+                                                 Command="{Binding TakePhotoCommand}"
+                                                 SemanticProperties.Description="Take a photo" />
+                            <controls:IconButton Glyph="{x:Static controls:Icons.Photo}"
+                                                 Style="{StaticResource SoftPill}"
+                                                 HeightRequest="36"
+                                                 MinimumHeightRequest="36"
+                                                 StrokeShape="RoundRectangle 18"
+                                                 Padding="14,0"
+                                                 Command="{Binding ChooseFromGalleryCommand}"
+                                                 SemanticProperties.Description="Choose a photo from the gallery" />
+                            <controls:IconButton Text="Remove"
+                                                 Style="{StaticResource DangerTextIcon}"
+                                                 HeightRequest="36"
+                                                 MinimumHeightRequest="36"
+                                                 Padding="10,0"
+                                                 FontSize="13"
+                                                 Command="{Binding RemovePhotoCommand}"
+                                                 IsVisible="{Binding HasPhoto}"
+                                                 SemanticProperties.Description="Remove the photo" />
                         </HorizontalStackLayout>
                     </VerticalStackLayout>
                 </Grid>
@@ -100,10 +111,9 @@
                     <TapGestureRecognizer Command="{Binding PickParentCommand}" />
                 </Border.GestureRecognizers>
                 <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8" AutomationProperties.IsInAccessibleTree="False">
-                    <Label Text="▦"
-                           FontSize="16"
-                           VerticalOptions="Center"
-                           TextColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
+                    <controls:Icon Glyph="{x:Static controls:Icons.Places}"
+                                   Size="16"
+                                   Color="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
                     <Label Grid.Column="1"
                            Text="{Binding ParentPath}"
                            Style="{StaticResource StrongLabel}"
@@ -112,7 +122,7 @@
                            LineBreakMode="HeadTruncation" />
                     <Label Grid.Column="2"
                            Text="Change"
-                           Style="{StaticResource StrongLabel}"
+                           FontFamily="JakartaSemiBold"
                            FontSize="14"
                            VerticalOptions="Center"
                            TextColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />

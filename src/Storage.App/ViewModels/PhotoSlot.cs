@@ -21,11 +21,8 @@ public partial class PhotoSlot : ObservableObject
     // reload every thumbnail each time one photo moves.
     public ImageSource? Source { get; }
 
+    // The form draws the heart filled on this one, the one the lists show, and hollow
+    // on the rest.
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HeartGlyph))]
     private bool _isPrimary;
-
-    // Filled when this is the one the lists show, hollow otherwise. The glyphs are text,
-    // not emoji, so they take the colour the template gives them in either theme.
-    public string HeartGlyph => IsPrimary ? "♥" : "♡";
 }

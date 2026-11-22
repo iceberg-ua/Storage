@@ -13,10 +13,12 @@
     <Grid RowDefinitions="Auto,*,Auto">
 
         <Grid Grid.Row="0" ColumnDefinitions="Auto,*" ColumnSpacing="12" Padding="20,20,20,12">
-            <Button Text="✕"
-                    Style="{StaticResource RoundIconButton}"
-                    Command="{Binding CancelCommand}"
-                    SemanticProperties.Description="Cancel" />
+            <controls:IconButton Glyph="{x:Static controls:Icons.Close}"
+                                 IconSize="16"
+                                 IconWeight="2.4"
+                                 Style="{StaticResource RoundIcon}"
+                                 Command="{Binding CancelCommand}"
+                                 SemanticProperties.Description="Cancel" />
             <Label Grid.Column="1"
                    Text="{Binding PageTitle}"
                    Style="{StaticResource Title}"
@@ -25,7 +27,7 @@
         </Grid>
 
         <ScrollView Grid.Row="1">
-            <VerticalStackLayout Padding="20,6,20,24" Spacing="22">
+            <VerticalStackLayout Padding="20,10,20,24" Spacing="22">
 
                 <!-- The chip as it will look on an item, live as the name and colour
                      change. Any colour can be chosen, so this is also where you see
@@ -78,9 +80,9 @@
                                 Direction="Row">
                         <BindableLayout.ItemTemplate>
                             <DataTemplate x:DataType="vm:PaletteSwatch">
-                                <ContentView FlexLayout.Basis="20%" Padding="0,0,0,12">
-                                <Border WidthRequest="56"
-                                        HeightRequest="56"
+                                <ContentView FlexLayout.Basis="20%">
+                                <Border WidthRequest="64"
+                                        HeightRequest="64"
                                         HorizontalOptions="Center"
                                         Padding="3"
                                         StrokeThickness="3"
@@ -101,13 +103,10 @@
                                             StrokeShape="Ellipse"
                                             BackgroundColor="{Binding Color, Converter={StaticResource HexToColorConverter}}"
                                             AutomationProperties.IsInAccessibleTree="False">
-                                        <Label Text="✓"
-                                               FontFamily="JakartaExtraBold"
-                                               FontSize="20"
-                                               TextColor="White"
-                                               HorizontalOptions="Center"
-                                               VerticalOptions="Center"
-                                               IsVisible="{Binding IsSelected}" />
+                                        <controls:Icon Glyph="{x:Static controls:Icons.Check}"
+                                                       Weight="3"
+                                                       Color="White"
+                                                       IsVisible="{Binding IsSelected}" />
                                     </Border>
                                 </Border>
                                 </ContentView>
@@ -155,9 +154,13 @@
                                        Style="{StaticResource Caption}"
                                        IsVisible="{Binding HasItems}" />
                             </VerticalStackLayout>
-                            <Button Grid.Column="1"
+                            <controls:IconButton Grid.Column="1"
                                     Text="Show items"
-                                    Style="{StaticResource SoftPrimaryButton}"
+                                    Style="{StaticResource SoftPill}"
+                                    HeightRequest="40"
+                                    MinimumHeightRequest="40"
+                                    StrokeShape="RoundRectangle 20"
+                                    Padding="14,0"
                                     VerticalOptions="Center"
                                     IsVisible="{Binding HasItems}"
                                     Command="{Binding ShowItemsCommand}" />
@@ -165,12 +168,11 @@
                     </Border>
 
                     <!-- Text-only and well away from Save. -->
-                    <Button Text="🗑  Delete tag"
-                            Style="{StaticResource DangerTextButton}"
-                            FontSize="15"
-                            HorizontalOptions="Start"
-                            Command="{Binding DeleteCommand}"
-                            SemanticProperties.Description="Delete tag" />
+                    <controls:IconButton Glyph="{x:Static controls:Icons.Trash}"
+                                         Text="Delete tag"
+                                         Style="{StaticResource DangerTextIcon}"
+                                         Command="{Binding DeleteCommand}"
+                                         SemanticProperties.Description="Delete tag" />
                 </VerticalStackLayout>
 
             </VerticalStackLayout>

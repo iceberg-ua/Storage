@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:Storage.App.ViewModels"
              xmlns:views="clr-namespace:Storage.App.Views"
+             xmlns:controls="clr-namespace:Storage.App.Controls"
              xmlns:models="clr-namespace:Storage.Core.Models;assembly=Storage.Core"
              x:Class="Storage.App.Views.HomePage"
              x:DataType="vm:HomeViewModel"
@@ -11,7 +12,7 @@
 
     <Grid RowDefinitions="*,Auto">
         <ScrollView Grid.Row="0">
-            <VerticalStackLayout Padding="20,28,20,16" Spacing="24">
+            <VerticalStackLayout Padding="20,28,20,24" Spacing="22">
 
                 <VerticalStackLayout Spacing="2">
                     <Label Text="{Binding Summary}" Style="{StaticResource Caption}" FontFamily="JakartaSemiBold" />
@@ -26,17 +27,16 @@
                         StrokeShape="RoundRectangle 28"
                         Padding="18,0"
                         HeightRequest="56"
-                        SemanticProperties.Description="Search items and locations"
+                        Shadow="{StaticResource FloatShadow}"
+                        SemanticProperties.Description="Search items, locations and tags"
                         SemanticProperties.Hint="Opens the Find tab">
                     <Border.GestureRecognizers>
                         <TapGestureRecognizer Command="{Binding OpenSearchCommand}" />
                     </Border.GestureRecognizers>
                     <HorizontalStackLayout Spacing="12" VerticalOptions="Center">
-                        <Label Text="🔍"
-                               FontSize="18"
-                               VerticalOptions="Center"
-                               AutomationProperties.IsInAccessibleTree="False" />
-                        <Label Text="Search items and locations"
+                        <controls:Icon Glyph="{x:Static controls:Icons.Search}"
+                                       Color="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
+                        <Label Text="Search items, locations, tags"
                                Style="{StaticResource Caption}"
                                FontSize="16"
                                VerticalOptions="Center" />
@@ -44,8 +44,8 @@
                 </Border>
 
                 <!-- Recently added: hidden until there is something to show. -->
-                <VerticalStackLayout Spacing="8" IsVisible="{Binding HasRecentItems}">
-                    <Grid ColumnDefinitions="*,Auto">
+                <VerticalStackLayout Spacing="12" IsVisible="{Binding HasRecentItems}">
+                    <Grid ColumnDefinitions="*,Auto" HeightRequest="26">
                         <Label Text="Recently added"
                                Style="{StaticResource SectionTitle}"
                                VerticalOptions="Center"
@@ -53,11 +53,12 @@
                         <Button Grid.Column="1"
                                 Text="See all"
                                 Style="{StaticResource TextButton}"
+                                Margin="0,-9"
                                 Command="{Binding SeeAllItemsCommand}" />
                     </Grid>
 
                     <CollectionView ItemsSource="{Binding RecentItems}"
-                                    HeightRequest="190"
+                                    HeightRequest="180"
                                     Margin="0,0,-20,0"
                                     HorizontalScrollBarVisibility="Never">
                         <CollectionView.ItemsLayout>
@@ -77,11 +78,11 @@
                                             StrokeShape="RoundRectangle 18"
                                             BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceSunken}, Dark={StaticResource SurfaceSunkenDark}}">
                                         <Grid>
-                                            <Label Text="📦"
-                                                   FontSize="24"
-                                                   AutomationProperties.IsInAccessibleTree="False"
-                                                   HorizontalOptions="Center"
-                                                   VerticalOptions="Center" />
+                                            <controls:Icon Glyph="{x:Static controls:Icons.Photo}"
+                                                           Size="28"
+                                                           Weight="1.6"
+                                                           Opacity="0.35"
+                                                           Color="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
                                             <Image Source="{Binding PrimaryPhotoFileName, Converter={StaticResource PhotoSourceConverter}}"
                                                    Aspect="AspectFill"
                                                    IsVisible="{Binding PrimaryPhotoFileName, Converter={StaticResource IsNotNullConverter}}"
@@ -91,6 +92,7 @@
                                     <VerticalStackLayout Spacing="1">
                                         <Label Text="{Binding Name}"
                                                Style="{StaticResource StrongLabel}"
+                                               FontFamily="JakartaSemiBold"
                                                FontSize="14"
                                                MaxLines="1"
                                                LineBreakMode="TailTruncation" />
@@ -107,8 +109,8 @@
                     </CollectionView>
                 </VerticalStackLayout>
 
-                <VerticalStackLayout Spacing="8">
-                    <Grid ColumnDefinitions="*,Auto">
+                <VerticalStackLayout Spacing="12">
+                    <Grid ColumnDefinitions="*,Auto" HeightRequest="26">
                         <Label Text="Locations"
                                Style="{StaticResource SectionTitle}"
                                VerticalOptions="Center"
@@ -116,6 +118,7 @@
                         <Button Grid.Column="1"
                                 Text="+ New location"
                                 Style="{StaticResource TextButton}"
+                                Margin="0,-9"
                                 Command="{Binding NewLocationCommand}" />
                     </Grid>
 
@@ -129,7 +132,7 @@
                         <BindableLayout.ItemTemplate>
                             <DataTemplate x:DataType="vm:PlaceTile">
                                 <ContentView FlexLayout.Basis="50%" Padding="6">
-                                    <Border Style="{StaticResource Card}"
+                                    <Border Style="{StaticResource RaisedCard}"
                                             StrokeShape="RoundRectangle 22"
                                             Padding="8,8,8,12"
                                             SemanticProperties.Description="{Binding Name, StringFormat='Open {0}'}">
@@ -175,11 +178,7 @@
             </VerticalStackLayout>
         </ScrollView>
 
-        <Button Grid.Row="1"
-                Text="📷  New item"
-                Command="{Binding NewItemCommand}"
-                Margin="20,8,20,16"
-                SemanticProperties.Description="New item: opens the camera" />
+        <views:AppTabBar Grid.Row="1" Current="home" SnapCommand="{Binding NewItemCommand}" />
     </Grid>
 
 </ContentPage>

@@ -2,6 +2,7 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:Storage.App.ViewModels"
+             xmlns:controls="clr-namespace:Storage.App.Controls"
              x:Class="Storage.App.Views.PickPlacePage"
              x:DataType="vm:PickPlaceViewModel"
              Title="{Binding Title}"
@@ -10,53 +11,74 @@
 
     <!-- Modal, over whatever asked for a place. A full page rather than a sheet over the
          one underneath: a see-through modal page is unreliable in Shell on Android. -->
-    <Grid RowDefinitions="Auto,Auto,Auto,*,Auto" Padding="20,20,20,0" RowSpacing="14">
+    <Grid RowDefinitions="Auto,Auto,Auto,*,Auto" Padding="20,20,20,0" RowSpacing="16">
 
         <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
             <VerticalStackLayout Spacing="4">
                 <Label Text="{Binding Title}"
                        Style="{StaticResource Title}"
+                       FontSize="24"
+                       CharacterSpacing="-0.24"
                        SemanticProperties.HeadingLevel="Level1" />
                 <Label Text="{Binding Subject}"
                        Style="{StaticResource Caption}"
                        IsVisible="{Binding HasSubject}" />
             </VerticalStackLayout>
-            <Button Grid.Column="1"
-                    Text="✕"
-                    Style="{StaticResource RoundIconButton}"
-                    Command="{Binding CloseCommand}"
-                    VerticalOptions="Start"
-                    SemanticProperties.Description="Close without choosing" />
+            <controls:IconButton Grid.Column="1"
+                                 Glyph="{x:Static controls:Icons.Close}"
+                                 IconSize="16"
+                                 IconWeight="2.4"
+                                 Style="{StaticResource RoundIcon}"
+                                 Shadow="{x:Null}"
+                                 VerticalOptions="Start"
+                                 Command="{Binding CloseCommand}"
+                                 SemanticProperties.Description="Close without choosing" />
         </Grid>
 
-        <Border Grid.Row="1" Style="{StaticResource FieldSurface}" StrokeShape="RoundRectangle 24" MinimumHeightRequest="48">
-            <Entry Text="{Binding SearchText}"
-                   Placeholder="Find a location"
-                   ClearButtonVisibility="WhileEditing"
-                   VerticalOptions="Center"
-                   SemanticProperties.Description="Find a location by name" />
+        <Border Grid.Row="1" Style="{StaticResource FieldSurface}" StrokeShape="RoundRectangle 24" MinimumHeightRequest="48" Padding="16,0">
+            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                <controls:Icon Glyph="{x:Static controls:Icons.Search}"
+                               Size="18"
+                               Color="{AppThemeBinding Light={StaticResource InkMuted}, Dark={StaticResource InkMutedDark}}" />
+                <Entry Grid.Column="1"
+                       Text="{Binding SearchText}"
+                       Placeholder="Find a location"
+                       FontSize="15"
+                       ClearButtonVisibility="WhileEditing"
+                       VerticalOptions="Center"
+                       SemanticProperties.Description="Find a location by name"
+                       controls:FocusRing.IsEnabled="True" />
+            </Grid>
         </Border>
 
-        <!-- Where in the tree this list is; each step goes back up to it. Hidden while
-             searching, when the list holds matches from every level instead. -->
+        <!-- Where in the tree this list is; each step but the last goes back up to it.
+             Hidden while searching, when the list holds matches from every level instead. -->
         <FlexLayout Grid.Row="2"
                     BindableLayout.ItemsSource="{Binding Crumbs}"
                     Wrap="Wrap"
+                    Margin="0,-6"
                     IsVisible="{Binding IsBrowsing}">
             <BindableLayout.ItemTemplate>
                 <DataTemplate x:DataType="vm:PlaceCrumb">
                     <HorizontalStackLayout>
                         <Label Text=" › "
-                               Style="{StaticResource Caption}"
+                               FontFamily="JakartaSemiBold"
+                               FontSize="14"
+                               TextColor="{AppThemeBinding Light={StaticResource InkMuted}, Dark={StaticResource InkMutedDark}}"
                                IsVisible="{Binding IsFirst, Converter={StaticResource InvertedBoolConverter}}"
                                VerticalOptions="Center" />
                         <Label Text="{Binding Name}"
-                               Style="{StaticResource StrongLabel}"
+                               FontFamily="JakartaSemiBold"
                                FontSize="14"
                                Padding="0,8"
                                TextColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}"
                                VerticalOptions="Center"
                                SemanticProperties.Description="{Binding Name, StringFormat='Go to {0}'}">
+                            <Label.Triggers>
+                                <DataTrigger TargetType="Label" Binding="{Binding IsLast}" Value="True">
+                                    <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+                                </DataTrigger>
+                            </Label.Triggers>
                             <Label.GestureRecognizers>
                                 <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:PickPlaceViewModel}}, Path=OpenCrumbCommand}"
                                                       CommandParameter="{Binding .}" />
@@ -67,73 +89,102 @@
             </BindableLayout.ItemTemplate>
         </FlexLayout>
 
-        <CollectionView Grid.Row="3" ItemsSource="{Binding Rows}">
-            <CollectionView.EmptyView>
+        <!-- One white card with the rows divided inside it, as in the mockup. A
+             ScrollView of rows rather than a CollectionView, as on the Tags tab: a card
+             has to size to its rows, and one level holds tens of places, not thousands. -->
+        <ScrollView Grid.Row="3">
+            <VerticalStackLayout>
                 <Label Text="{Binding EmptyText}"
                        Style="{StaticResource Caption}"
                        HorizontalTextAlignment="Center"
-                       Margin="0,32" />
-            </CollectionView.EmptyView>
-            <CollectionView.ItemTemplate>
-                <DataTemplate x:DataType="vm:PickRow">
-                    <Grid ColumnDefinitions="*,Auto" Padding="0,0,0,8">
-                        <!-- The row chooses; the arrow beside it opens what is inside. -->
-                        <Border Style="{StaticResource Card}"
-                                Padding="14,10"
-                                StrokeShape="RoundRectangle 18"
-                                SemanticProperties.Description="{Binding Description}"
-                                SemanticProperties.Hint="Double tap to choose">
-                            <Border.GestureRecognizers>
-                                <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:PickPlaceViewModel}}, Path=SelectCommand}"
-                                                      CommandParameter="{Binding .}" />
-                            </Border.GestureRecognizers>
-                            <Border.Triggers>
-                                <DataTrigger TargetType="Border" Binding="{Binding IsSelected}" Value="True">
-                                    <Setter Property="Stroke" Value="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
-                                    <Setter Property="StrokeThickness" Value="2" />
-                                    <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource PrimarySoft}, Dark={StaticResource PrimarySoftDark}}" />
-                                </DataTrigger>
-                            </Border.Triggers>
-                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
-                                <!-- A radio mark, so the choice reads without colour too. -->
-                                <Border WidthRequest="22"
-                                        HeightRequest="22"
-                                        StrokeShape="RoundRectangle 11"
-                                        StrokeThickness="2"
-                                        Stroke="{AppThemeBinding Light={StaticResource InkMuted}, Dark={StaticResource InkMutedDark}}"
-                                        VerticalOptions="Center">
-                                    <Border WidthRequest="10"
-                                            HeightRequest="10"
-                                            StrokeThickness="0"
-                                            StrokeShape="RoundRectangle 5"
-                                            IsVisible="{Binding IsSelected}"
-                                            BackgroundColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
-                                </Border>
-                                <VerticalStackLayout Grid.Column="1" Spacing="1" VerticalOptions="Center">
-                                    <Label Text="{Binding Name}" Style="{StaticResource StrongLabel}" />
-                                    <Label Text="{Binding Meta}" Style="{StaticResource Caption}" FontSize="12" />
-                                </VerticalStackLayout>
-                            </Grid>
-                        </Border>
-                        <Button Grid.Column="1"
-                                Text="›"
-                                Style="{StaticResource RoundIconButton}"
-                                FontSize="22"
-                                Margin="8,0,0,0"
-                                VerticalOptions="Center"
-                                IsVisible="{Binding CanOpen}"
-                                Command="{Binding Source={RelativeSource AncestorType={x:Type vm:PickPlaceViewModel}}, Path=OpenLevelCommand}"
-                                CommandParameter="{Binding .}"
-                                SemanticProperties.Description="{Binding Name, StringFormat='Show what is inside {0}'}" />
-                    </Grid>
-                </DataTemplate>
-            </CollectionView.ItemTemplate>
-        </CollectionView>
+                       Margin="0,32"
+                       IsVisible="{Binding HasNoRows}" />
+
+                <Border Style="{StaticResource Card}"
+                        Padding="0"
+                        StrokeShape="RoundRectangle 22"
+                        IsVisible="{Binding HasNoRows, Converter={StaticResource InvertedBoolConverter}}">
+                    <VerticalStackLayout BindableLayout.ItemsSource="{Binding Rows}">
+                        <BindableLayout.ItemTemplate>
+                            <DataTemplate x:DataType="vm:PickRow">
+                                <Grid RowDefinitions="1,60" ColumnDefinitions="*,Auto">
+                                    <Grid.Triggers>
+                                        <DataTrigger TargetType="Grid" Binding="{Binding IsSelected}" Value="True">
+                                            <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource PrimarySoft}, Dark={StaticResource PrimarySoftDark}}" />
+                                        </DataTrigger>
+                                    </Grid.Triggers>
+
+                                    <BoxView Grid.ColumnSpan="2"
+                                             HeightRequest="1"
+                                             IsVisible="{Binding HasDivider}"
+                                             Color="{AppThemeBinding Light={StaticResource Hairline}, Dark={StaticResource HairlineDark}}" />
+
+                                    <!-- The row chooses; the arrow beside it opens what is inside. -->
+                                    <Grid Grid.Row="1"
+                                          ColumnDefinitions="Auto,*"
+                                          ColumnSpacing="12"
+                                          Padding="16,0,12,0"
+                                          BackgroundColor="Transparent"
+                                          SemanticProperties.Description="{Binding Description}"
+                                          SemanticProperties.Hint="Double tap to choose">
+                                        <Grid.GestureRecognizers>
+                                            <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:PickPlaceViewModel}}, Path=SelectCommand}"
+                                                                  CommandParameter="{Binding .}" />
+                                        </Grid.GestureRecognizers>
+                                        <!-- A radio mark, so the choice reads without colour too. -->
+                                        <Border WidthRequest="22"
+                                                HeightRequest="22"
+                                                StrokeShape="RoundRectangle 11"
+                                                StrokeThickness="2"
+                                                Stroke="{AppThemeBinding Light={StaticResource Hairline}, Dark={StaticResource HairlineDark}}"
+                                                VerticalOptions="Center"
+                                                AutomationProperties.IsInAccessibleTree="False">
+                                            <Border.Triggers>
+                                                <DataTrigger TargetType="Border" Binding="{Binding IsSelected}" Value="True">
+                                                    <Setter Property="Stroke" Value="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
+                                                </DataTrigger>
+                                            </Border.Triggers>
+                                            <Border WidthRequest="10"
+                                                    HeightRequest="10"
+                                                    StrokeThickness="0"
+                                                    StrokeShape="RoundRectangle 5"
+                                                    IsVisible="{Binding IsSelected}"
+                                                    BackgroundColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
+                                        </Border>
+                                        <VerticalStackLayout Grid.Column="1"
+                                                             Spacing="1"
+                                                             VerticalOptions="Center"
+                                                             AutomationProperties.IsInAccessibleTree="False">
+                                            <Label Text="{Binding Name}" Style="{StaticResource StrongLabel}" MaxLines="1" LineBreakMode="TailTruncation" />
+                                            <Label Text="{Binding Meta}" Style="{StaticResource Caption}" FontSize="12" MaxLines="1" LineBreakMode="TailTruncation" />
+                                        </VerticalStackLayout>
+                                    </Grid>
+
+                                    <!-- Its own cell, set off by a hairline. -->
+                                    <Grid Grid.Row="1" Grid.Column="1" WidthRequest="52" IsVisible="{Binding CanOpen}">
+                                        <BoxView WidthRequest="1"
+                                                 HorizontalOptions="Start"
+                                                 Color="{AppThemeBinding Light={StaticResource Hairline}, Dark={StaticResource HairlineDark}}" />
+                                        <controls:IconButton Glyph="{x:Static controls:Icons.ChevronRight}"
+                                                             Style="{StaticResource PlainIcon}"
+                                                             WidthRequest="52"
+                                                             HeightRequest="60"
+                                                             Command="{Binding Source={RelativeSource AncestorType={x:Type vm:PickPlaceViewModel}}, Path=OpenLevelCommand}"
+                                                             CommandParameter="{Binding .}"
+                                                             SemanticProperties.Description="{Binding Name, StringFormat='Show what is inside {0}'}" />
+                                    </Grid>
+                                </Grid>
+                            </DataTemplate>
+                        </BindableLayout.ItemTemplate>
+                    </VerticalStackLayout>
+                </Border>
+            </VerticalStackLayout>
+        </ScrollView>
 
         <Button Grid.Row="4"
                 Text="{Binding ConfirmText}"
                 Command="{Binding ConfirmCommand}"
-                Margin="0,8,0,16" />
+                Margin="0,8,0,24" />
     </Grid>
 
 </ContentPage>

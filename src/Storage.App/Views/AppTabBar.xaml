@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!-- The bar along the foot of the four tab pages: Home, Locations, the camera, Tags,
+     Find, as in the mockups. Shell's own bar is hidden (see the Page style): it has no
+     way to raise a button out of the bar. Each tab page puts this in its last row and
+     sets Current and SnapCommand. -->
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:controls="clr-namespace:Storage.App.Controls"
+             x:Class="Storage.App.Views.AppTabBar">
+
+    <!-- Not clipped, so the camera disc can stand out above the top edge. -->
+    <Grid HeightRequest="84"
+          ColumnDefinitions="*,*,*,*,*"
+          Padding="0,0,0,10"
+          IsClippedToBounds="False"
+          BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}">
+
+        <BoxView Grid.ColumnSpan="5"
+                 HeightRequest="1"
+                 VerticalOptions="Start"
+                 Color="{AppThemeBinding Light={StaticResource SurfaceSunken}, Dark={StaticResource SurfaceSunkenDark}}" />
+
+        <VerticalStackLayout x:Name="HomeTab" Grid.Column="0" Spacing="4" VerticalOptions="Center"
+                             SemanticProperties.Description="Home">
+            <VerticalStackLayout.GestureRecognizers>
+                <TapGestureRecognizer Tapped="OnTabTapped" CommandParameter="home" />
+            </VerticalStackLayout.GestureRecognizers>
+            <controls:Icon x:Name="HomeIcon" Glyph="{x:Static controls:Icons.Home}" Size="24" Weight="1.8" />
+            <Label x:Name="HomeLabel" Text="Home" FontSize="11" HorizontalOptions="Center" />
+        </VerticalStackLayout>
+
+        <VerticalStackLayout x:Name="LocationsTab" Grid.Column="1" Spacing="4" VerticalOptions="Center"
+                             SemanticProperties.Description="Locations">
+            <VerticalStackLayout.GestureRecognizers>
+                <TapGestureRecognizer Tapped="OnTabTapped" CommandParameter="locations" />
+            </VerticalStackLayout.GestureRecognizers>
+            <controls:Icon x:Name="LocationsIcon" Glyph="{x:Static controls:Icons.Places}" Size="24" Weight="1.8" />
+            <Label x:Name="LocationsLabel" Text="Locations" FontSize="11" HorizontalOptions="Center" />
+        </VerticalStackLayout>
+
+        <!-- The camera: a new item, from wherever you are. Ringed in the canvas colour so
+             it reads as lifted off the bar. -->
+        <controls:IconButton x:Name="SnapButton"
+                             Grid.Column="2"
+                             Glyph="{x:Static controls:Icons.Camera}"
+                             IconSize="26"
+                             TextColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource PrimaryDarkText}}"
+                             BackgroundColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}"
+                             Stroke="{AppThemeBinding Light={StaticResource Canvas}, Dark={StaticResource CanvasDark}}"
+                             StrokeThickness="4"
+                             StrokeShape="RoundRectangle 32"
+                             WidthRequest="64"
+                             HeightRequest="64"
+                             Margin="0,-30,0,0"
+                             VerticalOptions="Start"
+                             HorizontalOptions="Center"
+                             Shadow="{StaticResource AccentShadow}"
+                             SemanticProperties.Description="New item"
+                             SemanticProperties.Hint="Opens the camera" />
+
+        <VerticalStackLayout x:Name="TagsTab" Grid.Column="3" Spacing="4" VerticalOptions="Center"
+                             SemanticProperties.Description="Tags">
+            <VerticalStackLayout.GestureRecognizers>
+                <TapGestureRecognizer Tapped="OnTabTapped" CommandParameter="tags" />
+            </VerticalStackLayout.GestureRecognizers>
+            <controls:Icon x:Name="TagsIcon" Glyph="{x:Static controls:Icons.Tag}" Size="24" Weight="1.8" />
+            <Label x:Name="TagsLabel" Text="Tags" FontSize="11" HorizontalOptions="Center" />
+        </VerticalStackLayout>
+
+        <VerticalStackLayout x:Name="FindTab" Grid.Column="4" Spacing="4" VerticalOptions="Center"
+                             SemanticProperties.Description="Find">
+            <VerticalStackLayout.GestureRecognizers>
+                <TapGestureRecognizer Tapped="OnTabTapped" CommandParameter="find" />
+            </VerticalStackLayout.GestureRecognizers>
+            <controls:Icon x:Name="FindIcon" Glyph="{x:Static controls:Icons.Search}" Size="24" Weight="1.8" />
+            <Label x:Name="FindLabel" Text="Find" FontSize="11" HorizontalOptions="Center" />
+        </VerticalStackLayout>
+    </Grid>
+
+</ContentView>

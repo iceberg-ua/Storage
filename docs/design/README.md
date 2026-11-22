@@ -24,6 +24,7 @@ a few lead nowhere (`href="#"`), such as "See all" on Home. The font
 | `location-form.html` | `Views/LocationForm.xaml` in `CreatePage.xaml` and `AddLocationPage.xaml` |
 | `pick-location.html` | `Views/PickPlacePage.xaml` |
 | `snap.html` | `Views/CameraPage.xaml` (snap mode) |
+| the tab bar in `home.html`, `locations.html`, `tags.html` | `Views/AppTabBar.xaml` |
 | `find.html` | `Views/FindPage.xaml`, nothing typed |
 | `find-results.html` | `Views/FindPage.xaml`, with a search |
 | `tags.html` | `Views/TagsPage.xaml` |
@@ -47,12 +48,16 @@ test does not check that a mockup uses the *right* token in a given place; that 
 | Canvas | `#F6F4EF` | page background |
 | Surface | `#FFFFFF` | cards, fields, round icon buttons |
 | SurfaceSunken | `#ECE8DF` | segment tracks, stepper minus (`#F0ECE4` in the mockups), photo placeholders |
-| Hairline | `#E4DFD4` | field outlines, dividers |
+| Hairline | `#E4DFD4` | dividers, outlined buttons and chips (fields have no outline until focused) |
 | Ink | `#1C1B19` | text, ink-filled buttons (Edit, New tag) |
 | InkMuted | `#5F5B53` | captions, counts, paths |
 | Primary | `#0F6E6E` | main buttons, focus ring, links |
 | PrimarySoft / OnPrimarySoft | `#DCEDEA` / `#0B5555` | location chips, soft buttons |
 | Danger | `#B3261E` | Delete, field errors |
+
+Icons are the mockups' own SVG paths, copied into `Controls/Icons.cs` and drawn by
+`Controls/Icon` (or `Controls/IconButton` when they are tappable), so they take the theme's
+colours. Shadows are the mockups' box-shadows, as the `…Shadow` resources in `Styles.xaml`.
 
 Type is Plus Jakarta Sans: 30 ExtraBold for tab titles (`Display`), 22 ExtraBold for page
 titles (`Title`), 18 Bold for sections, 13 Bold for field labels, 13 Regular for captions.
@@ -66,23 +71,24 @@ code and delete the line. An open question (rather than a decided difference) be
 
 **Everywhere**
 - **"Location", not "Place".** The mockups say Place(s); the app says Location(s). Undecided.
-- **Tab bar.** The mockups have five slots with a raised camera button in the middle
-  (Home, Places, Snap, Tags, Find). The app has four tabs (Home, Locations, Find, Tags) and a
-  "📷 New item" button on the pages that need it.
-- **Icons.** The tab bar uses SVG icons, as the mockups do; inside pages the app uses emoji and
-  text glyphs (📷 ✎ ✕ ▾ 🔍) where the mockups draw SVGs.
+- **Find keeps the tab bar.** The mockups open Find from the tab bar onto a screen with Back
+  and no tab bar; in the app Find is a tab like the others, so it has the bar and no Back.
+  Find pushed from a location's page or the Locations tab has Back and no bar, as drawn.
 
 **Home** (`home.html`)
 - No settings button (there is no settings page yet).
 
 **Locations** (`locations.html`)
-- A 🔍 button in the header, and the button reads "+ New" rather than "New place".
+- A search button in the header, and the button reads "New" rather than "New place".
 
 **Location page** (`location.html`, `location-with-photo.html`)
 - The header has ⋯ (edit, delete) where the mockup has a pencil.
+- The path above the name is the whole way down ("Locations › Garage"), each step tappable;
+  the mockup shows only the parent.
 - The sub-location chips open that sub-location; there is no "All" chip and they do not filter
   the list. A dashed "+ Location inside" chip replaces the floating Sub-place button.
-- One "📷 New item here" button at the bottom instead of "Snap into Garage".
+- One "New item here" button at the bottom instead of "Snap into Garage", in its own row
+  under the list rather than floating over it.
 - No "Recently added" sort menu and no Grid · List switch.
 - Tiles show tag dots but not the sub-location name, and hide ×1.
 - With a photo, the app shows it as a rounded card under the header, not full-bleed under a
@@ -92,10 +98,11 @@ code and delete the line. An open question (rather than a decided difference) be
 - Photos swipe with dots instead of the thumbnail strip and "1 / 3".
 - No "+ Tag" chip; tags are added in the form.
 - The text section is headed "Description", not "Notes".
-- The stepper's + is a white disc, not accent-filled.
+- Without a photo there is no sheet: the buttons and details sit on the canvas.
 
 **Item form** (`item-form.html`)
 - Two dashed add tiles (camera, gallery) instead of one "+".
+- The box for the next tag sits under the chips rather than after them on the same line.
 
 **Location form** (`location-form.html`)
 - The photo row has camera, gallery and Remove buttons instead of Change and Remove.
@@ -104,12 +111,19 @@ code and delete the line. An open question (rather than a decided difference) be
 
 **Pick location** (`pick-location.html`)
 - No "New place in Garage" row.
+- A full page rather than a sheet over a dimmed page: a see-through modal page is
+  unreliable in Shell on Android.
 
 **Snap** (`snap.html`)
 - No flash toggle.
+- Taking a single photo for a form (not drawn) uses the same dark panel, with Gallery, the
+  shutter and Cancel.
 
 **Find** (`find.html`)
 - With nothing typed, "Everything stored" is listed under recent searches and tags.
+- Tag filters in force sit in a row under the box (the mockup only shows a place filter,
+  which sits inside the box as drawn).
+- "tag: a tag" picks from a list of tags; the mockup does not say what it opens.
 
 **Tag page** (`edit-tag.html`)
 - "Custom colour…" opens RGB sliders under the palette; the mockup has the palette only.

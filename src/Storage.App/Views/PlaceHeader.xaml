@@ -2,6 +2,7 @@
 <ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:Storage.App.ViewModels"
+             xmlns:controls="clr-namespace:Storage.App.Controls"
              xmlns:models="clr-namespace:Storage.Core.Models;assembly=Storage.Core"
              x:Class="Storage.App.Views.PlaceHeader"
              x:DataType="vm:PlaceViewModel">
@@ -11,7 +12,7 @@
          the page's view model, set from the page's code: the list it sits in is bound
          to the search, and a RelativeSource lookup from inside a CollectionView header
          is not reliable on Android. -->
-    <VerticalStackLayout Padding="8,16,8,8" Spacing="16">
+    <VerticalStackLayout Padding="6,20,6,16" Spacing="16">
 
         <!-- The photo when there is one, with the actions over it; without one, the
              same actions on the canvas. Either way they are in the same place. -->
@@ -25,29 +26,56 @@
                        SemanticProperties.Description="{Binding Name, StringFormat='Photo of {0}'}" />
             </Border>
 
+            <!-- On a photo the discs turn see-through white, as in the mockup. -->
             <Grid ColumnDefinitions="Auto,*,Auto,Auto"
                   ColumnSpacing="8"
-                  Padding="12"
                   VerticalOptions="Start">
-                <Button Grid.Column="0"
-                        Text="←"
-                        Style="{StaticResource RoundIconButton}"
-                        Command="{Binding BackCommand}"
-                        SemanticProperties.Description="Back" />
-                <Button Grid.Column="2"
-                        Text="🔍"
-                        Style="{StaticResource RoundIconButton}"
-                        Command="{Binding SearchCommand}"
-                        SemanticProperties.Description="{Binding Name, StringFormat='Search in {0}'}" />
-                <Button Grid.Column="3"
-                        Text="⋯"
-                        Style="{StaticResource RoundIconButton}"
-                        Command="{Binding ShowActionsCommand}"
-                        SemanticProperties.Description="{Binding Name, StringFormat='Edit or delete {0}'}" />
+                <Grid.Triggers>
+                    <DataTrigger TargetType="Grid" Binding="{Binding HasPhoto}" Value="True">
+                        <Setter Property="Padding" Value="12" />
+                    </DataTrigger>
+                </Grid.Triggers>
+                <controls:IconButton Grid.Column="0"
+                                     Glyph="{x:Static controls:Icons.Back}"
+                                     Style="{StaticResource RoundIcon}"
+                                     Command="{Binding BackCommand}"
+                                     SemanticProperties.Description="Back">
+                    <controls:IconButton.Triggers>
+                        <DataTrigger TargetType="controls:IconButton" Binding="{Binding HasPhoto}" Value="True">
+                            <Setter Property="BackgroundColor" Value="#EBFFFFFF" />
+                            <Setter Property="TextColor" Value="{StaticResource Ink}" />
+                        </DataTrigger>
+                    </controls:IconButton.Triggers>
+                </controls:IconButton>
+                <controls:IconButton Grid.Column="2"
+                                     Glyph="{x:Static controls:Icons.Search}"
+                                     Style="{StaticResource RoundIcon}"
+                                     Command="{Binding SearchCommand}"
+                                     SemanticProperties.Description="{Binding Name, StringFormat='Search in {0}'}">
+                    <controls:IconButton.Triggers>
+                        <DataTrigger TargetType="controls:IconButton" Binding="{Binding HasPhoto}" Value="True">
+                            <Setter Property="BackgroundColor" Value="#EBFFFFFF" />
+                            <Setter Property="TextColor" Value="{StaticResource Ink}" />
+                        </DataTrigger>
+                    </controls:IconButton.Triggers>
+                </controls:IconButton>
+                <controls:IconButton Grid.Column="3"
+                                     Glyph="{x:Static controls:Icons.More}"
+                                     IconFilled="True"
+                                     Style="{StaticResource RoundIcon}"
+                                     Command="{Binding ShowActionsCommand}"
+                                     SemanticProperties.Description="{Binding Name, StringFormat='Edit or delete {0}'}">
+                    <controls:IconButton.Triggers>
+                        <DataTrigger TargetType="controls:IconButton" Binding="{Binding HasPhoto}" Value="True">
+                            <Setter Property="BackgroundColor" Value="#EBFFFFFF" />
+                            <Setter Property="TextColor" Value="{StaticResource Ink}" />
+                        </DataTrigger>
+                    </controls:IconButton.Triggers>
+                </controls:IconButton>
             </Grid>
         </Grid>
 
-        <VerticalStackLayout Spacing="4" Padding="8,0">
+        <VerticalStackLayout Spacing="4">
             <!-- The way here, each step a link: going up three levels is one tap, not
                  three presses of Back. -->
             <FlexLayout BindableLayout.ItemsSource="{Binding Crumbs}" Wrap="Wrap">
@@ -56,12 +84,12 @@
                         <HorizontalStackLayout>
                             <Label Text=" › "
                                    Style="{StaticResource Caption}"
+                                   FontFamily="JakartaSemiBold"
                                    IsVisible="{Binding IsFirst, Converter={StaticResource InvertedBoolConverter}}"
                                    VerticalOptions="Center" />
                             <Label Text="{Binding Name}"
                                    Style="{StaticResource Caption}"
                                    FontFamily="JakartaSemiBold"
-                                   TextColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}"
                                    Padding="0,6"
                                    VerticalOptions="Center"
                                    SemanticProperties.Description="{Binding Name, StringFormat='Go to {0}'}">
@@ -76,6 +104,8 @@
             </FlexLayout>
             <Label Text="{Binding Name}"
                    Style="{StaticResource Display}"
+                   FontSize="32"
+                   CharacterSpacing="-0.64"
                    SemanticProperties.HeadingLevel="Level1" />
             <Label Text="{Binding Summary}"
                    Style="{StaticResource Caption}"
@@ -88,7 +118,7 @@
              adds another. A row rather than a second list, so the items below stay the
              main content of the page. -->
         <ScrollView Orientation="Horizontal" HorizontalScrollBarVisibility="Never">
-            <HorizontalStackLayout Spacing="8" Padding="8,0">
+            <HorizontalStackLayout Spacing="8">
                 <HorizontalStackLayout BindableLayout.ItemsSource="{Binding SubPlaces}" Spacing="8">
                     <BindableLayout.ItemTemplate>
                         <DataTemplate x:DataType="models:LocationSummary">
@@ -100,11 +130,12 @@
                                 </Border.GestureRecognizers>
                                 <HorizontalStackLayout Spacing="6" VerticalOptions="Center">
                                     <Label Text="{Binding Location.Name}"
-                                           Style="{StaticResource StrongLabel}"
+                                           FontFamily="JakartaSemiBold"
                                            FontSize="14"
                                            VerticalOptions="Center" />
                                     <Label Text="{Binding ItemCount}"
-                                           Style="{StaticResource Caption}"
+                                           FontSize="14"
+                                           Opacity="0.75"
                                            VerticalOptions="Center" />
                                 </HorizontalStackLayout>
                             </Border>
@@ -121,7 +152,7 @@
                         <TapGestureRecognizer Command="{Binding AddSubPlaceCommand}" />
                     </Border.GestureRecognizers>
                     <Label Text="+ Location inside"
-                           Style="{StaticResource StrongLabel}"
+                           FontFamily="JakartaSemiBold"
                            FontSize="14"
                            VerticalOptions="Center" />
                 </Border>

@@ -38,6 +38,20 @@ public sealed record RecentSearch(string Text, int? PlaceId, string? PlaceName, 
             .OfType<string>());
 }
 
+/// <summary>A filter in a recent search's row: "in: Garage" in the soft accent, or a tag in its own colour.</summary>
+public sealed record RecentChip(string Label, string? TagColor)
+{
+    public bool IsPlace => TagColor is null;
+    public bool IsTag => TagColor is not null;
+}
+
+/// <summary>A recent search as a row: its filters as chips, then the text; divided from the row above but the first.</summary>
+public sealed record RecentRow(RecentSearch Search, IReadOnlyList<RecentChip> Chips, bool IsFirst)
+{
+    public bool HasDivider => !IsFirst;
+    public bool HasText => Search.Text.Length > 0;
+}
+
 /// <summary>
 /// The Find page: one search box with filter chips — "in:" a place, which reaches
 /// everything inside it, and "tag:" one or more tags, which all have to hold — and the
@@ -74,7 +88,11 @@ public partial class FindViewModel : ObservableObject, IQueryAttributable
     private RecentSearch? _shownSearch;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasText))]
     private string _text = string.Empty;
+
+    /// <summary>Shows the box's own clear button.</summary>
+    public bool HasText => Text.Length > 0;
 
     /// <summary>The "in:" filter, or null for everywhere.</summary>
     [ObservableProperty]
@@ -90,6 +108,7 @@ public partial class FindViewModel : ObservableObject, IQueryAttributable
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ShowingPlaces))]
+    [NotifyPropertyChangedFor(nameof(ShowSegment))]
     [NotifyPropertyChangedFor(nameof(ItemsTabDescription))]
     [NotifyPropertyChangedFor(nameof(PlacesTabDescription))]
     private bool _showingItems = true;
@@ -98,7 +117,22 @@ public partial class FindViewModel : ObservableObject, IQueryAttributable
 
     /// <summary>Nothing typed and no filter: recent searches and tags lead the whole inventory.</summary>
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowSegment))]
+    [NotifyPropertyChangedFor(nameof(IsSearching))]
     private bool _isIdle = true;
+
+    public bool IsSearching => !IsIdle;
+
+    /// <summary>
+    /// Items | Places. At rest on Items the page is recent searches, tags and then
+    /// everything, as in the mockup, with no switch; Places at rest (from the Locations
+    /// tab's search) keeps it, so there is a way back.
+    /// </summary>
+    public bool ShowSegment => !IsIdle || ShowingPlaces;
+
+    /// <summary>The "Add filter" row: an in: chip to add, or filters matching the text.</summary>
+    [ObservableProperty]
+    private bool _showAddFilter;
 
     [ObservableProperty]
     private bool _isRefreshing;
@@ -137,13 +171,14 @@ public partial class FindViewModel : ObservableObject, IQueryAttributable
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasRecent))]
-    private ObservableCollection<RecentSearch> _recent = [];
+    private ObservableCollection<RecentRow> _recent = [];
 
     public bool HasRecent => Recent.Count > 0;
 
+    /// <summary>Every tag with how many items carry it, as on the Tags tab.</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasBrowseTags))]
-    private ObservableCollection<Tag> _browseTags = [];
+    private ObservableCollection<TagRow> _browseTags = [];
 
     public bool HasBrowseTags => BrowseTags.Count > 0;
 
@@ -215,11 +250,11 @@ public partial class FindViewModel : ObservableObject, IQueryAttributable
         try
         {
             _locationsById = (await _locationRepository.GetAllAsync()).ToDictionary(l => l.Id);
-            _allTags = (await _tagRepository.GetAllAsync())
+            _allTags = (await _tagRepository.GetAllWithItemCountsAsync())
                 .OrderBy(t => t.Name, StringComparer.CurrentCultureIgnoreCase)
                 .ToList();
-            BrowseTags = new ObservableCollection<Tag>(_allTags);
-            Recent = new ObservableCollection<RecentSearch>(PrunedRecent());
+            BrowseTags = new ObservableCollection<TagRow>(_allTags.Select(t => new TagRow(t, IsFirst: false)));
+            Recent = RecentRows(PrunedRecent());
 
             if (_pendingPlaceId is int id)
             {
@@ -336,8 +371,9 @@ public partial class FindViewModel : ObservableObject, IQueryAttributable
                 ? $"{outside} more outside {place.Name} — search everywhere"
                 : string.Empty;
             Suggestions = new ObservableCollection<FindSuggestion>(SuggestionsFor(term));
+            ShowAddFilter = !IsIdle && (Suggestions.Count > 0 || place is null);
             EmptyText = IsIdle
-                ? "Nothing stored yet. Add something with New item."
+                ? "Nothing stored yet. Add something with the camera button below."
                 : term.Length > 0 ? $"Nothing matches “{term}”" : "Nothing matches these filters";
             PlacesEmptyText = tags.Count > 0
                 ? "Tags are on items, not locations"
@@ -457,6 +493,26 @@ public partial class FindViewModel : ObservableObject, IQueryAttributable
         await SearchAsync();
     }
 
+    // "tag: a tag": every tag not already a filter, to choose one.
+    [RelayCommand]
+    private async Task PickTagFilterAsync()
+    {
+        var choices = _allTags.Where(t => TagFilters.All(f => f.Id != t.Id)).ToList();
+        if (choices.Count == 0)
+        {
+            await Shell.Current.DisplayAlertAsync(null,
+                _allTags.Count == 0 ? "There are no tags yet. Add one on the Tags tab or on an item." : "Every tag is already a filter.", "OK");
+            return;
+        }
+
+        var name = await Shell.Current.DisplayActionSheetAsync("Search by tag", "Cancel", null, choices.Select(t => t.Name).ToArray());
+        if (choices.FirstOrDefault(t => t.Name == name) is { } tag)
+            await AddTagFilterAsync(tag);
+    }
+
+    [RelayCommand]
+    private void ClearText() => Text = string.Empty;
+
     [RelayCommand]
     private async Task RemovePlaceFilterAsync()
     {
@@ -552,7 +608,24 @@ public partial class FindViewModel : ObservableObject, IQueryAttributable
             .ToList();
 
         WriteRecent(list);
-        Recent = new ObservableCollection<RecentSearch>(list);
+        Recent = RecentRows(list);
+    }
+
+    private ObservableCollection<RecentRow> RecentRows(IEnumerable<RecentSearch> searches) =>
+        new(searches.Select((search, i) => new RecentRow(search, ChipsOf(search), IsFirst: i == 0)));
+
+    private IReadOnlyList<RecentChip> ChipsOf(RecentSearch search)
+    {
+        var chips = new List<RecentChip>();
+        if (search.PlaceName is not null)
+            chips.Add(new RecentChip($"in: {search.PlaceName}", null));
+        for (var i = 0; i < search.TagIds.Length && i < search.TagNames.Length; i++)
+        {
+            var color = _allTags.FirstOrDefault(t => t.Id == search.TagIds[i])?.Color ?? TagPalette.Colors[^1];
+            chips.Add(new RecentChip($"tag: {search.TagNames[i]}", color));
+        }
+
+        return chips;
     }
 
     // A recent search whose place or tag has been deleted would quietly run as a

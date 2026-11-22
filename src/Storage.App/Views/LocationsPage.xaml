@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:Storage.App.ViewModels"
              xmlns:views="clr-namespace:Storage.App.Views"
+             xmlns:controls="clr-namespace:Storage.App.Controls"
              x:Class="Storage.App.Views.LocationsPage"
              x:DataType="vm:LocationsViewModel"
              Title="Locations"
@@ -19,17 +20,21 @@
                                        CommandParameter="{Binding .}">
                             <Grid BackgroundColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}"
                                   WidthRequest="96">
-                                <Label Text="Delete"
-                                       FontFamily="JakartaBold"
-                                       TextColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource Ink}}"
-                                       HorizontalOptions="Center"
-                                       VerticalOptions="Center" />
+                                <VerticalStackLayout Spacing="4" HorizontalOptions="Center" VerticalOptions="Center">
+                                    <controls:Icon Glyph="{x:Static controls:Icons.Trash}"
+                                                   Color="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource Ink}}" />
+                                    <Label Text="Delete"
+                                           FontFamily="JakartaBold"
+                                           FontSize="14"
+                                           TextColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource Ink}}"
+                                           HorizontalOptions="Center" />
+                                </VerticalStackLayout>
                             </Grid>
                         </SwipeItemView>
                     </SwipeItems>
                 </SwipeView.RightItems>
 
-                <Border Style="{StaticResource Card}"
+                <Border Style="{StaticResource RaisedCard}"
                         StrokeShape="RoundRectangle 22"
                         Padding="10,10,14,10"
                         SemanticProperties.Description="{Binding Name, StringFormat='Open {0}'}">
@@ -42,7 +47,7 @@
                                 HeightRequest="64"
                                 StrokeThickness="0"
                                 StrokeShape="RoundRectangle 16">
-                            <views:PlaceCover />
+                            <views:PlaceCover Gap="3" />
                         </Border>
                         <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
                             <Label Text="{Binding Name}"
@@ -61,11 +66,10 @@
                                    FontSize="12"
                                    TextColor="{AppThemeBinding Light={StaticResource OnPrimarySoft}, Dark={StaticResource OnPrimarySoftDark}}" />
                         </VerticalStackLayout>
-                        <Label Grid.Column="2"
-                               Text="›"
-                               Style="{StaticResource Caption}"
-                               FontSize="22"
-                               VerticalOptions="Center" />
+                        <controls:Icon Grid.Column="2"
+                                       Glyph="{x:Static controls:Icons.ChevronRight}"
+                                       Size="18"
+                                       Color="{AppThemeBinding Light={StaticResource InkMuted}, Dark={StaticResource InkMutedDark}}" />
                     </Grid>
                 </Border>
             </SwipeView>
@@ -78,27 +82,24 @@
         <Grid Grid.Row="0"
               ColumnDefinitions="*,Auto,Auto"
               ColumnSpacing="8"
-              Padding="20,28,20,16">
+              Padding="20,28,20,18">
             <VerticalStackLayout Spacing="2" VerticalOptions="End">
                 <Label Text="{Binding Summary}" Style="{StaticResource Caption}" FontFamily="JakartaSemiBold" />
                 <Label Text="Locations"
                        Style="{StaticResource Display}"
                        SemanticProperties.HeadingLevel="Level1" />
             </VerticalStackLayout>
-            <Button Grid.Column="1"
-                    Text="🔍"
-                    Style="{StaticResource RoundIconButton}"
+            <controls:IconButton Grid.Column="1"
+                    Glyph="{x:Static controls:Icons.Search}"
+                    Style="{StaticResource RoundIcon}"
                     Command="{Binding SearchCommand}"
                     VerticalOptions="End"
                     SemanticProperties.Description="Search locations"
                     ToolTipProperties.Text="Search locations" />
-            <Button Grid.Column="2"
-                    Text="+ New"
-                    Style="{StaticResource StrongButton}"
-                    FontSize="14"
-                    Padding="16,0"
-                    MinimumHeightRequest="44"
-                    CornerRadius="22"
+            <controls:IconButton Grid.Column="2"
+                    Glyph="{x:Static controls:Icons.Plus}"
+                    Text="New"
+                    Style="{StaticResource StrongPill}"
                     VerticalOptions="End"
                     Command="{Binding NavigateToCreateCommand}"
                     SemanticProperties.Description="Add a location" />
@@ -116,7 +117,7 @@
                         <Label Text="No locations yet"
                                Style="{StaticResource Title}"
                                HorizontalTextAlignment="Center" />
-                        <Label Text="Tap + New to add the first place you keep things."
+                        <Label Text="Tap New to add the first place you keep things."
                                Style="{StaticResource Caption}"
                                HorizontalTextAlignment="Center" />
                     </VerticalStackLayout>
@@ -124,13 +125,7 @@
             </CollectionView>
         </RefreshView>
 
-        <!-- Its own row under the lists, not floating over them, so it never covers a
-             row's swipe action and the lists need no spacer at the end. -->
-        <Button Grid.Row="2"
-                Text="📷  New item"
-                Command="{Binding NewItemCommand}"
-                Margin="20,8,20,16"
-                SemanticProperties.Description="New item: opens the camera" />
+        <views:AppTabBar Grid.Row="2" Current="locations" SnapCommand="{Binding NewItemCommand}" />
     </Grid>
 
 </ContentPage>

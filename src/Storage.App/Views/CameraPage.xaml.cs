@@ -614,7 +614,7 @@ public partial class CameraPage : ContentPage, IQueryAttributable
     {
         _strip.Clear();
         for (var i = 0; i < _snapPhotos.Count; i++)
-            _strip.Add(new SnapThumb(_snapPhotos[i], $"Photo {i + 1} of {_snapPhotos.Count}. Double tap to remove it"));
+            _strip.Add(new SnapThumb(_snapPhotos[i], $"Photo {i + 1} of {_snapPhotos.Count}{(i == 0 ? ", the main photo" : "")}. Double tap to remove it", IsPrimary: i == 0));
 
         UpdateSnapCount();
     }
@@ -622,7 +622,7 @@ public partial class CameraPage : ContentPage, IQueryAttributable
     private void UpdateSnapCount()
     {
         var count = _snapPhotos.Count;
-        SnapCountLabel.Text = count == 0 ? string.Empty : $"{count} of {AddItemViewModel.MaxPhotosPerItem}";
+        SnapCountLabel.Text = count == 0 ? string.Empty : $"{count} of {AddItemViewModel.MaxPhotosPerItem} photos";
         SemanticProperties.SetDescription(NextButton, count == 0
             ? "Next: describe the item, without a photo"
             : $"Next: describe the item, with {count} photo{(count == 1 ? "" : "s")}");
@@ -661,13 +661,13 @@ public partial class CameraPage : ContentPage, IQueryAttributable
                 _snapLocationId = null;
 
             var path = LocationPath.Of(_snapLocationId, byId);
-            PlaceLabel.Text = path.Length == 0 ? "📍  No location  ▾" : $"📍  {path}  ▾";
+            PlaceLabel.Text = path.Length == 0 ? "No location" : $"Into {path}";
             SemanticProperties.SetDescription(PlacePill, path.Length == 0 ? "Where it goes: no location. Change" : $"Where it goes: {path}. Change");
         }
         catch (Exception)
         {
             // Only the label; the item can still be made, and the form shows the place too.
-            PlaceLabel.Text = "📍  Choose where it goes  ▾";
+            PlaceLabel.Text = "Choose where it goes";
         }
     }
 
@@ -743,4 +743,4 @@ public partial class CameraPage : ContentPage, IQueryAttributable
 }
 
 /// <summary>One thumbnail in the Snap strip, with what a screen reader says for it.</summary>
-public sealed record SnapThumb(string FileName, string Description);
+public sealed record SnapThumb(string FileName, string Description, bool IsPrimary);
