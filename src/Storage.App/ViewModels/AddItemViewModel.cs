@@ -53,11 +53,11 @@ public partial class AddItemViewModel : ObservableObject, IQueryAttributable
     // every route out is covered by construction. These two say when "left" is real:
     // the page also disappears when a photo source or the place picker is put on top of
     // it, and there is nothing to discard once a save has committed.
-    private bool _isAwaitingPhotoSource;
+    private bool _isCovered;
     private bool _isCommitted;
 
     /// <summary>True while the camera page, the gallery picker or the place picker covers the form.</summary>
-    public bool IsAwaitingPhotoSource => _isAwaitingPhotoSource;
+    public bool IsCovered => _isCovered;
 
     [ObservableProperty]
     private string _name = string.Empty;
@@ -82,14 +82,7 @@ public partial class AddItemViewModel : ObservableObject, IQueryAttributable
             if (SelectedLocation is null)
                 return "No location";
 
-            var byId = _locations.ToDictionary(l => l.Id);
-            var names = new List<string>();
-            var seen = new HashSet<int>();
-            for (int? id = SelectedLocation.Id; id is int current && seen.Add(current) && byId.TryGetValue(current, out var l); id = l.ParentId)
-                names.Add(l.Name);
-
-            names.Reverse();
-            return string.Join(" › ", names);
+            return LocationPath.Of(SelectedLocation.Id, _locations.ToDictionary(l => l.Id));
         }
     }
 
@@ -191,7 +184,7 @@ public partial class AddItemViewModel : ObservableObject, IQueryAttributable
     private async Task LoadAsync()
     {
         // We are back on this page, so the camera round-trip is over either way.
-        _isAwaitingPhotoSource = false;
+        _isCovered = false;
 
         if (_capturedPhotoFileName is string captured)
         {
@@ -243,7 +236,7 @@ public partial class AddItemViewModel : ObservableObject, IQueryAttributable
     {
         // The picker covers the page, which then disappears; without this the form would
         // take that as being left and throw away the photos taken on it.
-        _isAwaitingPhotoSource = true;
+        _isCovered = true;
         try
         {
             var pick = await _placePicker.PickAsync(new PlacePickRequest(
@@ -270,7 +263,7 @@ public partial class AddItemViewModel : ObservableObject, IQueryAttributable
         }
         finally
         {
-            _isAwaitingPhotoSource = false;
+            _isCovered = false;
         }
     }
 
@@ -398,7 +391,7 @@ public partial class AddItemViewModel : ObservableObject, IQueryAttributable
             return;
 
         // The page is about to disappear because it is being covered, not left.
-        _isAwaitingPhotoSource = true;
+        _isCovered = true;
         await Shell.Current.GoToAsync("camera");
     }
 
@@ -411,7 +404,7 @@ public partial class AddItemViewModel : ObservableObject, IQueryAttributable
         // The system picker covers the page too, and a covered page is not always
         // distinguishable from a left one. Cleared here rather than in LoadAsync,
         // because a page that was only covered may never come back through it.
-        _isAwaitingPhotoSource = true;
+        _isCovered = true;
         try
         {
             var fileName = await _photoService.PickFromGalleryAsync();
@@ -425,7 +418,7 @@ public partial class AddItemViewModel : ObservableObject, IQueryAttributable
         }
         finally
         {
-            _isAwaitingPhotoSource = false;
+            _isCovered = false;
         }
     }
 
@@ -538,7 +531,7 @@ public partial class AddItemViewModel : ObservableObject, IQueryAttributable
     /// </summary>
     public async Task ReconcilePhotosOnLeaveAsync()
     {
-        if (_isAwaitingPhotoSource || _isCommitted)
+        if (_isCovered || _isCommitted)
             return;
 
         // Nothing was committed, so every file this edit wrote goes — including the

@@ -101,10 +101,27 @@
                FontSize="12"
                TextColor="{AppThemeBinding Light={StaticResource Gray500}, Dark={StaticResource Gray300}}"
                Margin="0,0,0,5" />
-        <Picker ItemsSource="{Binding AvailableParents}"
-                SelectedItem="{Binding ParentLocation}"
-                ItemDisplayBinding="{Binding Name}"
-                Title="Select parent location" />
+        <!-- Opens the place picker, which leaves out this location and everything inside
+             it; shows the whole path of what was chosen. -->
+        <Border Style="{StaticResource FieldSurface}"
+                SemanticProperties.Description="{Binding ParentPath, StringFormat='Inside: {0}. Change'}"
+                SemanticProperties.Hint="Opens the list of locations">
+            <Border.GestureRecognizers>
+                <TapGestureRecognizer Command="{Binding PickParentCommand}" />
+            </Border.GestureRecognizers>
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                <Label Text="{Binding ParentPath}"
+                       Style="{StaticResource StrongLabel}"
+                       VerticalOptions="Center"
+                       LineBreakMode="TailTruncation" />
+                <Label Grid.Column="1"
+                       Text="Change"
+                       Style="{StaticResource StrongLabel}"
+                       FontSize="14"
+                       VerticalOptions="Center"
+                       TextColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
+            </Grid>
+        </Border>
 
     </VerticalStackLayout>
 
