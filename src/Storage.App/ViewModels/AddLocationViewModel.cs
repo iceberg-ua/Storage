@@ -212,6 +212,19 @@ public partial class AddLocationViewModel : ObservableObject, IQueryAttributable
 
         var description = string.IsNullOrWhiteSpace(Description) ? null : Description.Trim();
 
+        // The parent was chosen when the form opened or when the picker closed; it may
+        // have been deleted since, from another tab. Saving would then fail the foreign
+        // key, so say so and let the user choose again rather than lose the form.
+        if (ParentLocation is { } chosenParent && await _locationRepository.GetByIdAsync(chosenParent.Id) is null)
+        {
+            ParentLocation = null;
+            await Shell.Current.DisplayAlertAsync(
+                "Choose where it goes again",
+                $"{chosenParent.Name} no longer exists, so it can't hold this location. It is set to Top level for now; change it or save as it is.",
+                "OK");
+            return;
+        }
+
         if (IsEditMode)
         {
             var location = await _locationRepository.GetByIdAsync(_locationId);
@@ -238,16 +251,29 @@ public partial class AddLocationViewModel : ObservableObject, IQueryAttributable
                     "Can't use that parent", $"{parent.Name} is inside {Name.Trim()}, so it can't be its parent", "OK");
                 return;
             }
+            catch (Exception ex)
+            {
+                await ShowSaveFailedAsync(ex);
+                return;
+            }
         }
         else
         {
-            await _locationRepository.AddAsync(new StorageLocation
+            try
             {
-                Name = Name.Trim(),
-                Description = description,
-                PhotoFileName = PhotoFileName,
-                ParentId = ParentLocation?.Id
-            });
+                await _locationRepository.AddAsync(new StorageLocation
+                {
+                    Name = Name.Trim(),
+                    Description = description,
+                    PhotoFileName = PhotoFileName,
+                    ParentId = ParentLocation?.Id
+                });
+            }
+            catch (Exception ex)
+            {
+                await ShowSaveFailedAsync(ex);
+                return;
+            }
         }
 
         // Only now are the dropped files safe to remove: everything this edit started
@@ -265,6 +291,16 @@ public partial class AddLocationViewModel : ObservableObject, IQueryAttributable
 
         await Shell.Current.GoToAsync("..");
     }
+
+    // Still possible after the check above: the parent can go in the moment between the
+    // check and the write. Nothing was saved, and the form stays as it is, photo
+    // included, so the user can try again. Saves run from a command, where an escaping
+    // exception would end the app.
+    private static Task ShowSaveFailedAsync(Exception ex) =>
+        Shell.Current.DisplayAlertAsync(
+            "Couldn't save the location",
+            $"Nothing was saved. Check where it goes and try again.\n\n{ex.Message}".TrimEnd(),
+            "OK");
 
     // Shortcut: open the create screen on an item, with this location already selected.
     [RelayCommand]
