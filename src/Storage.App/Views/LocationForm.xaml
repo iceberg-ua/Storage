@@ -104,7 +104,8 @@
         <!-- Opens the place picker, which leaves out this location and everything inside
              it; shows the whole path of what was chosen. -->
         <Border Style="{StaticResource FieldSurface}"
-                SemanticProperties.Description="{Binding ParentPath, StringFormat='Inside: {0}. Change'}">
+                SemanticProperties.Description="{Binding ParentPath, StringFormat='Inside: {0}. Change'}"
+                SemanticProperties.Hint="Opens the list of locations">
             <Border.GestureRecognizers>
                 <TapGestureRecognizer Command="{Binding PickParentCommand}" />
             </Border.GestureRecognizers>

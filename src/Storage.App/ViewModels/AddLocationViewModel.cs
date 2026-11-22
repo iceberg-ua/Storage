@@ -1,4 +1,3 @@
-using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Storage.App.Services;
@@ -42,7 +41,7 @@ public partial class AddLocationViewModel : ObservableObject, IQueryAttributable
     private bool _isCoveredByCreate;
 
     /// <summary>True while the camera page, the gallery picker or the place picker covers the form.</summary>
-    public bool IsAwaitingPhotoSource { get; private set; }
+    public bool IsCovered { get; private set; }
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasPhoto))]
@@ -75,14 +74,7 @@ public partial class AddLocationViewModel : ObservableObject, IQueryAttributable
             if (ParentLocation is null)
                 return "Top level";
 
-            var byId = _availableParents.ToDictionary(l => l.Id);
-            var names = new List<string>();
-            var seen = new HashSet<int>();
-            for (int? id = ParentLocation.Id; id is int current && seen.Add(current) && byId.TryGetValue(current, out var l); id = l.ParentId)
-                names.Add(l.Name);
-
-            names.Reverse();
-            return string.Join(" › ", names);
+            return LocationPath.Of(ParentLocation.Id, _availableParents.ToDictionary(l => l.Id));
         }
     }
 
@@ -133,7 +125,7 @@ public partial class AddLocationViewModel : ObservableObject, IQueryAttributable
     private async Task LoadAsync()
     {
         // We are back on this page, so the camera round-trip is over either way.
-        IsAwaitingPhotoSource = false;
+        IsCovered = false;
         _isCoveredByCreate = false;
 
         if (_capturedPhotoFileName is string captured)
@@ -198,9 +190,14 @@ public partial class AddLocationViewModel : ObservableObject, IQueryAttributable
     {
         // The picker covers the page, which then disappears; without this the form would
         // take that as being left and throw away the photo taken on it.
-        IsAwaitingPhotoSource = true;
+        IsCovered = true;
         try
         {
+            // Read afresh each time, so the picker leaves out exactly what is inside this
+            // location now (a location created inside it since the form opened included),
+            // and a tap before the first load finished still has the right exclusions.
+            await LoadAvailableParentsAsync();
+
             var pick = await _placePicker.PickAsync(new PlacePickRequest(
                 "Put it inside…",
                 string.IsNullOrWhiteSpace(Name) ? null : Name.Trim(),
@@ -215,12 +212,29 @@ public partial class AddLocationViewModel : ObservableObject, IQueryAttributable
             if (pick is null)
                 return;
 
-            // The picker reads the locations afresh, so it can offer one added since this
-            // form loaded its list; reload once rather than call that "top level".
-            if (pick.LocationId is int id && _availableParents.All(l => l.Id != id))
+            if (pick.LocationId is not int id)
+            {
+                ParentLocation = null;
+                return;
+            }
+
+            // The picker reads the locations afresh, so it can offer one added since the
+            // list above was read; reload once for it.
+            if (_availableParents.All(l => l.Id != id))
                 await LoadAvailableParentsAsync();
 
-            ParentLocation = _availableParents.FirstOrDefault(l => l.Id == pick.LocationId);
+            // Still not a parent this location may have (it was moved inside this one
+            // meanwhile, or deleted): keep the old choice and say so, rather than quietly
+            // putting the location at the top level.
+            var picked = _availableParents.FirstOrDefault(l => l.Id == id);
+            if (picked is null)
+            {
+                await Shell.Current.DisplayAlertAsync(
+                    null, "That location can't hold this one any more. The place it was in is kept.", "OK");
+                return;
+            }
+
+            ParentLocation = picked;
         }
         catch (Exception ex)
         {
@@ -229,7 +243,7 @@ public partial class AddLocationViewModel : ObservableObject, IQueryAttributable
         }
         finally
         {
-            IsAwaitingPhotoSource = false;
+            IsCovered = false;
         }
     }
 
@@ -241,14 +255,14 @@ public partial class AddLocationViewModel : ObservableObject, IQueryAttributable
     private async Task TakePhotoAsync()
     {
         // The page is about to disappear because it is being covered, not left.
-        IsAwaitingPhotoSource = true;
+        IsCovered = true;
         await Shell.Current.GoToAsync("camera");
     }
 
     [RelayCommand]
     private async Task ChooseFromGalleryAsync()
     {
-        IsAwaitingPhotoSource = true;
+        IsCovered = true;
         try
         {
             var fileName = await _photoService.PickFromGalleryAsync();
@@ -262,7 +276,7 @@ public partial class AddLocationViewModel : ObservableObject, IQueryAttributable
         }
         finally
         {
-            IsAwaitingPhotoSource = false;
+            IsCovered = false;
         }
     }
 
@@ -366,7 +380,7 @@ public partial class AddLocationViewModel : ObservableObject, IQueryAttributable
     /// </summary>
     public async Task ReconcilePhotoOnLeaveAsync()
     {
-        if (IsAwaitingPhotoSource || _isCoveredByCreate || _isCommitted)
+        if (IsCovered || _isCoveredByCreate || _isCommitted)
             return;
 
         await _photoService.DeleteAllAsync(

@@ -135,10 +135,10 @@ public partial class CreateViewModel : ObservableObject, IQueryAttributable
     /// </summary>
     public async Task LeaveAsync()
     {
-        // Either form's photo source covers the whole page. Each form only knows about
-        // its own, so without this the other form would take the page as left and throw
-        // away what it had staged.
-        if (Item.IsAwaitingPhotoSource || Location.IsAwaitingPhotoSource)
+        // Either form's camera, gallery or place picker covers the whole page. Each form
+        // only knows about its own, so without this the other form would take the page
+        // as left and throw away what it had staged.
+        if (Item.IsCovered || Location.IsCovered)
             return;
 
         await Item.ReconcilePhotosOnLeaveAsync();

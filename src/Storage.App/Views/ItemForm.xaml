@@ -147,7 +147,8 @@
         <Label Text="Location (Optional)" FontSize="16" Margin="0,10,0,0" />
         <!-- Opens the place picker; shows the whole path of what was chosen. -->
         <Border Style="{StaticResource FieldSurface}"
-                SemanticProperties.Description="{Binding SelectedLocationPath, StringFormat='Location: {0}. Change'}">
+                SemanticProperties.Description="{Binding SelectedLocationPath, StringFormat='Location: {0}. Change'}"
+                SemanticProperties.Hint="Opens the list of locations">
             <Border.GestureRecognizers>
                 <TapGestureRecognizer Command="{Binding PickLocationCommand}" />
             </Border.GestureRecognizers>

@@ -20,7 +20,8 @@ public partial class AddLocationPage : ContentPage
     }
 
     // Every way out of the page ends here, so this is where an unsaved photo is
-    // reconciled. Ignored while the camera or the gallery picker only covers the page.
+    // reconciled. Ignored while the camera, the gallery picker or the place picker only
+    // covers the page.
     protected override async void OnDisappearing()
     {
         base.OnDisappearing();

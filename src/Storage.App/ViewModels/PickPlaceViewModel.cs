@@ -227,7 +227,7 @@ public partial class PickPlaceViewModel : ObservableObject
         if (!_hasSelection)
             ConfirmText = "Choose a location";
         else if (_selectedId == _request.CurrentId)
-            ConfirmText = "Already here";
+            ConfirmText = _selectedId is null ? $"Already in {_request.NoneInSentence}" : "Already here";
         else
             ConfirmText = string.Format(_request.ConfirmFormat, _selectedId is int id ? _byId[id].Name : _request.NoneInSentence);
 
@@ -287,22 +287,9 @@ public partial class PickPlaceViewModel : ObservableObject
 
     private string? PathOf(int? id)
     {
-        var path = PathTo(id).Select(l => l.Name).ToList();
-        return path.Count == 0 ? null : string.Join(" › ", path);
+        var path = LocationPath.Of(id, _byId);
+        return path.Length == 0 ? null : path;
     }
 
-    // Top first. Stops at a repeat, as the repository does, in case an old cycle remains.
-    private List<StorageLocation> PathTo(int? id)
-    {
-        var path = new List<StorageLocation>();
-        var seen = new HashSet<int>();
-        while (id is int current && seen.Add(current) && _byId.TryGetValue(current, out var location))
-        {
-            path.Add(location);
-            id = location.ParentId;
-        }
-
-        path.Reverse();
-        return path;
-    }
+    private List<StorageLocation> PathTo(int? id) => LocationPath.Chain(id, _byId);
 }
