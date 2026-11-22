@@ -95,5 +95,5 @@ public partial class HomeViewModel : ObservableObject
     private Task NewLocationAsync() => Shell.Current.GoToAsync(Routes.Create(CreateKind.Location));
 
     [RelayCommand]
-    private Task NewItemAsync() => Shell.Current.GoToAsync(Routes.Create(CreateKind.Item));
+    private Task NewItemAsync() => Shell.Current.GoToAsync(Routes.Snap());
 }

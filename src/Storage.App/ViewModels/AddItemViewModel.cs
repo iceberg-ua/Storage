@@ -47,7 +47,9 @@ public partial class AddItemViewModel : ObservableObject, IQueryAttributable
     // that was taken and then removed has already cost a file on disk.
     private readonly HashSet<string> _stagedPhotoFileNames = new(StringComparer.OrdinalIgnoreCase);
 
-    private string? _capturedPhotoFileName;
+    // Photos handed to the form that it adds on its next load: the one the camera page
+    // just took, or the set the Snap flow took before the form opened.
+    private readonly List<string> _capturedPhotoFileNames = [];
 
     // Reconciliation runs when the page is left, not from any one exit handler, so
     // every route out is covered by construction. These two say when "left" is real:
@@ -178,7 +180,10 @@ public partial class AddItemViewModel : ObservableObject, IQueryAttributable
     /// A photo the camera page handed back. Added on the next load rather than here, so
     /// the add can be awaited.
     /// </summary>
-    public void AcceptCapturedPhoto(string fileName) => _capturedPhotoFileName = fileName;
+    public void AcceptCapturedPhoto(string fileName) => _capturedPhotoFileNames.Add(fileName);
+
+    /// <summary>The photos the Snap flow took, in order; the first becomes the primary.</summary>
+    public void AcceptCapturedPhotos(IEnumerable<string> fileNames) => _capturedPhotoFileNames.AddRange(fileNames);
 
     [RelayCommand]
     private async Task LoadAsync()
@@ -186,11 +191,12 @@ public partial class AddItemViewModel : ObservableObject, IQueryAttributable
         // We are back on this page, so the camera round-trip is over either way.
         _isCovered = false;
 
-        if (_capturedPhotoFileName is string captured)
-        {
-            _capturedPhotoFileName = null;
-            await AddPhotoAsync(captured);
-        }
+        // Taken off the list before they are added, so a load running again meanwhile
+        // cannot add the same photo twice.
+        var captured = _capturedPhotoFileNames.ToList();
+        _capturedPhotoFileNames.Clear();
+        foreach (var fileName in captured)
+            await AddPhotoAsync(fileName);
 
         // OnAppearing fires again when a pushed page is popped — don't discard edits in progress.
         if (_isLoaded)

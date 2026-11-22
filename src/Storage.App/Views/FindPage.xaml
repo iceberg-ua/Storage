@@ -362,10 +362,10 @@
 
         <!-- As on the other tabs. With a place filter, the new item starts in that place. -->
         <Button Grid.Row="6"
-                Text="New item"
+                Text="📷  New item"
                 Command="{Binding NewItemCommand}"
                 Margin="0,8,0,16"
-                SemanticProperties.Description="Add a new item" />
+                SemanticProperties.Description="New item: opens the camera" />
     </Grid>
 
 </ContentPage>

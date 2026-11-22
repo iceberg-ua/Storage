@@ -58,6 +58,15 @@ public partial class CreateViewModel : ObservableObject, IQueryAttributable
             Kind = parsedKind;
         }
 
+        // The Snap flow's photos, also only on the way in: a later pop back from the
+        // camera sends this query again, and would add them a second time.
+        if (!_isOpened &&
+            query.TryGetValue("photos", out var photos) &&
+            Convert.ToString(photos) is { Length: > 0 } joined)
+        {
+            Item.AcceptCapturedPhotos(Uri.UnescapeDataString(joined).Split('|', StringSplitOptions.RemoveEmptyEntries));
+        }
+
         _isOpened = true;
 
         if (query.TryGetValue("locationId", out var locationId) &&

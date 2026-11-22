@@ -88,6 +88,6 @@ public partial class LocationsViewModel : ObservableObject
 
     // A new item at the top level; inside a location, its own page adds one there.
     [RelayCommand]
-    private Task NewItemAsync() => Shell.Current.GoToAsync(Routes.Create(CreateKind.Item));
+    private Task NewItemAsync() => Shell.Current.GoToAsync(Routes.Snap());
 
 }

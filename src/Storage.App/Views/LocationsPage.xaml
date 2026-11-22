@@ -127,10 +127,10 @@
         <!-- Its own row under the lists, not floating over them, so it never covers a
              row's swipe action and the lists need no spacer at the end. -->
         <Button Grid.Row="2"
-                Text="New item"
+                Text="📷  New item"
                 Command="{Binding NewItemCommand}"
                 Margin="20,8,20,16"
-                SemanticProperties.Description="Add a new item" />
+                SemanticProperties.Description="New item: opens the camera" />
     </Grid>
 
 </ContentPage>

@@ -2,6 +2,7 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:camera="clr-namespace:CommunityToolkit.Maui.Views;assembly=CommunityToolkit.Maui.Camera"
+             xmlns:views="clr-namespace:Storage.App.Views"
              x:Class="Storage.App.Views.CameraPage"
              Shell.NavBarIsVisible="False"
              Shell.TabBarIsVisible="False"
@@ -26,7 +27,10 @@
         <Grid x:Name="LiveLayer" IsVisible="False">
             <camera:CameraView x:Name="Camera" />
 
-            <Grid ColumnDefinitions="Auto,*,Auto"
+            <!-- Taking one photo for a form: Cancel, the shutter, Gallery; each photo is
+                 reviewed before it goes back. -->
+            <Grid x:Name="SingleBar"
+                  ColumnDefinitions="Auto,*,Auto"
                   VerticalOptions="End"
                   Padding="20,20,20,40"
                   ColumnSpacing="10">
@@ -62,6 +66,108 @@
                         Style="{StaticResource OverlayButton}"
                         Clicked="OnGalleryClicked" />
             </Grid>
+
+            <!-- Snap: photos one after another for a new item, kept as they are taken,
+                 then Next to the form. Where it will go is set here, before the form. -->
+            <Grid x:Name="SnapTopBar"
+                  IsVisible="False"
+                  ColumnDefinitions="Auto,*"
+                  ColumnSpacing="10"
+                  Padding="20,20,20,0"
+                  VerticalOptions="Start">
+                <Button Text="✕"
+                        Style="{StaticResource OverlayButton}"
+                        CornerRadius="22"
+                        WidthRequest="44"
+                        Padding="0"
+                        Clicked="OnCancelClicked"
+                        SemanticProperties.Description="Close the camera" />
+                <Border Grid.Column="1"
+                        HorizontalOptions="Center"
+                        HeightRequest="40"
+                        Padding="14,0"
+                        StrokeThickness="0"
+                        StrokeShape="RoundRectangle 20"
+                        BackgroundColor="#B3000000"
+                        SemanticProperties.Hint="Opens the list of locations">
+                    <Border.GestureRecognizers>
+                        <TapGestureRecognizer Tapped="OnPlaceTapped" />
+                    </Border.GestureRecognizers>
+                    <Label x:Name="PlaceLabel"
+                           Text="📍  No location  ▾"
+                           TextColor="White"
+                           FontFamily="JakartaBold"
+                           FontSize="14"
+                           VerticalOptions="Center"
+                           LineBreakMode="TailTruncation" />
+                </Border>
+            </Grid>
+
+            <VerticalStackLayout x:Name="SnapBottomBar"
+                                 IsVisible="False"
+                                 VerticalOptions="End"
+                                 Padding="20,0,20,32"
+                                 Spacing="16">
+                <!-- What has been taken so far: tap one to drop it. -->
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                    <ScrollView Orientation="Horizontal" HorizontalScrollBarVisibility="Never">
+                        <HorizontalStackLayout x:Name="SnapStrip" Spacing="8">
+                            <BindableLayout.ItemTemplate>
+                                <DataTemplate x:DataType="x:String">
+                                    <Border WidthRequest="52"
+                                            HeightRequest="52"
+                                            StrokeThickness="2"
+                                            Stroke="White"
+                                            StrokeShape="RoundRectangle 12"
+                                            SemanticProperties.Description="Photo taken. Double tap to remove it">
+                                        <Border.GestureRecognizers>
+                                            <TapGestureRecognizer Tapped="OnSnapPhotoTapped" CommandParameter="{Binding .}" />
+                                        </Border.GestureRecognizers>
+                                        <Image Source="{Binding ., Converter={StaticResource PhotoSourceConverter}}" Aspect="AspectFill" />
+                                    </Border>
+                                </DataTemplate>
+                            </BindableLayout.ItemTemplate>
+                        </HorizontalStackLayout>
+                    </ScrollView>
+                    <Label x:Name="SnapCountLabel"
+                           Grid.Column="1"
+                           TextColor="White"
+                           FontFamily="JakartaSemiBold"
+                           FontSize="13"
+                           VerticalOptions="Center" />
+                </Grid>
+
+                <Grid ColumnDefinitions="*,Auto,*">
+                    <Button Text="🖼️"
+                            Style="{StaticResource OverlayButton}"
+                            CornerRadius="16"
+                            WidthRequest="56"
+                            HeightRequest="56"
+                            Padding="0"
+                            FontSize="22"
+                            HorizontalOptions="Start"
+                            Clicked="OnGalleryClicked"
+                            SemanticProperties.Description="Add photos from the gallery" />
+                    <Border Grid.Column="1"
+                            WidthRequest="80"
+                            HeightRequest="80"
+                            StrokeThickness="5"
+                            Stroke="White"
+                            StrokeShape="RoundRectangle 40"
+                            BackgroundColor="#66FFFFFF"
+                            SemanticProperties.Description="Take photo">
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnShutterTapped" />
+                        </Border.GestureRecognizers>
+                    </Border>
+                    <Button x:Name="NextButton"
+                            Grid.Column="2"
+                            Text="Next ›"
+                            HorizontalOptions="End"
+                            Clicked="OnNextClicked"
+                            SemanticProperties.Description="Next: describe the item" />
+                </Grid>
+            </VerticalStackLayout>
         </Grid>
 
         <!-- Review state: the capture, before it is committed to the item -->
@@ -100,6 +206,11 @@
                     Text="Open app settings"
                     IsVisible="False"
                     Clicked="OnSettingsClicked" />
+            <!-- Snap only: a camera that cannot open must not stop a new item. -->
+            <Button x:Name="ContinueButton"
+                    Text="Continue without the camera"
+                    IsVisible="False"
+                    Clicked="OnNextClicked" />
             <Button Text="Back"
                     Style="{StaticResource OverlayButton}"
                     Clicked="OnCancelClicked" />

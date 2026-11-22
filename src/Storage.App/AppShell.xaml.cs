@@ -33,6 +33,10 @@ public partial class AppShell : Shell
 		// Modal. Opened through PlacePicker, which hands the choice back to its caller.
 		Routing.RegisterRoute("pickplace", typeof(PickPlacePage));
 
+		// The same camera page, opened first for a new item: "snap", with an optional
+		// "locationId". It replaces itself with the create page once the photos are taken.
+		Routing.RegisterRoute("snap", typeof(CameraPage));
+
 		// Pops back with a "photoFileName" for the item form to pick up, on the item
 		// edit page or the create page.
 		Routing.RegisterRoute("camera", typeof(CameraPage));
