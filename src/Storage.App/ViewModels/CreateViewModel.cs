@@ -28,13 +28,16 @@ public partial class CreateViewModel : ObservableObject, IQueryAttributable
     [NotifyPropertyChangedFor(nameof(IsItem))]
     [NotifyPropertyChangedFor(nameof(IsLocation))]
     [NotifyPropertyChangedFor(nameof(PageTitle))]
+    [NotifyPropertyChangedFor(nameof(SaveText))]
     private CreateKind _kind = CreateKind.Item;
 
     public bool IsItem => Kind == CreateKind.Item;
 
     public bool IsLocation => Kind == CreateKind.Location;
 
-    public string PageTitle => IsItem ? "Add Item" : "Add Location";
+    public string PageTitle => IsItem ? "New item" : "New location";
+
+    public string SaveText => IsItem ? "Save item" : "Save location";
 
     public CreateViewModel(AddItemViewModel item, AddLocationViewModel location)
     {

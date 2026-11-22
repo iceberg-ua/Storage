@@ -15,10 +15,16 @@
 
                 <Label Text="Tag Name" FontSize="16" />
                 <VerticalStackLayout Spacing="4">
-                    <Entry Text="{Binding Name}"
-                           Placeholder="Enter tag name"
-                           MaxLength="50"
-                           controls:FocusOnError.Message="{Binding NameError.Text}" />
+                    <!-- In a box now that Android's underline is gone; the page itself is
+                         restyled with the Tags tab. -->
+                    <Border Style="{StaticResource FieldSurface}">
+                        <Entry Text="{Binding Name}"
+                               Placeholder="Enter tag name"
+                               MaxLength="50"
+                               VerticalOptions="Center"
+                               controls:FocusRing.IsEnabled="True"
+                               controls:FocusOnError.Message="{Binding NameError.Text}" />
+                    </Border>
                     <Label Text="{Binding NameError.Text}" Style="{StaticResource FieldError}" />
                 </VerticalStackLayout>
 

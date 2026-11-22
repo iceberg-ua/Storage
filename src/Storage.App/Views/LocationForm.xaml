@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8" ?>
-<!-- The location's fields, without Save or Cancel: shared by the edit page and the
-     create page, which each put their own buttons under it. Bound to an
-     AddLocationViewModel. -->
+<!-- The location's fields, without the header or Save: shared by the edit page and the
+     create page, which each put their own around it. Bound to an AddLocationViewModel. -->
 <ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:Storage.App.ViewModels"
@@ -9,119 +8,138 @@
              x:Class="Storage.App.Views.LocationForm"
              x:DataType="vm:AddLocationViewModel">
 
-    <VerticalStackLayout Spacing="15">
+    <VerticalStackLayout Spacing="20">
 
-        <!-- One photo at most: the picture you recognise the place by. With none, the
-             tile is a shutter; with one, it shows the photo and a remove button, and
-             taking or picking another replaces it. -->
-        <Label Text="Photo (Optional)" FontSize="16" />
+        <!-- One photo at most: the picture you recognise the place by. Taking or picking
+             another replaces it. -->
+        <VerticalStackLayout Spacing="6">
+            <Label Style="{StaticResource FieldLabel}">
+                <Label.FormattedText>
+                    <FormattedString>
+                        <Span Text="Photo " />
+                        <Span Text="· optional"
+                              FontFamily="JakartaRegular"
+                              TextColor="{AppThemeBinding Light={StaticResource InkMuted}, Dark={StaticResource InkMutedDark}}" />
+                    </FormattedString>
+                </Label.FormattedText>
+            </Label>
 
-        <Grid WidthRequest="160"
-              HeightRequest="160"
-              HorizontalOptions="Start">
-            <Border Padding="0"
-                    BackgroundColor="{AppThemeBinding Light={StaticResource Gray100}, Dark={StaticResource Gray600}}"
-                    Stroke="{AppThemeBinding Light={StaticResource Gray300}, Dark={StaticResource Gray500}}">
-                <Border.StrokeShape>
-                    <RoundRectangle CornerRadius="10" />
-                </Border.StrokeShape>
-                <Border.GestureRecognizers>
-                    <TapGestureRecognizer Command="{Binding TakePhotoCommand}" />
-                </Border.GestureRecognizers>
-                <Grid>
-                    <Label Text="📷"
-                           FontSize="40"
-                           HorizontalOptions="Center"
-                           VerticalOptions="Center"
-                           IsVisible="{Binding HasPhoto, Converter={StaticResource InvertedBoolConverter}}"
-                           SemanticProperties.Description="Take a photo" />
-                    <Image Source="{Binding PhotoFileName, Converter={StaticResource PhotoSourceConverter}}"
-                           Aspect="AspectFill"
-                           IsVisible="{Binding HasPhoto}"
-                           SemanticProperties.Description="Location photo. Tap to retake" />
+            <Border Style="{StaticResource Card}" Padding="8,8,14,8">
+                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="14">
+                    <!-- Tapping the frame takes a photo, with or without one there. -->
+                    <Border WidthRequest="112"
+                            HeightRequest="84"
+                            StrokeThickness="0"
+                            StrokeShape="RoundRectangle 14"
+                            BackgroundColor="{AppThemeBinding Light={StaticResource PrimarySoft}, Dark={StaticResource PrimarySoftDark}}"
+                            SemanticProperties.Description="{Binding PhotoFrameDescription}">
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding TakePhotoCommand}" />
+                        </Border.GestureRecognizers>
+                        <Grid AutomationProperties.IsInAccessibleTree="False">
+                            <Label Text="📷"
+                                   FontSize="26"
+                                   Opacity="0.6"
+                                   HorizontalOptions="Center"
+                                   VerticalOptions="Center"
+                                   IsVisible="{Binding HasPhoto, Converter={StaticResource InvertedBoolConverter}}" />
+                            <Image Source="{Binding PhotoFileName, Converter={StaticResource PhotoSourceConverter}}"
+                                   Aspect="AspectFill"
+                                   IsVisible="{Binding HasPhoto}" />
+                        </Grid>
+                    </Border>
+
+                    <VerticalStackLayout Grid.Column="1" Spacing="8" VerticalOptions="Center">
+                        <Label Text="Shown at the top of the location and on its card"
+                               Style="{StaticResource Caption}"
+                               FontSize="12" />
+                        <HorizontalStackLayout Spacing="6">
+                            <Button Text="📷"
+                                    Style="{StaticResource SoftPrimaryButton}"
+                                    Command="{Binding TakePhotoCommand}"
+                                    Padding="12,0"
+                                    SemanticProperties.Description="Take a photo" />
+                            <Button Text="🖼️"
+                                    Style="{StaticResource SoftPrimaryButton}"
+                                    Command="{Binding ChooseFromGalleryCommand}"
+                                    Padding="12,0"
+                                    SemanticProperties.Description="Choose a photo from the gallery" />
+                            <Button Text="Remove"
+                                    Style="{StaticResource DangerTextButton}"
+                                    Command="{Binding RemovePhotoCommand}"
+                                    IsVisible="{Binding HasPhoto}"
+                                    SemanticProperties.Description="Remove the photo" />
+                        </HorizontalStackLayout>
+                    </VerticalStackLayout>
                 </Grid>
             </Border>
+        </VerticalStackLayout>
 
-            <!-- Its own scrim, since a photo can be any colour. -->
-            <Border WidthRequest="30"
-                    HeightRequest="30"
-                    Margin="4"
-                    Padding="0"
-                    VerticalOptions="Start"
-                    HorizontalOptions="End"
-                    StrokeThickness="0"
-                    BackgroundColor="#66000000"
-                    IsVisible="{Binding HasPhoto}">
-                <Border.StrokeShape>
-                    <RoundRectangle CornerRadius="15" />
-                </Border.StrokeShape>
-                <Border.GestureRecognizers>
-                    <TapGestureRecognizer Command="{Binding RemovePhotoCommand}" />
-                </Border.GestureRecognizers>
-                <Label Text="✕"
-                       FontSize="14"
-                       TextColor="White"
-                       HorizontalOptions="Center"
+        <VerticalStackLayout Spacing="6">
+            <Label Text="Name" Style="{StaticResource FieldLabel}" />
+            <Border Style="{StaticResource FieldSurface}">
+                <Entry Text="{Binding Name}"
+                       Placeholder="Garage, kitchen, a box…"
+                       MaxLength="100"
                        VerticalOptions="Center"
-                       SemanticProperties.Description="Remove the photo" />
+                       SemanticProperties.Description="Name"
+                       controls:FocusRing.IsEnabled="True"
+                       controls:FocusOnError.Message="{Binding NameError.Text}" />
             </Border>
-        </Grid>
-
-        <HorizontalStackLayout Spacing="10">
-            <Button Text="Take photo"
-                    Command="{Binding TakePhotoCommand}" />
-            <Button Text="Choose from gallery"
-                    Command="{Binding ChooseFromGalleryCommand}"
-                    BackgroundColor="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource Gray600}}"
-                    TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}" />
-        </HorizontalStackLayout>
-
-        <Label Text="One photo per location. A new one replaces it."
-               FontSize="12"
-               IsVisible="{Binding HasPhoto}"
-               TextColor="{AppThemeBinding Light={StaticResource Gray500}, Dark={StaticResource Gray400}}" />
-
-        <Label Text="Location Name" FontSize="16" Margin="0,10,0,0" />
-        <VerticalStackLayout Spacing="4">
-            <Entry Text="{Binding Name}"
-                   Placeholder="Enter location name (e.g., 'Garage', 'Kitchen')"
-                   MaxLength="100"
-                   controls:FocusOnError.Message="{Binding NameError.Text}" />
             <Label Text="{Binding NameError.Text}" Style="{StaticResource FieldError}" />
         </VerticalStackLayout>
 
-        <Label Text="Description (Optional)" FontSize="16" Margin="0,10,0,0" />
-        <Editor Text="{Binding Description}"
-                Placeholder="What's here, or how to find it"
-                HeightRequest="100"
-                MaxLength="1000" />
-
-        <Label Text="Parent Location (Optional)" FontSize="16" Margin="0,10,0,0" />
-        <Label Text="Select a parent to create a nested location hierarchy"
-               FontSize="12"
-               TextColor="{AppThemeBinding Light={StaticResource Gray500}, Dark={StaticResource Gray300}}"
-               Margin="0,0,0,5" />
         <!-- Opens the place picker, which leaves out this location and everything inside
              it; shows the whole path of what was chosen. -->
-        <Border Style="{StaticResource FieldSurface}"
-                SemanticProperties.Description="{Binding ParentPath, StringFormat='Inside: {0}. Change'}"
-                SemanticProperties.Hint="Opens the list of locations">
-            <Border.GestureRecognizers>
-                <TapGestureRecognizer Command="{Binding PickParentCommand}" />
-            </Border.GestureRecognizers>
-            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                <Label Text="{Binding ParentPath}"
-                       Style="{StaticResource StrongLabel}"
-                       VerticalOptions="Center"
-                       LineBreakMode="TailTruncation" />
-                <Label Grid.Column="1"
-                       Text="Change"
-                       Style="{StaticResource StrongLabel}"
-                       FontSize="14"
-                       VerticalOptions="Center"
-                       TextColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
-            </Grid>
-        </Border>
+        <VerticalStackLayout Spacing="6">
+            <Label Text="Inside" Style="{StaticResource FieldLabel}" />
+            <Border Style="{StaticResource FieldSurface}"
+                    SemanticProperties.Description="{Binding ParentPath, StringFormat='Inside: {0}. Change'}"
+                    SemanticProperties.Hint="Opens the list of locations">
+                <Border.GestureRecognizers>
+                    <TapGestureRecognizer Command="{Binding PickParentCommand}" />
+                </Border.GestureRecognizers>
+                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8" AutomationProperties.IsInAccessibleTree="False">
+                    <Label Text="▦"
+                           FontSize="16"
+                           VerticalOptions="Center"
+                           TextColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
+                    <Label Grid.Column="1"
+                           Text="{Binding ParentPath}"
+                           Style="{StaticResource StrongLabel}"
+                           VerticalOptions="Center"
+                           MaxLines="1"
+                           LineBreakMode="HeadTruncation" />
+                    <Label Grid.Column="2"
+                           Text="Change"
+                           Style="{StaticResource StrongLabel}"
+                           FontSize="14"
+                           VerticalOptions="Center"
+                           TextColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
+                </Grid>
+            </Border>
+        </VerticalStackLayout>
+
+        <VerticalStackLayout Spacing="6">
+            <Label Style="{StaticResource FieldLabel}">
+                <Label.FormattedText>
+                    <FormattedString>
+                        <Span Text="Description " />
+                        <Span Text="· shown on one line in lists, found by search"
+                              FontFamily="JakartaRegular"
+                              TextColor="{AppThemeBinding Light={StaticResource InkMuted}, Dark={StaticResource InkMutedDark}}" />
+                    </FormattedString>
+                </Label.FormattedText>
+            </Label>
+            <Border Style="{StaticResource FieldSurface}" Padding="12,4">
+                <Editor Text="{Binding Description}"
+                        Placeholder="What's here, or how to find it"
+                        HeightRequest="72"
+                        MaxLength="1000"
+                        SemanticProperties.Description="Description"
+                        controls:FocusRing.IsEnabled="True" />
+            </Border>
+        </VerticalStackLayout>
 
     </VerticalStackLayout>
 

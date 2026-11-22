@@ -44,30 +44,43 @@ public class NumericStepper : ContentView
             Keyboard = Keyboard.Numeric,
             HorizontalTextAlignment = TextAlignment.Center,
             VerticalOptions = LayoutOptions.Center,
+            FontFamily = "JakartaExtraBold",
+            FontSize = 18,
+            // A floor, not a width: four digits and more still fit.
+            MinimumWidthRequest = 56,
             Text = Value.ToString(CultureInfo.InvariantCulture)
         };
+        SemanticProperties.SetDescription(_entry, "Quantity");
         _entry.TextChanged += OnEntryTextChanged;
         _entry.Unfocused += (_, _) => SyncEntryText();
 
-        var decrement = CreateStepButton("−", () => Value--);
-        var increment = CreateStepButton("+", () => Value++);
+        // Minus is the quiet one; plus, the common direction, carries the accent.
+        var decrement = CreateStepButton("−", "Decrease quantity", () => Value--);
+        decrement.SetAppThemeColor(Button.BackgroundColorProperty, Resource("SurfaceSunken"), Resource("SurfaceSunkenDark"));
+        decrement.SetAppThemeColor(Button.TextColorProperty, Resource("Ink"), Resource("InkDark"));
 
-        var grid = new Grid
+        var increment = CreateStepButton("+", "Increase quantity", () => Value++);
+        increment.SetAppThemeColor(Button.BackgroundColorProperty, Resource("Primary"), Resource("PrimaryDark"));
+        increment.SetAppThemeColor(Button.TextColorProperty, Colors.White, Resource("PrimaryDarkText"));
+
+        var row = new HorizontalStackLayout { Spacing = 4, VerticalOptions = LayoutOptions.Center };
+        row.Add(decrement);
+        row.Add(_entry);
+        row.Add(increment);
+
+        // The same white box as the other fields beside it.
+        var surface = new Border
         {
-            ColumnDefinitions =
-            {
-                new ColumnDefinition(GridLength.Auto),
-                new ColumnDefinition(GridLength.Star),
-                new ColumnDefinition(GridLength.Auto)
-            },
-            ColumnSpacing = 10
+            StrokeThickness = 2,
+            StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 16 },
+            Padding = new Thickness(4, 0),
+            HeightRequest = 52,
+            Content = row
         };
+        surface.SetAppThemeColor(BackgroundColorProperty, Resource("Surface"), Resource("SurfaceDark"));
+        surface.SetAppThemeColor(Border.StrokeProperty, Resource("Hairline"), Resource("HairlineDark"));
 
-        grid.Add(decrement, 0);
-        grid.Add(_entry, 1);
-        grid.Add(increment, 2);
-
-        Content = grid;
+        Content = surface;
     }
 
     public int Value
@@ -88,20 +101,30 @@ public class NumericStepper : ContentView
         set => SetValue(MaximumProperty, value);
     }
 
-    private static Button CreateStepButton(string text, Action onClicked)
+    private static Button CreateStepButton(string text, string description, Action onClicked)
     {
         var button = new Button
         {
             Text = text,
             FontSize = 20,
-            WidthRequest = 52,
+            WidthRequest = 44,
             HeightRequest = 44,
+            MinimumHeightRequest = 44,
+            CornerRadius = 12,
             Padding = 0
         };
+        SemanticProperties.SetDescription(button, description);
 
         button.Clicked += (_, _) => onClicked();
         return button;
     }
+
+    // A colour from the app's palette; black only if the dictionary is missing, which
+    // would already show everywhere else.
+    private static Color Resource(string key) =>
+        Application.Current?.Resources.TryGetValue(key, out var value) == true && value is Color color
+            ? color
+            : Colors.Black;
 
     private static object CoerceValue(BindableObject bindable, object value)
     {
