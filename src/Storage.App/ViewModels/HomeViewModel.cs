@@ -76,13 +76,14 @@ public partial class HomeViewModel : ObservableObject
 
     private static string Plural(int count, string noun) => count == 1 ? $"1 {noun}" : $"{count} {noun}s";
 
-    // The box here opens the Find tab with the caret in its box.
+    // The box here opens the Find tab, started afresh (the tab keeps its last search
+    // otherwise), with the caret in its box.
     [RelayCommand]
-    private Task OpenSearchAsync() => Shell.Current.GoToAsync("//find?focus=1");
+    private Task OpenSearchAsync() => Shell.Current.GoToAsync("//find?reset=1&focus=1");
 
     // Find with nothing typed lists everything stored.
     [RelayCommand]
-    private Task SeeAllItemsAsync() => Shell.Current.GoToAsync("//find");
+    private Task SeeAllItemsAsync() => Shell.Current.GoToAsync("//find?reset=1");
 
     [RelayCommand]
     private Task OpenItemAsync(Item item) => Shell.Current.GoToAsync($"itemdetail?itemId={item.Id}");

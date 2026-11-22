@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Globalization;
 using System.Text.Json;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -24,7 +25,7 @@ public sealed record FindPlaceRow(StorageLocation Location, string Before, strin
     public string Description => HasPath ? $"{Location.Name}, in {Path}" : Location.Name;
 }
 
-/// <summary>A filter offered while typing: "tag: Car" or "in: Garage".</summary>
+/// <summary>A filter offered while typing: "tag: Car" or "in: Shelf · Garage".</summary>
 public sealed record FindSuggestion(string Label, int? TagId, int? LocationId);
 
 /// <summary>A search the user ran and opened a result from, kept on the device to run again.</summary>
@@ -41,8 +42,8 @@ public sealed record RecentSearch(string Text, int? PlaceId, string? PlaceName, 
 /// The Find page: one search box with filter chips — "in:" a place, which reaches
 /// everything inside it, and "tag:" one or more tags, which all have to hold — and the
 /// results as Items | Places. It replaces the switches and scope buttons the lists used
-/// to carry. With nothing typed and no filter it lists the whole inventory under recent
-/// searches and the tags to browse by.
+/// to carry. With nothing typed and no filter, Items lists the whole inventory under
+/// recent searches and the tags to browse by, and Places lists every location.
 /// </summary>
 public partial class FindViewModel : ObservableObject, IQueryAttributable
 {
@@ -54,16 +55,22 @@ public partial class FindViewModel : ObservableObject, IQueryAttributable
     private readonly ILocationRepository _locationRepository;
     private readonly ITagRepository _tagRepository;
     private readonly PlacePicker _placePicker;
+    private readonly LocationDeletion _deletion;
     private readonly SearchDebounce _debounce = new();
 
     private Dictionary<int, StorageLocation> _locationsById = [];
     private List<Tag> _allTags = [];
     private bool _focusRequested;
     private bool _skipDebounce;
+    private int? _pendingPlaceId;
 
-    // Each load gets a number; a slower, older one that finishes after a newer one
+    // Each search gets a number; a slower, older one that finishes after a newer one
     // started does not overwrite its results.
-    private int _loadVersion;
+    private int _searchVersion;
+
+    // What the shown results were searched for, so a result opened before the debounce
+    // has run the newest text is remembered with the search that actually found it.
+    private RecentSearch? _shownSearch;
 
     [ObservableProperty]
     private string _text = string.Empty;
@@ -80,27 +87,20 @@ public partial class FindViewModel : ObservableObject, IQueryAttributable
 
     public ObservableCollection<Tag> TagFilters { get; } = [];
 
-    /// <summary>The tab chosen; at rest the page shows items whatever it is.</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ShowingPlaces))]
-    [NotifyPropertyChangedFor(nameof(ShowItemList))]
-    [NotifyPropertyChangedFor(nameof(ShowPlaceList))]
+    [NotifyPropertyChangedFor(nameof(ItemsTabDescription))]
+    [NotifyPropertyChangedFor(nameof(PlacesTabDescription))]
     private bool _showingItems = true;
 
     public bool ShowingPlaces => !ShowingItems;
 
-    public bool ShowItemList => IsIdle || ShowingItems;
-
-    public bool ShowPlaceList => !IsIdle && ShowingPlaces;
-
-    /// <summary>Nothing typed and no filter: recent searches and tags lead, over the whole inventory.</summary>
+    /// <summary>Nothing typed and no filter: recent searches and tags lead the whole inventory.</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsSearching))]
-    [NotifyPropertyChangedFor(nameof(ShowItemList))]
-    [NotifyPropertyChangedFor(nameof(ShowPlaceList))]
     private bool _isIdle = true;
 
-    public bool IsSearching => !IsIdle;
+    [ObservableProperty]
+    private bool _isRefreshing;
 
     [ObservableProperty]
     private ObservableCollection<FindItemRow> _itemResults = [];
@@ -109,10 +109,17 @@ public partial class FindViewModel : ObservableObject, IQueryAttributable
     private ObservableCollection<FindPlaceRow> _placeResults = [];
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ItemsTabDescription))]
     private string _itemsTabText = "Items";
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(PlacesTabDescription))]
     private string _placesTabText = "Places";
+
+    // The segment's selection is only colour and weight; a screen reader hears it here.
+    public string ItemsTabDescription => ShowingItems ? $"{ItemsTabText}, selected" : ItemsTabText;
+
+    public string PlacesTabDescription => ShowingPlaces ? $"{PlacesTabText}, selected" : PlacesTabText;
 
     /// <summary>"3 more outside Garage — search everywhere", or empty.</summary>
     [ObservableProperty]
@@ -134,10 +141,16 @@ public partial class FindViewModel : ObservableObject, IQueryAttributable
     public bool HasRecent => Recent.Count > 0;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasBrowseTags))]
     private ObservableCollection<Tag> _browseTags = [];
+
+    public bool HasBrowseTags => BrowseTags.Count > 0;
 
     [ObservableProperty]
     private string _emptyText = string.Empty;
+
+    [ObservableProperty]
+    private string _placesEmptyText = string.Empty;
 
     /// <summary>Pushed from a location's page or the Locations tab, so it shows its own Back.</summary>
     [ObservableProperty]
@@ -147,22 +160,22 @@ public partial class FindViewModel : ObservableObject, IQueryAttributable
         IItemRepository itemRepository,
         ILocationRepository locationRepository,
         ITagRepository tagRepository,
-        PlacePicker placePicker)
+        PlacePicker placePicker,
+        LocationDeletion deletion)
     {
         _itemRepository = itemRepository;
         _locationRepository = locationRepository;
         _tagRepository = tagRepository;
         _placePicker = placePicker;
-        TagFilters.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasTagFilters));
+        _deletion = deletion;
     }
 
-    public bool HasTagFilters => TagFilters.Count > 0;
-
-    // "in" (a location id), "tab=places", "focus=1" and "pushed=1". Cleared once read.
-    private int? _pendingPlaceId;
-
+    // "reset" starts afresh (the tab page lives on between visits), "in" sets a place,
+    // "tab=places" opens on Places, "focus" puts the caret in the box, "pushed" shows Back.
     public void ApplyQueryAttributes(IDictionary<string, object> query)
     {
+        if (query.ContainsKey("reset"))
+            Reset();
         if (query.TryGetValue("in", out var place) && int.TryParse(Convert.ToString(place), out var placeId))
             _pendingPlaceId = placeId;
         if (query.TryGetValue("tab", out var tab))
@@ -173,6 +186,14 @@ public partial class FindViewModel : ObservableObject, IQueryAttributable
             IsPushed = true;
 
         query.Clear();
+    }
+
+    private void Reset()
+    {
+        SetTextQuietly(string.Empty);
+        PlaceFilter = null;
+        TagFilters.Clear();
+        ShowingItems = true;
     }
 
     /// <summary>True once after the box was asked for; the page then focuses it.</summary>
@@ -194,19 +215,17 @@ public partial class FindViewModel : ObservableObject, IQueryAttributable
                 .OrderBy(t => t.Name, StringComparer.CurrentCultureIgnoreCase)
                 .ToList();
             BrowseTags = new ObservableCollection<Tag>(_allTags);
-            Recent = new ObservableCollection<RecentSearch>(ReadRecent());
+            Recent = new ObservableCollection<RecentSearch>(PrunedRecent());
 
             if (_pendingPlaceId is int id)
             {
                 _pendingPlaceId = null;
                 PlaceFilter = _locationsById.GetValueOrDefault(id);
+                if (PlaceFilter is null)
+                    await Shell.Current.DisplayAlertAsync(null, "That location no longer exists, so this searches everywhere.", "OK");
             }
 
-            // A filter on a place or tag deleted meanwhile would match nothing, silently.
-            if (PlaceFilter is not null && !_locationsById.ContainsKey(PlaceFilter.Id))
-                PlaceFilter = null;
-            foreach (var gone in TagFilters.Where(t => _allTags.All(a => a.Id != t.Id)).ToList())
-                TagFilters.Remove(gone);
+            RefreshFilters();
         }
         catch (Exception ex)
         {
@@ -217,52 +236,99 @@ public partial class FindViewModel : ObservableObject, IQueryAttributable
         await SearchAsync();
     }
 
+    // The chips hold the instances read when they were set. Re-read them, so a rename
+    // shows, and drop any deleted since: a filter on something gone matches nothing.
+    private void RefreshFilters()
+    {
+        if (PlaceFilter is not null)
+            PlaceFilter = _locationsById.GetValueOrDefault(PlaceFilter.Id);
+
+        var fresh = TagFilters
+            .Select(t => _allTags.FirstOrDefault(a => a.Id == t.Id))
+            .OfType<Tag>()
+            .ToList();
+        TagFilters.Clear();
+        foreach (var tag in fresh)
+            TagFilters.Add(tag);
+    }
+
+    [RelayCommand]
+    private async Task RefreshAsync()
+    {
+        IsRefreshing = true;
+        try
+        {
+            await LoadAsync();
+        }
+        finally
+        {
+            IsRefreshing = false;
+        }
+    }
+
     partial void OnTextChanged(string value)
     {
         if (!_skipDebounce)
             _debounce.Queue(SearchAsync);
     }
 
+    private void SetTextQuietly(string text)
+    {
+        _skipDebounce = true;
+        Text = text;
+        _skipDebounce = false;
+    }
+
     private async Task SearchAsync()
     {
-        var version = ++_loadVersion;
+        var version = ++_searchVersion;
         var term = Text.Trim();
-        var query = new ItemQuery(term, PlaceFilter?.Id, TagFilters.Select(t => t.Id).ToList());
+        var place = PlaceFilter;
+        var tags = TagFilters.ToList();
+        var query = new ItemQuery(term, place?.Id, tags.Select(t => t.Id).ToList());
 
         try
         {
             var items = await _itemRepository.FindAsync(query);
 
             // Tags belong to items, so a tag filter leaves nothing to say about places.
-            var places = TagFilters.Count == 0 && (term.Length > 0 || PlaceFilter is not null)
-                ? await _locationRepository.FindAsync(term, PlaceFilter?.Id)
+            // With nothing typed and no place, Places lists every location.
+            var places = tags.Count == 0
+                ? await _locationRepository.FindAsync(term, place?.Id)
                 : Array.Empty<StorageLocation>();
 
-            var outside = PlaceFilter is null
+            var outside = place is null
                 ? 0
                 : await _itemRepository.CountMatchesAsync(query with { WithinLocationId = null }) - items.Count;
 
-            if (version != _loadVersion)
+            if (version != _searchVersion)
                 return;
 
-            IsIdle = term.Length == 0 && PlaceFilter is null && TagFilters.Count == 0;
+            IsIdle = term.Length == 0 && place is null && tags.Count == 0;
+            _shownSearch = IsIdle
+                ? null
+                : new RecentSearch(term, place?.Id, place?.Name, tags.Select(t => t.Id).ToArray(), tags.Select(t => t.Name).ToArray());
+
             ItemResults = new ObservableCollection<FindItemRow>(items.Select(i => ItemRow(i, term)));
             PlaceResults = new ObservableCollection<FindPlaceRow>(places.Select(l => PlaceRow(l, term)));
             ItemsTabText = $"Items · {items.Count}";
             PlacesTabText = $"Places · {places.Count}";
-            OutsideText = outside > 0 && PlaceFilter is not null
-                ? $"{outside} more outside {PlaceFilter.Name} — search everywhere"
+            OutsideText = outside > 0 && place is not null
+                ? $"{outside} more outside {place.Name} — search everywhere"
                 : string.Empty;
             Suggestions = new ObservableCollection<FindSuggestion>(SuggestionsFor(term));
             EmptyText = IsIdle
-                ? "Nothing stored yet. Add something with New item on Home."
+                ? "Nothing stored yet. Add something with New item."
                 : term.Length > 0 ? $"Nothing matches “{term}”" : "Nothing matches these filters";
+            PlacesEmptyText = tags.Count > 0
+                ? "Tags are on items, not locations"
+                : IsIdle ? "No locations yet" : "No location matches";
         }
         catch (Exception ex)
         {
             // The debounce runs this off any handler; an escaping exception would be lost
-            // or end the app, and the user would see a list that silently stopped updating.
-            if (version == _loadVersion)
+            // or end the app, and the list would silently stop updating.
+            if (version == _searchVersion)
                 await ShowFailureAsync(ex);
         }
     }
@@ -270,26 +336,31 @@ public partial class FindViewModel : ObservableObject, IQueryAttributable
     private FindItemRow ItemRow(Item item, string term)
     {
         var (before, match, after) = Split(item.Name, term);
-        return new FindItemRow(item, before, match, after, PathOf(item.LocationId));
+        return new FindItemRow(item, before, match, after, LocationPathOf(item.LocationId));
     }
 
     private FindPlaceRow PlaceRow(StorageLocation location, string term)
     {
         var (before, match, after) = Split(location.Name, term);
-        return new FindPlaceRow(location, before, match, after, PathOf(location.ParentId));
+        return new FindPlaceRow(location, before, match, after, LocationPathOf(location.ParentId));
     }
 
-    // The name around the first match, for the highlight. A match only in the
+    // The name around the first match, for the highlight. The match's own length comes
+    // from the comparer: under culture rules it need not be the term's ("co­ffee"
+    // matches "coffee", a decomposed "é" matches a precomposed one). A match only in the
     // description or a tag leaves the name whole.
     private static (string Before, string Match, string After) Split(string name, string term)
     {
-        var at = term.Length == 0 ? -1 : name.IndexOf(term, StringComparison.CurrentCultureIgnoreCase);
+        if (term.Length == 0)
+            return (name, string.Empty, string.Empty);
+
+        var at = CultureInfo.CurrentCulture.CompareInfo.IndexOf(name, term, CompareOptions.IgnoreCase, out var length);
         return at < 0
             ? (name, string.Empty, string.Empty)
-            : (name[..at], name.Substring(at, term.Length), name[(at + term.Length)..]);
+            : (name[..at], name.Substring(at, length), name[(at + length)..]);
     }
 
-    private string PathOf(int? locationId)
+    private string LocationPathOf(int? locationId)
     {
         var names = new List<string>();
         var seen = new HashSet<int>();
@@ -313,11 +384,16 @@ public partial class FindViewModel : ObservableObject, IQueryAttributable
             .Take(MaxSuggestions)
             .Select(t => new FindSuggestion($"tag: {t.Name}", t.Id, null));
 
+        // With where it sits, since two shelves can share a name.
         var places = _locationsById.Values
             .Where(l => l.Name.Contains(term, StringComparison.CurrentCultureIgnoreCase) && l.Id != PlaceFilter?.Id)
             .OrderBy(l => l.Name, StringComparer.CurrentCultureIgnoreCase)
             .Take(MaxSuggestions)
-            .Select(l => new FindSuggestion($"in: {l.Name}", null, l.Id));
+            .Select(l =>
+            {
+                var parent = LocationPathOf(l.ParentId);
+                return new FindSuggestion(parent.Length == 0 ? $"in: {l.Name}" : $"in: {l.Name} · {parent}", null, l.Id);
+            });
 
         return tags.Concat(places);
     }
@@ -329,13 +405,18 @@ public partial class FindViewModel : ObservableObject, IQueryAttributable
     private async Task ApplySuggestionAsync(FindSuggestion suggestion)
     {
         if (suggestion.TagId is int tagId && _allTags.FirstOrDefault(t => t.Id == tagId) is { } tag)
+        {
             TagFilters.Add(tag);
-        else if (suggestion.LocationId is int locationId)
-            PlaceFilter = _locationsById.GetValueOrDefault(locationId);
 
-        _skipDebounce = true;
-        Text = string.Empty;
-        _skipDebounce = false;
+            // Tags narrow items only; Places would just be empty.
+            ShowingItems = true;
+        }
+        else if (suggestion.LocationId is int locationId)
+        {
+            PlaceFilter = _locationsById.GetValueOrDefault(locationId);
+        }
+
+        SetTextQuietly(string.Empty);
         await SearchAsync();
     }
 
@@ -404,6 +485,18 @@ public partial class FindViewModel : ObservableObject, IQueryAttributable
         await Shell.Current.GoToAsync(Routes.Place(row.Location.Id));
     }
 
+    // The swipe on a location in the results, as on the Locations tab.
+    [RelayCommand]
+    private async Task DeletePlaceAsync(FindPlaceRow row)
+    {
+        if (await _deletion.ConfirmAndDeleteAsync(row.Location.Id, row.Location.Name))
+            await LoadAsync();
+    }
+
+    [RelayCommand]
+    private Task NewItemAsync() =>
+        Shell.Current.GoToAsync(Routes.Create(CreateKind.Item, PlaceFilter?.Id));
+
     [RelayCommand]
     private async Task RunRecentAsync(RecentSearch recent)
     {
@@ -413,9 +506,7 @@ public partial class FindViewModel : ObservableObject, IQueryAttributable
             TagFilters.Add(tag);
 
         // Set without the debounce, which would only run the same search again.
-        _skipDebounce = true;
-        Text = recent.Text;
-        _skipDebounce = false;
+        SetTextQuietly(recent.Text);
         await SearchAsync();
     }
 
@@ -432,15 +523,8 @@ public partial class FindViewModel : ObservableObject, IQueryAttributable
     // Only a search that found what the user opened is worth offering again.
     private void Remember()
     {
-        if (IsIdle)
+        if (_shownSearch is not { } search)
             return;
-
-        var search = new RecentSearch(
-            Text.Trim(),
-            PlaceFilter?.Id,
-            PlaceFilter?.Name,
-            TagFilters.Select(t => t.Id).ToArray(),
-            TagFilters.Select(t => t.Name).ToArray());
 
         var list = ReadRecent()
             .Where(r => r.Label != search.Label)
@@ -450,6 +534,26 @@ public partial class FindViewModel : ObservableObject, IQueryAttributable
 
         WriteRecent(list);
         Recent = new ObservableCollection<RecentSearch>(list);
+    }
+
+    // A recent search whose place or tag has been deleted would quietly run as a
+    // different search under a label that still names it; it is dropped instead. One
+    // whose place or tags were renamed is relabelled.
+    private List<RecentSearch> PrunedRecent()
+    {
+        var kept = new List<RecentSearch>();
+        foreach (var recent in ReadRecent())
+        {
+            var place = recent.PlaceId is int id ? _locationsById.GetValueOrDefault(id) : null;
+            var tags = _allTags.Where(t => recent.TagIds.Contains(t.Id)).ToList();
+            if ((recent.PlaceId is not null && place is null) || tags.Count != recent.TagIds.Distinct().Count())
+                continue;
+
+            kept.Add(recent with { PlaceName = place?.Name, TagNames = tags.Select(t => t.Name).ToArray() });
+        }
+
+        WriteRecent(kept);
+        return kept;
     }
 
     // On the device only, like everything else in the app. A value that no longer reads

@@ -30,7 +30,8 @@ public static class Routes
     /// <remarks>Read back by <see cref="FindViewModel.ApplyQueryAttributes"/>.</remarks>
     public static string Search(int? inLocationId = null, bool places = false)
     {
-        var route = "search?pushed=1";
+        // Focused, as the search toolbar was: the user tapped search to type.
+        var route = "search?pushed=1&focus=1";
         if (inLocationId is int id)
             route += $"&in={id}";
         if (places)

@@ -15,6 +15,10 @@ public partial class FindPage : ContentPage
         InitializeComponent();
         _viewModel = viewModel;
         BindingContext = _viewModel;
+
+        // The idle header sits inside a list; pointed at the view model directly, as on
+        // a location's page, rather than found by a lookup from inside the header.
+        IdleHeader.BindingContext = _viewModel;
     }
 
     // Every appearance, so an item edited or added elsewhere shows as it is now. LoadAsync
