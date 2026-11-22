@@ -22,4 +22,12 @@
     <ProjectReference Include="..\..\src\Storage.Core\Storage.Core.csproj" />
   </ItemGroup>
 
+  <!-- DesignTokenTests reads these beside the test assembly, so it needs no repo checkout
+       around bin/, and a change to any of them makes the build copy it again. -->
+  <ItemGroup>
+    <None Include="..\..\docs\design\tokens.json" Link="design\tokens.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\docs\design\screens\*.html" Link="design\screens\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\src\Storage.App\Resources\Styles\Colors.xaml" Link="design\Colors.xaml" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

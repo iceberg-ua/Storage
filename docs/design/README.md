@@ -7,7 +7,8 @@ claude.ai is a scratch space for trying ideas; whatever is chosen there is copie
 ## Viewing
 
 Open any file in `screens/` in a browser. Each is a 390 × 844 phone screen with inline styles
-and no scripts; links between screens work, so `home.html` is a starting point. The font
+and no scripts. Most buttons link to the screen they open, so `home.html` is a starting point;
+a few lead nowhere (`href="#"`), such as "See all" on Home. The font
 (Plus Jakarta Sans) loads from Google Fonts, so offline the text falls back to the system font.
 
 ## Screens
@@ -30,17 +31,22 @@ and no scripts; links between screens work, so `home.html` is a starting point. 
 
 ## Tokens
 
-`tokens.json` lists the design's colours (light theme) and the tag palette.
-`tests/Storage.Tests/DesignTokenTests.cs` checks them against
-`src/Storage.App/Resources/Styles/Colors.xaml` and `TagPalette`, and that every colour has a
-`…Dark` variant. A colour change therefore touches `tokens.json`, `Colors.xaml` and, where it
-shows, the mockups, in the same PR.
+`tokens.json` lists the design's colours (light theme), the tag palette, and the few
+mockup-only shades (photo stand-ins, the camera screen, web-only states), each with what the
+app uses instead. `tests/Storage.Tests/DesignTokenTests.cs` checks that:
+
+- every token matches `src/Storage.App/Resources/Styles/Colors.xaml`, and has a `…Dark` variant there
+- the tag palette matches `TagPalette`
+- every colour in `screens/*.html` is one of the listed ones
+
+So a colour change touches `tokens.json` and whichever side it starts on, in the same PR. The
+test does not check that a mockup uses the *right* token in a given place; that is review.
 
 | Token | Light | Used for |
 | --- | --- | --- |
 | Canvas | `#F6F4EF` | page background |
 | Surface | `#FFFFFF` | cards, fields, round icon buttons |
-| SurfaceSunken | `#ECE8DF` | segment tracks, stepper minus, photo placeholders |
+| SurfaceSunken | `#ECE8DF` | segment tracks, stepper minus (`#F0ECE4` in the mockups), photo placeholders |
 | Hairline | `#E4DFD4` | field outlines, dividers |
 | Ink | `#1C1B19` | text, ink-filled buttons (Edit, New tag) |
 | InkMuted | `#5F5B53` | captions, counts, paths |
@@ -54,20 +60,59 @@ Corners: 16 for fields, 20–22 for cards, full pills for buttons and chips.
 
 ## Known differences
 
-Where the app deliberately differs from the mockups. Fix the mockup or the code when one of
-these is settled, and delete the line.
+Where the app deliberately differs from the mockups. When one is settled, fix the mockup or the
+code and delete the line. An open question (rather than a decided difference) belongs in a
+`VOL-*` issue in Linear; link it from its line here.
 
+**Everywhere**
 - **"Location", not "Place".** The mockups say Place(s); the app says Location(s). Undecided.
 - **Tab bar.** The mockups have five slots with a raised camera button in the middle
   (Home, Places, Snap, Tags, Find). The app has four tabs (Home, Locations, Find, Tags) and a
   "📷 New item" button on the pages that need it.
-- **Icons.** The mockups draw SVG icons; the app uses emoji and text glyphs (📷 ✎ ✕ ▾).
-- **Home.** No settings button (there is no settings page yet).
-- **Location page.** No "Recently added" sort menu and no Grid · List switch.
-- **Item form.** Two dashed add tiles (camera, gallery) instead of one "+".
-- **Location form.** The photo row has camera, gallery and Remove buttons instead of
-  Change and Remove. The edit page has "Add item here" but not the "In this place" card with
-  counts and Sub-place (Sub-place lives on the location's page).
+- **Icons.** The tab bar uses SVG icons, as the mockups do; inside pages the app uses emoji and
+  text glyphs (📷 ✎ ✕ ▾ 🔍) where the mockups draw SVGs.
+
+**Home** (`home.html`)
+- No settings button (there is no settings page yet).
+
+**Locations** (`locations.html`)
+- A 🔍 button in the header, and the button reads "+ New" rather than "New place".
+
+**Location page** (`location.html`, `location-with-photo.html`)
+- The header has ⋯ (edit, delete) where the mockup has a pencil.
+- The sub-location chips open that sub-location; there is no "All" chip and they do not filter
+  the list. A dashed "+ Location inside" chip replaces the floating Sub-place button.
+- One "📷 New item here" button at the bottom instead of "Snap into Garage".
+- No "Recently added" sort menu and no Grid · List switch.
+- Tiles show tag dots but not the sub-location name, and hide ×1.
+- With a photo, the app shows it as a rounded card under the header, not full-bleed under a
+  sheet.
+
+**Item** (`item.html`)
+- Photos swipe with dots instead of the thumbnail strip and "1 / 3".
+- No "+ Tag" chip; tags are added in the form.
+- The text section is headed "Description", not "Notes".
+- The stepper's + is a white disc, not accent-filled.
+
+**Item form** (`item-form.html`)
+- Two dashed add tiles (camera, gallery) instead of one "+".
+
+**Location form** (`location-form.html`)
+- The photo row has camera, gallery and Remove buttons instead of Change and Remove.
+- The edit page has "Add item here" but not the "In this place" card with counts and Sub-place
+  (Sub-place lives on the location's page).
+
+**Pick location** (`pick-location.html`)
+- No "New place in Garage" row.
+
+**Snap** (`snap.html`)
+- No flash toggle.
+
+**Find** (`find.html`)
+- With nothing typed, "Everything stored" is listed under recent searches and tags.
+
+**Tag page** (`edit-tag.html`)
+- "Custom colour…" opens RGB sliders under the palette; the mockup has the palette only.
 
 ## Changing the design
 
