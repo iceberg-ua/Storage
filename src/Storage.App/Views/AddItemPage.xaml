@@ -5,28 +5,31 @@
              xmlns:views="clr-namespace:Storage.App.Views"
              x:Class="Storage.App.Views.AddItemPage"
              x:DataType="vm:AddItemViewModel"
-             Title="{Binding PageTitle}">
+             Title="{Binding PageTitle}"
+             Shell.NavBarIsVisible="False">
 
-    <!-- Fields scroll; the action buttons stay pinned to the bottom. -->
-    <Grid RowDefinitions="*,Auto">
+    <!-- ✕ and the title on top, the fields scrolling under them, Save pinned below. -->
+    <Grid RowDefinitions="Auto,*,Auto">
 
-        <ScrollView Grid.Row="0">
-            <views:ItemForm Padding="20" />
+        <Grid Grid.Row="0" ColumnDefinitions="Auto,*" ColumnSpacing="12" Padding="20,20,20,12">
+            <Button Text="✕"
+                    Style="{StaticResource RoundIconButton}"
+                    Command="{Binding CancelCommand}"
+                    SemanticProperties.Description="Cancel" />
+            <Label Grid.Column="1"
+                   Text="{Binding PageTitle}"
+                   Style="{StaticResource Title}"
+                   VerticalOptions="Center"
+                   SemanticProperties.HeadingLevel="Level1" />
+        </Grid>
+
+        <ScrollView Grid.Row="1">
+            <views:ItemForm Padding="20,6,20,24" />
         </ScrollView>
 
-        <Grid Grid.Row="1"
-              ColumnDefinitions="*,*"
-              ColumnSpacing="10"
-              Padding="20,10">
-            <Button Grid.Column="0"
-                    Text="Cancel"
-                    Command="{Binding CancelCommand}"
-                    BackgroundColor="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource Gray600}}"
-                    TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}" />
-            <Button Grid.Column="1"
-                    Text="Save"
-                    Command="{Binding SaveItemCommand}" />
-        </Grid>
+        <Border Grid.Row="2" Style="{StaticResource SaveBar}">
+            <Button Text="Save changes" Command="{Binding SaveItemCommand}" />
+        </Border>
 
     </Grid>
 

@@ -30,6 +30,17 @@ public static class MauiProgram
 		builder.Logging.AddDebug();
 #endif
 
+#if ANDROID
+		// Every text field sits in a FieldSurface box, which is its outline. Android draws
+		// an underline of its own under an EditText; a transparent tint takes it away
+		// without dropping the padding the native background gives.
+		var noTint = Android.Content.Res.ColorStateList.ValueOf(Android.Graphics.Color.Transparent);
+		Microsoft.Maui.Handlers.EntryHandler.Mapper.AppendToMapping("NoUnderline", (handler, _) =>
+			handler.PlatformView.BackgroundTintList = noTint);
+		Microsoft.Maui.Handlers.EditorHandler.Mapper.AppendToMapping("NoUnderline", (handler, _) =>
+			handler.PlatformView.BackgroundTintList = noTint);
+#endif
+
 		// Configure SQLite database
 		var dbPath = Path.Combine(FileSystem.AppDataDirectory, "storage.db");
 		// A factory, not one shared context: each repository call takes a context of its

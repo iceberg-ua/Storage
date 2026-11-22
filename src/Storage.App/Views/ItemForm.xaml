@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8" ?>
-<!-- The item's fields, without Save or Cancel: shared by the edit page and the create
-     page, which each put their own buttons under it. Bound to an AddItemViewModel. -->
+<!-- The item's fields, without the header or Save: shared by the edit page and the
+     create page, which each put their own around it. Bound to an AddItemViewModel. -->
 <ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:Storage.App.ViewModels"
@@ -9,248 +9,328 @@
              x:Class="Storage.App.Views.ItemForm"
              x:DataType="vm:AddItemViewModel">
 
-    <VerticalStackLayout Spacing="15">
+    <VerticalStackLayout Spacing="18">
 
-        <!-- Photos, in the order they will be shown; the first is the primary,
-             the one the item list uses as its thumbnail. The strip scrolls
-             sideways because ten thumbnails do not fit across a phone. -->
-        <Label Text="Photos" FontSize="16" />
+        <!-- Photos, in the order they will be shown; the first is the main one, the one
+             lists use as the thumbnail. The camera and gallery tiles come after them, as
+             "add more": most photos now arrive from the camera before the form opens.
+             The strip scrolls sideways because ten thumbnails do not fit across a phone. -->
+        <VerticalStackLayout Spacing="8">
+            <ScrollView Orientation="Horizontal"
+                        HorizontalScrollBarVisibility="Never"
+                        Margin="0,-6,-20,0">
+                <HorizontalStackLayout Spacing="4" Padding="0,0,20,0">
 
-        <ScrollView Orientation="Horizontal" HorizontalScrollBarVisibility="Never">
-            <HorizontalStackLayout Spacing="10">
+                    <HorizontalStackLayout BindableLayout.ItemsSource="{Binding Photos}" Spacing="4">
+                        <BindableLayout.ItemTemplate>
+                            <DataTemplate x:DataType="vm:PhotoSlot">
+                                <!-- 90 square with the photo at 84 in its lower left, so the
+                                     remove button can overhang the top right corner. -->
+                                <Grid WidthRequest="90" HeightRequest="90">
+                                    <Border WidthRequest="84"
+                                            HeightRequest="84"
+                                            HorizontalOptions="Start"
+                                            VerticalOptions="End"
+                                            StrokeThickness="0"
+                                            StrokeShape="RoundRectangle 18"
+                                            BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceSunken}, Dark={StaticResource SurfaceSunkenDark}}">
+                                        <Image Source="{Binding Source}" Aspect="AspectFill" />
+                                    </Border>
 
-                <!-- Always first in the strip. Taking a photo is what this
-                     section is for, and the shutter should not drift further
-                     from the thumb with every photo already added. It doubles
-                     as the empty state: with no photos, this tile is the strip. -->
-                <Border WidthRequest="110"
-                        HeightRequest="110"
-                        Padding="0"
-                        IsVisible="{Binding CanAddMorePhotos}"
-                        BackgroundColor="{AppThemeBinding Light={StaticResource Gray100}, Dark={StaticResource Gray600}}"
-                        Stroke="{AppThemeBinding Light={StaticResource Gray300}, Dark={StaticResource Gray500}}">
-                    <Border.StrokeShape>
-                        <RoundRectangle CornerRadius="10" />
-                    </Border.StrokeShape>
-                    <Border.GestureRecognizers>
-                        <TapGestureRecognizer Command="{Binding TakePhotoCommand}" />
-                    </Border.GestureRecognizers>
-                    <Label Text="📷"
-                           FontSize="36"
-                           HorizontalOptions="Center"
-                           VerticalOptions="Center"
-                           SemanticProperties.Description="Take a photo" />
-                </Border>
-
-                <HorizontalStackLayout BindableLayout.ItemsSource="{Binding Photos}" Spacing="10">
-                    <BindableLayout.ItemTemplate>
-                        <DataTemplate x:DataType="vm:PhotoSlot">
-                            <Grid WidthRequest="110" HeightRequest="110">
-                                <Border Padding="0" StrokeThickness="0">
-                                    <Border.StrokeShape>
-                                        <RoundRectangle CornerRadius="10" />
-                                    </Border.StrokeShape>
-                                    <Image Source="{Binding Source}" Aspect="AspectFill" />
-                                </Border>
-
-                                <!-- Filled on the photo the lists show, hollow on
-                                     the rest; tapping one moves that photo to the
-                                     front, which is what being primary is. Both
-                                     it and the remove button carry their own
-                                     scrim, since a photo can be any colour. -->
-                                <Border WidthRequest="30"
-                                        HeightRequest="30"
-                                        Margin="4"
-                                        Padding="0"
-                                        VerticalOptions="End"
-                                        HorizontalOptions="Start"
-                                        StrokeThickness="0"
-                                        BackgroundColor="#66000000">
-                                    <Border.StrokeShape>
-                                        <RoundRectangle CornerRadius="15" />
-                                    </Border.StrokeShape>
-                                    <Border.GestureRecognizers>
-                                        <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:AddItemViewModel}}, Path=MakePrimaryCommand}"
-                                                              CommandParameter="{Binding .}" />
-                                    </Border.GestureRecognizers>
-                                    <Label Text="{Binding HeartGlyph}"
-                                           FontSize="16"
-                                           TextColor="White"
-                                           HorizontalOptions="Center"
-                                           VerticalOptions="Center"
-                                           SemanticProperties.Description="Make this the primary photo">
-                                        <Label.Triggers>
-                                            <DataTrigger TargetType="Label" Binding="{Binding IsPrimary}" Value="True">
-                                                <Setter Property="TextColor" Value="#FF4D6A" />
+                                    <!-- Filled on the main photo, hollow on the rest; tapping
+                                         one moves that photo to the front, which is what being
+                                         main is. On a white disc, since a photo can be any colour. -->
+                                    <Border WidthRequest="28"
+                                            HeightRequest="28"
+                                            Margin="6,0,0,6"
+                                            HorizontalOptions="Start"
+                                            VerticalOptions="End"
+                                            StrokeThickness="0"
+                                            StrokeShape="RoundRectangle 14"
+                                            BackgroundColor="#D9FFFFFF"
+                                            SemanticProperties.Description="Make this the main photo">
+                                        <Border.GestureRecognizers>
+                                            <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:AddItemViewModel}}, Path=MakePrimaryCommand}"
+                                                                  CommandParameter="{Binding .}" />
+                                        </Border.GestureRecognizers>
+                                        <Label Text="{Binding HeartGlyph}"
+                                               FontSize="16"
+                                               TextColor="{StaticResource Ink}"
+                                               HorizontalOptions="Center"
+                                               VerticalOptions="Center"
+                                               AutomationProperties.IsInAccessibleTree="False">
+                                            <Label.Triggers>
+                                                <DataTrigger TargetType="Label" Binding="{Binding IsPrimary}" Value="True">
+                                                    <Setter Property="TextColor" Value="{StaticResource Primary}" />
+                                                </DataTrigger>
+                                            </Label.Triggers>
+                                        </Label>
+                                        <Border.Triggers>
+                                            <DataTrigger TargetType="Border" Binding="{Binding IsPrimary}" Value="True">
+                                                <Setter Property="BackgroundColor" Value="White" />
+                                                <Setter Property="SemanticProperties.Description" Value="Main photo" />
                                             </DataTrigger>
-                                        </Label.Triggers>
-                                    </Label>
-                                </Border>
+                                        </Border.Triggers>
+                                    </Border>
 
-                                <Border WidthRequest="30"
-                                        HeightRequest="30"
-                                        Margin="4"
-                                        Padding="0"
-                                        VerticalOptions="Start"
-                                        HorizontalOptions="End"
-                                        StrokeThickness="0"
-                                        BackgroundColor="#66000000">
-                                    <Border.StrokeShape>
-                                        <RoundRectangle CornerRadius="15" />
-                                    </Border.StrokeShape>
-                                    <Border.GestureRecognizers>
-                                        <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:AddItemViewModel}}, Path=RemovePhotoCommand}"
-                                                              CommandParameter="{Binding .}" />
-                                    </Border.GestureRecognizers>
-                                    <Label Text="✕"
-                                           FontSize="14"
-                                           TextColor="White"
-                                           HorizontalOptions="Center"
-                                           VerticalOptions="Center"
-                                           SemanticProperties.Description="Remove this photo" />
-                                </Border>
-                            </Grid>
-                        </DataTemplate>
-                    </BindableLayout.ItemTemplate>
+                                    <!-- Ringed in the canvas colour so it reads as sitting on
+                                         top of the photo's corner. -->
+                                    <Border WidthRequest="26"
+                                            HeightRequest="26"
+                                            HorizontalOptions="End"
+                                            VerticalOptions="Start"
+                                            StrokeThickness="2"
+                                            Stroke="{AppThemeBinding Light={StaticResource Canvas}, Dark={StaticResource CanvasDark}}"
+                                            StrokeShape="RoundRectangle 13"
+                                            BackgroundColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}"
+                                            SemanticProperties.Description="Remove this photo">
+                                        <Border.GestureRecognizers>
+                                            <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:AddItemViewModel}}, Path=RemovePhotoCommand}"
+                                                                  CommandParameter="{Binding .}" />
+                                        </Border.GestureRecognizers>
+                                        <Label Text="✕"
+                                               FontSize="11"
+                                               FontFamily="JakartaBold"
+                                               TextColor="{AppThemeBinding Light={StaticResource Canvas}, Dark={StaticResource CanvasDark}}"
+                                               HorizontalOptions="Center"
+                                               VerticalOptions="Center"
+                                               AutomationProperties.IsInAccessibleTree="False" />
+                                    </Border>
+                                </Grid>
+                            </DataTemplate>
+                        </BindableLayout.ItemTemplate>
+                    </HorizontalStackLayout>
+
+                    <!-- Add more: dashed tiles, gone at the limit. With no photos yet they
+                         are the whole strip. -->
+                    <Border WidthRequest="84"
+                            HeightRequest="84"
+                            VerticalOptions="End"
+                            IsVisible="{Binding CanAddMorePhotos}"
+                            StrokeThickness="2"
+                            StrokeDashArray="3,2"
+                            Stroke="{AppThemeBinding Light={StaticResource InkMuted}, Dark={StaticResource InkMutedDark}}"
+                            StrokeShape="RoundRectangle 18"
+                            BackgroundColor="Transparent"
+                            SemanticProperties.Description="Take a photo">
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding TakePhotoCommand}" />
+                        </Border.GestureRecognizers>
+                        <Label Text="📷"
+                               FontSize="24"
+                               HorizontalOptions="Center"
+                               VerticalOptions="Center"
+                               AutomationProperties.IsInAccessibleTree="False" />
+                    </Border>
+                    <Border WidthRequest="84"
+                            HeightRequest="84"
+                            Margin="6,0,0,0"
+                            VerticalOptions="End"
+                            IsVisible="{Binding CanAddMorePhotos}"
+                            StrokeThickness="2"
+                            StrokeDashArray="3,2"
+                            Stroke="{AppThemeBinding Light={StaticResource InkMuted}, Dark={StaticResource InkMutedDark}}"
+                            StrokeShape="RoundRectangle 18"
+                            BackgroundColor="Transparent"
+                            SemanticProperties.Description="Choose a photo from the gallery">
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding ChooseFromGalleryCommand}" />
+                        </Border.GestureRecognizers>
+                        <Label Text="🖼️"
+                               FontSize="24"
+                               HorizontalOptions="Center"
+                               VerticalOptions="Center"
+                               AutomationProperties.IsInAccessibleTree="False" />
+                    </Border>
                 </HorizontalStackLayout>
-            </HorizontalStackLayout>
-        </ScrollView>
+            </ScrollView>
 
-        <HorizontalStackLayout Spacing="10">
-            <Button Text="Take photo"
-                    Command="{Binding TakePhotoCommand}"
-                    IsEnabled="{Binding CanAddMorePhotos}" />
-            <Button Text="Choose from gallery"
-                    Command="{Binding ChooseFromGalleryCommand}"
-                    IsEnabled="{Binding CanAddMorePhotos}"
-                    BackgroundColor="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource Gray600}}"
-                    TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}" />
-        </HorizontalStackLayout>
+            <Label Text="{Binding PhotoCountText}" Style="{StaticResource Caption}" FontSize="12" />
+        </VerticalStackLayout>
 
-        <Label Text="{Binding PhotoLimitMessage}"
-               FontSize="12"
-               IsVisible="{Binding IsAtPhotoLimit}"
-               TextColor="{AppThemeBinding Light={StaticResource Gray500}, Dark={StaticResource Gray400}}" />
-
-        <Label Text="Item Name" FontSize="16" Margin="0,10,0,0" />
-        <VerticalStackLayout Spacing="4">
-            <Entry Text="{Binding Name}"
-                   Placeholder="Enter item name"
-                   MaxLength="200"
-                   controls:FocusOnError.Message="{Binding NameError.Text}" />
+        <VerticalStackLayout Spacing="6">
+            <Label Text="Name" Style="{StaticResource FieldLabel}" />
+            <Border Style="{StaticResource FieldSurface}">
+                <Entry Text="{Binding Name}"
+                       Placeholder="What is it?"
+                       MaxLength="200"
+                       VerticalOptions="Center"
+                       SemanticProperties.Description="Name"
+                       controls:FocusRing.IsEnabled="True"
+                       controls:FocusOnError.Message="{Binding NameError.Text}" />
+            </Border>
             <Label Text="{Binding NameError.Text}" Style="{StaticResource FieldError}" />
         </VerticalStackLayout>
 
-        <Label Text="Quantity" FontSize="16" Margin="0,10,0,0" />
-        <controls:NumericStepper Value="{Binding Quantity}" Minimum="1" />
+        <!-- Quantity and location side by side: both short, both set on most items. -->
+        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+            <VerticalStackLayout Spacing="6">
+                <Label Text="Quantity" Style="{StaticResource FieldLabel}" />
+                <controls:NumericStepper Value="{Binding Quantity}" Minimum="1" />
+            </VerticalStackLayout>
 
-        <Label Text="Location (Optional)" FontSize="16" Margin="0,10,0,0" />
-        <!-- Opens the place picker; shows the whole path of what was chosen. -->
-        <Border Style="{StaticResource FieldSurface}"
-                SemanticProperties.Description="{Binding SelectedLocationPath, StringFormat='Location: {0}. Change'}"
-                SemanticProperties.Hint="Opens the list of locations">
-            <Border.GestureRecognizers>
-                <TapGestureRecognizer Command="{Binding PickLocationCommand}" />
-            </Border.GestureRecognizers>
-            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                <Label Text="{Binding SelectedLocationPath}"
-                       Style="{StaticResource StrongLabel}"
-                       VerticalOptions="Center"
-                       LineBreakMode="TailTruncation" />
-                <Label Grid.Column="1"
-                       Text="Change"
-                       Style="{StaticResource StrongLabel}"
-                       FontSize="14"
-                       VerticalOptions="Center"
-                       TextColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
-            </Grid>
-        </Border>
-
-        <Label Text="Tags (Optional)" FontSize="16" Margin="0,10,0,0" />
-
-        <!-- Assigned tags. FlexLayout wraps onto as many rows as it needs;
-             tapping a chip removes it. -->
-        <FlexLayout BindableLayout.ItemsSource="{Binding ItemTags}"
-                    Wrap="Wrap"
-                    Direction="Row"
-                    IsVisible="{Binding ItemTags.Count, Converter={StaticResource CountToBoolConverter}}">
-            <BindableLayout.ItemTemplate>
-                <DataTemplate x:DataType="models:Tag">
-                    <Border Margin="0,0,8,8"
-                            Padding="12,6"
-                            StrokeThickness="0"
-                            BackgroundColor="{Binding Color, Converter={StaticResource HexToColorConverter}}">
-                        <Border.StrokeShape>
-                            <RoundRectangle CornerRadius="16" />
-                        </Border.StrokeShape>
-                        <Border.GestureRecognizers>
-                            <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:AddItemViewModel}}, Path=RemoveTagCommand}"
-                                                  CommandParameter="{Binding .}" />
-                        </Border.GestureRecognizers>
-                        <!-- Text follows the background: a custom colour can be
-                             any brightness, so white is not always readable. -->
-                        <Label Text="{Binding Name, StringFormat='{0}  ✕'}"
+            <VerticalStackLayout Grid.Column="1" Spacing="6">
+                <Label Text="Location" Style="{StaticResource FieldLabel}" />
+                <!-- Opens the place picker; shows the whole path of what was chosen. -->
+                <Border Style="{StaticResource FieldSurface}"
+                        SemanticProperties.Description="{Binding SelectedLocationPath, StringFormat='Location: {0}. Change'}"
+                        SemanticProperties.Hint="Opens the list of locations">
+                    <Border.GestureRecognizers>
+                        <TapGestureRecognizer Command="{Binding PickLocationCommand}" />
+                    </Border.GestureRecognizers>
+                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+                        <Label Text="📍"
                                FontSize="14"
-                               TextColor="{Binding Color, Converter={StaticResource HexToTextColorConverter}}" />
-                    </Border>
-                </DataTemplate>
-            </BindableLayout.ItemTemplate>
-        </FlexLayout>
+                               VerticalOptions="Center"
+                               AutomationProperties.IsInAccessibleTree="False" />
+                        <Label Grid.Column="1"
+                               Text="{Binding SelectedLocationPath}"
+                               Style="{StaticResource StrongLabel}"
+                               FontSize="14"
+                               VerticalOptions="Center"
+                               MaxLines="1"
+                               LineBreakMode="HeadTruncation"
+                               AutomationProperties.IsInAccessibleTree="False" />
+                        <Label Grid.Column="2"
+                               Text="▾"
+                               Style="{StaticResource Caption}"
+                               FontSize="14"
+                               VerticalOptions="Center"
+                               AutomationProperties.IsInAccessibleTree="False" />
+                    </Grid>
+                </Border>
+            </VerticalStackLayout>
+        </Grid>
 
-        <Entry Text="{Binding TagInput}"
-               Placeholder="Add a tag"
-               MaxLength="50"
-               ReturnType="Done"
-               IsEnabled="{Binding CanAddMoreTags}"
-               ReturnCommand="{Binding AddTagCommand}" />
+        <VerticalStackLayout Spacing="8">
+            <Label Style="{StaticResource FieldLabel}">
+                <Label.FormattedText>
+                    <FormattedString>
+                        <Span Text="Tags " />
+                        <Span Text="{Binding TagCountText}"
+                              FontFamily="JakartaRegular"
+                              TextColor="{AppThemeBinding Light={StaticResource InkMuted}, Dark={StaticResource InkMutedDark}}" />
+                    </FormattedString>
+                </Label.FormattedText>
+            </Label>
 
-        <Label Text="{Binding TagLimitMessage}"
-               FontSize="12"
-               IsVisible="{Binding IsAtTagLimit}"
-               TextColor="{AppThemeBinding Light={StaticResource Gray500}, Dark={StaticResource Gray400}}" />
+            <!-- Chips and the box for the next one share one white surface, the way the
+                 tags will sit together on the item. -->
+            <Border Style="{StaticResource FieldSurface}" Padding="8">
+                <VerticalStackLayout Spacing="4">
+                    <FlexLayout BindableLayout.ItemsSource="{Binding ItemTags}"
+                                Wrap="Wrap"
+                                Direction="Row"
+                                IsVisible="{Binding ItemTags.Count, Converter={StaticResource CountToBoolConverter}}">
+                        <BindableLayout.ItemTemplate>
+                            <DataTemplate x:DataType="models:Tag">
+                                <Border Style="{StaticResource Chip}"
+                                        Margin="0,0,8,8"
+                                        Padding="12,0,5,0"
+                                        HeightRequest="34"
+                                        StrokeShape="RoundRectangle 17"
+                                        BackgroundColor="{Binding Color, Converter={StaticResource HexToColorConverter}}"
+                                        SemanticProperties.Description="{Binding Name, StringFormat='Tag {0}. Double tap to remove it'}">
+                                    <Border.GestureRecognizers>
+                                        <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:AddItemViewModel}}, Path=RemoveTagCommand}"
+                                                              CommandParameter="{Binding .}" />
+                                    </Border.GestureRecognizers>
+                                    <!-- Text follows the background: a custom colour can be
+                                         any brightness, so white is not always readable. -->
+                                    <HorizontalStackLayout Spacing="6" AutomationProperties.IsInAccessibleTree="False">
+                                        <Label Text="{Binding Name}"
+                                               FontFamily="JakartaBold"
+                                               FontSize="14"
+                                               VerticalOptions="Center"
+                                               TextColor="{Binding Color, Converter={StaticResource HexToTextColorConverter}}" />
+                                        <Border WidthRequest="24"
+                                                HeightRequest="24"
+                                                VerticalOptions="Center"
+                                                StrokeThickness="0"
+                                                StrokeShape="RoundRectangle 12"
+                                                BackgroundColor="#33FFFFFF">
+                                            <Label Text="✕"
+                                                   FontSize="10"
+                                                   FontFamily="JakartaBold"
+                                                   HorizontalOptions="Center"
+                                                   VerticalOptions="Center"
+                                                   TextColor="{Binding Color, Converter={StaticResource HexToTextColorConverter}}" />
+                                        </Border>
+                                    </HorizontalStackLayout>
+                                </Border>
+                            </DataTemplate>
+                        </BindableLayout.ItemTemplate>
+                    </FlexLayout>
 
-        <!-- Autocomplete against tags already in use. A VerticalStackLayout,
-             not a CollectionView: one nested inside this page's ScrollView
-             cannot measure itself and collapses. -->
-        <VerticalStackLayout BindableLayout.ItemsSource="{Binding TagSuggestions}"
-                             Spacing="1"
-                             IsVisible="{Binding HasTagSuggestions}">
-            <BindableLayout.ItemTemplate>
-                <DataTemplate x:DataType="models:Tag">
-                    <Border Padding="12,10"
-                            StrokeThickness="0"
-                            BackgroundColor="{AppThemeBinding Light={StaticResource Gray100}, Dark={StaticResource Gray900}}">
-                        <Border.GestureRecognizers>
-                            <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:AddItemViewModel}}, Path=SelectSuggestionCommand}"
-                                                  CommandParameter="{Binding .}" />
-                        </Border.GestureRecognizers>
-                        <HorizontalStackLayout Spacing="8">
-                            <!-- Its colour, so a suggestion is recognisable as
-                                 the chip it will become. -->
-                            <Border WidthRequest="14"
-                                    HeightRequest="14"
-                                    Padding="0"
-                                    StrokeThickness="0"
-                                    VerticalOptions="Center"
-                                    BackgroundColor="{Binding Color, Converter={StaticResource HexToColorConverter}}">
-                                <Border.StrokeShape>
-                                    <RoundRectangle CornerRadius="7" />
-                                </Border.StrokeShape>
-                            </Border>
-                            <Label Text="{Binding Name}"
-                                   FontSize="14"
-                                   TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}" />
-                        </HorizontalStackLayout>
-                    </Border>
-                </DataTemplate>
-            </BindableLayout.ItemTemplate>
+                    <!-- Hidden at the limit rather than greyed out: there is nothing to type. -->
+                    <Entry Text="{Binding TagInput}"
+                           Placeholder="Add or create a tag"
+                           MaxLength="50"
+                           ReturnType="Done"
+                           IsVisible="{Binding CanAddMoreTags}"
+                           ReturnCommand="{Binding AddTagCommand}"
+                           SemanticProperties.Description="Add or create a tag"
+                           controls:FocusRing.IsEnabled="True" />
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Tags already in use that match what is typed, as chips to add. -->
+            <FlexLayout BindableLayout.ItemsSource="{Binding TagSuggestions}"
+                        Wrap="Wrap"
+                        Direction="Row"
+                        IsVisible="{Binding HasTagSuggestions}">
+                <BindableLayout.ItemTemplate>
+                    <DataTemplate x:DataType="models:Tag">
+                        <Border Style="{StaticResource ChoiceChip}"
+                                Margin="0,0,8,8"
+                                Padding="12,0"
+                                HeightRequest="36"
+                                StrokeShape="RoundRectangle 18"
+                                SemanticProperties.Description="{Binding Name, StringFormat='Add tag {0}'}">
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:AddItemViewModel}}, Path=SelectSuggestionCommand}"
+                                                      CommandParameter="{Binding .}" />
+                            </Border.GestureRecognizers>
+                            <HorizontalStackLayout Spacing="6" AutomationProperties.IsInAccessibleTree="False">
+                                <!-- Its colour, so a suggestion is recognisable as the
+                                     chip it will become. -->
+                                <Border WidthRequest="10"
+                                        HeightRequest="10"
+                                        VerticalOptions="Center"
+                                        StrokeThickness="0"
+                                        StrokeShape="RoundRectangle 5"
+                                        BackgroundColor="{Binding Color, Converter={StaticResource HexToColorConverter}}" />
+                                <Label Text="{Binding Name, StringFormat='+ {0}'}"
+                                       FontFamily="JakartaSemiBold"
+                                       FontSize="13"
+                                       VerticalOptions="Center" />
+                            </HorizontalStackLayout>
+                        </Border>
+                    </DataTemplate>
+                </BindableLayout.ItemTemplate>
+            </FlexLayout>
         </VerticalStackLayout>
 
-        <Label Text="Description (Optional)" FontSize="16" Margin="0,10,0,0" />
-        <Editor Text="{Binding Description}"
-                Placeholder="Enter description"
-                HeightRequest="100"
-                MaxLength="1000" />
+        <VerticalStackLayout Spacing="6">
+            <Label Style="{StaticResource FieldLabel}">
+                <Label.FormattedText>
+                    <FormattedString>
+                        <Span Text="Description " />
+                        <Span Text="· optional"
+                              FontFamily="JakartaRegular"
+                              TextColor="{AppThemeBinding Light={StaticResource InkMuted}, Dark={StaticResource InkMutedDark}}" />
+                    </FormattedString>
+                </Label.FormattedText>
+            </Label>
+            <Border Style="{StaticResource FieldSurface}" Padding="12,4">
+                <Editor Text="{Binding Description}"
+                        Placeholder="Size, condition, anything that helps find it"
+                        HeightRequest="88"
+                        MaxLength="1000"
+                        SemanticProperties.Description="Description"
+                        controls:FocusRing.IsEnabled="True" />
+            </Border>
+        </VerticalStackLayout>
 
     </VerticalStackLayout>
 

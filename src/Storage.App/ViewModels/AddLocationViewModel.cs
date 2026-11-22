@@ -20,6 +20,10 @@ public partial class AddLocationViewModel : ObservableObject, IQueryAttributable
     private readonly ILocationRepository _locationRepository;
     private readonly PlacePicker _placePicker;
     private readonly IPhotoService _photoService;
+    private readonly LocationDeletion _deletion;
+
+    // The name as stored, for the delete question: the field may hold an unsaved edit.
+    private string _savedName = string.Empty;
 
     private int _locationId;
     private int? _parentId;
@@ -45,9 +49,12 @@ public partial class AddLocationViewModel : ObservableObject, IQueryAttributable
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasPhoto))]
+    [NotifyPropertyChangedFor(nameof(PhotoFrameDescription))]
     private string? _photoFileName;
 
     public bool HasPhoto => PhotoFileName is not null;
+
+    public string PhotoFrameDescription => HasPhoto ? "Location photo. Double tap to take a new one" : "Take a photo";
 
     [ObservableProperty]
     private string _name = string.Empty;
@@ -79,19 +86,24 @@ public partial class AddLocationViewModel : ObservableObject, IQueryAttributable
     }
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(SaveText))]
     private bool _isEditMode;
 
+    public string SaveText => IsEditMode ? "Save changes" : "Save location";
+
     [ObservableProperty]
-    private string _pageTitle = "Add Location";
+    private string _pageTitle = "New location";
 
     public AddLocationViewModel(
         ILocationRepository locationRepository,
         IPhotoService photoService,
-        PlacePicker placePicker)
+        PlacePicker placePicker,
+        LocationDeletion deletion)
     {
         _locationRepository = locationRepository;
         _photoService = photoService;
         _placePicker = placePicker;
+        _deletion = deletion;
     }
 
     // The edit page's entry point: Shell calls this on its BindingContext with the
@@ -112,7 +124,7 @@ public partial class AddLocationViewModel : ObservableObject, IQueryAttributable
         }
 
         IsEditMode = _locationId != 0;
-        PageTitle = IsEditMode ? "Edit Location" : "Add Location";
+        PageTitle = IsEditMode ? "Edit location" : "New location";
     }
 
     /// <summary>The parent a new location starts under. Applied on the first load.</summary>
@@ -153,6 +165,7 @@ public partial class AddLocationViewModel : ObservableObject, IQueryAttributable
             }
 
             Name = location.Name;
+            _savedName = location.Name;
             Description = location.Description ?? string.Empty;
             ParentLocation = _availableParents.FirstOrDefault(l => l.Id == location.ParentId);
 
@@ -401,6 +414,19 @@ public partial class AddLocationViewModel : ObservableObject, IQueryAttributable
         // The edit stays open underneath, unsaved photo included.
         _isCoveredByCreate = true;
         await Shell.Current.GoToAsync(Routes.Snap(_locationId));
+    }
+
+    // Asks first, as everywhere else a location is deleted. The location's own photo goes
+    // with it; one taken during this edit is dropped when the page is left, as on Cancel.
+    // The edit page only opens from the location's page, which is gone too, so both close.
+    [RelayCommand]
+    private async Task DeleteAsync()
+    {
+        if (!IsEditMode)
+            return;
+
+        if (await _deletion.ConfirmAndDeleteAsync(_locationId, _savedName))
+            await Shell.Current.GoToAsync("../..");
     }
 
     [RelayCommand]

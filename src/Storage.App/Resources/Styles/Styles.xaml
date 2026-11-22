@@ -136,12 +136,9 @@
         <Setter Property="Padding" Value="16" />
     </Style>
 
-    <!-- The white box an Entry, Editor or picker row sits in. The control inside stays
-         transparent. Android still draws its own underline under an Entry; turning that
-         off is a handler mapping, and it lands with the restyled forms so the current
-         forms do not lose the only outline their fields have.
-         Focus and error rings are a Stroke / StrokeThickness="2" set by a trigger on the
-         form's own Border, which can see the Entry it wraps; a shared style cannot. -->
+    <!-- The white box an Entry, Editor or picker row sits in, and its only outline: the
+         control inside stays transparent, and MauiProgram takes away Android's underline.
+         controls:FocusRing on the field gives this box the accent ring while it has focus. -->
     <Style TargetType="Border" x:Key="FieldSurface">
         <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}" />
         <Setter Property="Stroke" Value="{AppThemeBinding Light={StaticResource Hairline}, Dark={StaticResource HairlineDark}}" />
@@ -149,6 +146,17 @@
         <Setter Property="StrokeShape" Value="RoundRectangle 16" />
         <Setter Property="Padding" Value="14,0" />
         <Setter Property="MinimumHeightRequest" Value="52" />
+    </Style>
+
+    <!-- The strip Save sits in at the foot of a form: canvas, with a hairline on top.
+         The stroke goes all round, so the margin pushes its sides and bottom off screen. -->
+    <Style TargetType="Border" x:Key="SaveBar">
+        <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource Canvas}, Dark={StaticResource CanvasDark}}" />
+        <Setter Property="Stroke" Value="{AppThemeBinding Light={StaticResource Hairline}, Dark={StaticResource HairlineDark}}" />
+        <Setter Property="StrokeThickness" Value="1" />
+        <Setter Property="StrokeShape" Value="Rectangle" />
+        <Setter Property="Margin" Value="-1,0,-1,-1" />
+        <Setter Property="Padding" Value="21,12,21,20" />
     </Style>
 
     <!-- The grey track behind a two- or three-way switch (Item | Place, Items | Places). -->

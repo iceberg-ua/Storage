@@ -33,7 +33,9 @@ public static class FocusOnError
         {
             try
             {
-                await scrollView.ScrollToAsync(entry.Parent as Element ?? entry, ScrollToPosition.Start, animated: true);
+                // In a FieldSurface box, the box's own parent is what holds the message.
+                var field = entry.Parent is Border { Parent: Element outer } ? outer : entry.Parent as Element ?? entry;
+                await scrollView.ScrollToAsync(field, ScrollToPosition.Start, animated: true);
             }
             catch (Exception)
             {

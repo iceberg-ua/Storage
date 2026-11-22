@@ -99,7 +99,8 @@ public partial class AddItemViewModel : ObservableObject, IQueryAttributable
 
     public bool IsAtTagLimit => !CanAddMoreTags;
 
-    public string TagLimitMessage => $"Maximum {MaxTagsPerItem} tags per item";
+    /// <summary>"· 2 of 5", after the Tags label; empty until there is a tag.</summary>
+    public string TagCountText => ItemTags.Count == 0 ? string.Empty : $"· {ItemTags.Count} of {MaxTagsPerItem}";
 
     [ObservableProperty]
     private string _tagInput = string.Empty;
@@ -114,7 +115,7 @@ public partial class AddItemViewModel : ObservableObject, IQueryAttributable
     private bool _isEditMode;
 
     [ObservableProperty]
-    private string _pageTitle = "Add Item";
+    private string _pageTitle = "New item";
 
     // The photo strip, in display order. The first is the primary — the one the item
     // list shows — so ordering the set and choosing the primary are one gesture.
@@ -127,7 +128,14 @@ public partial class AddItemViewModel : ObservableObject, IQueryAttributable
 
     public bool IsAtPhotoLimit => !CanAddMorePhotos;
 
-    public string PhotoLimitMessage => $"Maximum {MaxPhotosPerItem} photos per item";
+    /// <summary>The line under the photo strip: how many, and what the heart means.</summary>
+    public string PhotoCountText => Photos.Count switch
+    {
+        0 => $"Up to {MaxPhotosPerItem} photos",
+        1 => $"1 of {MaxPhotosPerItem} photos",
+        _ when IsAtPhotoLimit => $"{Photos.Count} of {MaxPhotosPerItem} photos, the most for one item · the filled heart marks the main photo",
+        _ => $"{Photos.Count} of {MaxPhotosPerItem} photos · the filled heart marks the main photo"
+    };
 
     public AddItemViewModel(
         IItemRepository itemRepository,
@@ -170,7 +178,7 @@ public partial class AddItemViewModel : ObservableObject, IQueryAttributable
         }
 
         IsEditMode = _itemId != 0;
-        PageTitle = IsEditMode ? "Edit Item" : "Add Item";
+        PageTitle = IsEditMode ? "Edit item" : "New item";
     }
 
     /// <summary>The location a new item starts in. Applied on the first load.</summary>
@@ -292,6 +300,7 @@ public partial class AddItemViewModel : ObservableObject, IQueryAttributable
     {
         OnPropertyChanged(nameof(CanAddMoreTags));
         OnPropertyChanged(nameof(IsAtTagLimit));
+        OnPropertyChanged(nameof(TagCountText));
     }
 
     // The same arrangement for photos, which three commands mutate and which are
@@ -313,6 +322,7 @@ public partial class AddItemViewModel : ObservableObject, IQueryAttributable
         OnPropertyChanged(nameof(HasPhotos));
         OnPropertyChanged(nameof(CanAddMorePhotos));
         OnPropertyChanged(nameof(IsAtPhotoLimit));
+        OnPropertyChanged(nameof(PhotoCountText));
 
         // Which photo is primary is a fact about position — restamped here rather
         // than worked out in the template.
