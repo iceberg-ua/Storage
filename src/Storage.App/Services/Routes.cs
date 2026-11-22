@@ -19,6 +19,25 @@ public static class Routes
         return locationId is int id ? $"{route}&locationId={id}" : route;
     }
 
+    /// <summary>
+    /// The camera, first, for a new item: photos one after another, then the item form
+    /// with them and <paramref name="locationId"/> already filled in.
+    /// </summary>
+    /// <remarks>Read back by <see cref="Views.CameraPage.ApplyQueryAttributes"/>.</remarks>
+    public static string Snap(int? locationId = null) =>
+        locationId is int id ? $"snap?snap=1&locationId={id}" : "snap?snap=1";
+
+    /// <summary>
+    /// The create page on an item, with the photos the camera took for it. The camera
+    /// takes itself out from under it once it is pushed, so Back from the form leaves the flow.
+    /// </summary>
+    public static string CreateFromSnap(int? locationId, IEnumerable<string> photoFileNames)
+    {
+        var photos = string.Join('|', photoFileNames);
+        var route = Create(CreateKind.Item, locationId);
+        return photos.Length == 0 ? route : $"{route}&photos={Uri.EscapeDataString(photos)}";
+    }
+
     /// <summary>One location's page: its sub-locations and the items stored in it.</summary>
     /// <remarks>Read back by <see cref="PlaceViewModel.ApplyQueryAttributes"/>.</remarks>
     public static string Place(int locationId) => $"place?locationId={locationId}";

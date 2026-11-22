@@ -162,5 +162,5 @@ public partial class PlaceViewModel : ObservableObject, IQueryAttributable
 
     [RelayCommand]
     private Task NewItemAsync() =>
-        Shell.Current.GoToAsync(Routes.Create(CreateKind.Item, LocationId));
+        Shell.Current.GoToAsync(Routes.Snap(LocationId));
 }

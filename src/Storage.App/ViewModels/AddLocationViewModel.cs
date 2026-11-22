@@ -400,7 +400,7 @@ public partial class AddLocationViewModel : ObservableObject, IQueryAttributable
 
         // The edit stays open underneath, unsaved photo included.
         _isCoveredByCreate = true;
-        await Shell.Current.GoToAsync(Routes.Create(CreateKind.Item, _locationId));
+        await Shell.Current.GoToAsync(Routes.Snap(_locationId));
     }
 
     [RelayCommand]

@@ -110,11 +110,11 @@
         </Grid>
 
         <Button Grid.Row="1"
-                Text="New item here"
+                Text="📷  New item here"
                 Command="{Binding NewItemCommand}"
                 IsVisible="{Binding IsMissing, Converter={StaticResource InvertedBoolConverter}}"
                 Margin="16,8,16,16"
-                SemanticProperties.Description="{Binding Name, StringFormat='Add a new item to {0}'}" />
+                SemanticProperties.Description="{Binding Name, StringFormat='New item in {0}: opens the camera'}" />
 
         <!-- Deleted while this page was underneath another one, from a search on a
              tab. Said plainly, with a way out, instead of popping during OnAppearing. -->

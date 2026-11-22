@@ -495,7 +495,7 @@ public partial class FindViewModel : ObservableObject, IQueryAttributable
 
     [RelayCommand]
     private Task NewItemAsync() =>
-        Shell.Current.GoToAsync(Routes.Create(CreateKind.Item, PlaceFilter?.Id));
+        Shell.Current.GoToAsync(Routes.Snap(PlaceFilter?.Id));
 
     [RelayCommand]
     private async Task RunRecentAsync(RecentSearch recent)
