@@ -2,6 +2,7 @@
 <ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:Storage.App.ViewModels"
+             xmlns:controls="clr-namespace:Storage.App.Controls"
              x:Class="Storage.App.Views.PlaceCover"
              x:DataType="vm:PlaceTile">
 
@@ -9,13 +10,13 @@
          parent Border clips the corners. Bind it to a PlaceTile. -->
     <Grid BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceSunken}, Dark={StaticResource SurfaceSunkenDark}}">
 
-        <!-- Nothing to show yet. -->
-        <Label Text="📍"
-               FontSize="22"
-               AutomationProperties.IsInAccessibleTree="False"
-               HorizontalOptions="Center"
-               VerticalOptions="Center"
-               IsVisible="{Binding HasNoPicture}" />
+        <!-- Nothing to show yet: the mockups' photo placeholder. -->
+        <controls:Icon Glyph="{x:Static controls:Icons.Photo}"
+                       Size="26"
+                       Weight="1.6"
+                       Opacity="0.35"
+                       Color="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}"
+                       IsVisible="{Binding HasNoPicture}" />
 
         <!-- The location's own photo wins: it is the one picture the user chose. -->
         <Image Source="{Binding OwnPhoto, Converter={StaticResource PhotoSourceConverter}}"
@@ -25,8 +26,9 @@
         <!-- Otherwise up to four recent item photos from inside it. -->
         <Grid RowDefinitions="*,*"
               ColumnDefinitions="*,*"
-              RowSpacing="2"
-              ColumnSpacing="2"
+              x:Name="Mosaic"
+              RowSpacing="4"
+              ColumnSpacing="4"
               IsVisible="{Binding HasMosaic}">
             <!-- Spans come from PlaceTile, so fewer than four photos still fill it. -->
             <Image Grid.Row="0" Grid.Column="0" Aspect="AspectFill"

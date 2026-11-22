@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:Storage.App.ViewModels"
              xmlns:models="clr-namespace:Storage.Core.Models;assembly=Storage.Core"
+             xmlns:controls="clr-namespace:Storage.App.Controls"
              x:Class="Storage.App.Views.ItemDetailPage"
              x:DataType="vm:ItemDetailViewModel"
              Title="{Binding Name}"
@@ -23,7 +24,7 @@
                          this is the thing you were looking for. AspectFit, not
                          AspectFill — a crop can hide the very detail that tells two
                          similar items apart. -->
-                    <Grid HeightRequest="360"
+                    <Grid HeightRequest="380"
                           IsVisible="{Binding HasPhotos}"
                           BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceSunken}, Dark={StaticResource SurfaceSunkenDark}}">
                         <!-- Swipe for the rest of the set, starting on the primary. Its
@@ -47,7 +48,7 @@
                         <Border IsVisible="{Binding HasMultiplePhotos}"
                                 HorizontalOptions="Center"
                                 VerticalOptions="End"
-                                Margin="0,0,0,14"
+                                Margin="0,0,0,44"
                                 Padding="10,5"
                                 StrokeThickness="0"
                                 StrokeShape="RoundRectangle 12"
@@ -58,23 +59,52 @@
                         </Border>
                     </Grid>
 
+                    <!-- White discs on the canvas; see-through white over a photo. -->
                     <Grid ColumnDefinitions="Auto,*,Auto"
-                          Padding="20,16,20,0"
+                          Padding="20,20,20,0"
                           VerticalOptions="Start">
-                        <Button Grid.Column="0"
-                                Text="←"
-                                Style="{StaticResource RoundIconButton}"
-                                Command="{Binding BackCommand}"
-                                SemanticProperties.Description="Back" />
-                        <Button Grid.Column="2"
-                                Text="⋯"
-                                Style="{StaticResource RoundIconButton}"
-                                Command="{Binding ShowActionsCommand}"
-                                SemanticProperties.Description="{Binding Name, StringFormat='More for {0}, including delete'}" />
+                        <controls:IconButton Grid.Column="0"
+                                             Glyph="{x:Static controls:Icons.Back}"
+                                             Style="{StaticResource RoundIcon}"
+                                             Command="{Binding BackCommand}"
+                                             SemanticProperties.Description="Back">
+                            <controls:IconButton.Triggers>
+                                <DataTrigger TargetType="controls:IconButton" Binding="{Binding HasPhotos}" Value="True">
+                                    <Setter Property="BackgroundColor" Value="#EBFFFFFF" />
+                                    <Setter Property="TextColor" Value="{StaticResource Ink}" />
+                                </DataTrigger>
+                            </controls:IconButton.Triggers>
+                        </controls:IconButton>
+                        <controls:IconButton Grid.Column="2"
+                                             Glyph="{x:Static controls:Icons.More}"
+                                             IconFilled="True"
+                                             Style="{StaticResource RoundIcon}"
+                                             Command="{Binding ShowActionsCommand}"
+                                             SemanticProperties.Description="{Binding Name, StringFormat='More for {0}, including delete'}">
+                            <controls:IconButton.Triggers>
+                                <DataTrigger TargetType="controls:IconButton" Binding="{Binding HasPhotos}" Value="True">
+                                    <Setter Property="BackgroundColor" Value="#EBFFFFFF" />
+                                    <Setter Property="TextColor" Value="{StaticResource Ink}" />
+                                </DataTrigger>
+                            </controls:IconButton.Triggers>
+                        </controls:IconButton>
                     </Grid>
                 </Grid>
 
-                <VerticalStackLayout Padding="20,20,20,24" Spacing="20">
+                <!-- The details on a sheet of canvas that rises over the photo's lower edge,
+                     rounded at the top, as in the mockup. Without a photo it just sits
+                     under the buttons. -->
+                <Border StrokeThickness="0"
+                        StrokeShape="RoundRectangle 28,28,0,0"
+                        Padding="20,20,20,24"
+                        BackgroundColor="{AppThemeBinding Light={StaticResource Canvas}, Dark={StaticResource CanvasDark}}">
+                    <Border.Triggers>
+                        <DataTrigger TargetType="Border" Binding="{Binding HasPhotos}" Value="True">
+                            <Setter Property="Margin" Value="0,-28,0,0" />
+                            <Setter Property="Padding" Value="20,26,20,24" />
+                        </DataTrigger>
+                    </Border.Triggers>
+                <VerticalStackLayout Spacing="20">
 
                     <VerticalStackLayout Spacing="10">
                         <Label Text="{Binding Name}"
@@ -87,17 +117,22 @@
                              this page exists to answer, so "nowhere yet" is an answer. -->
                         <Border Style="{StaticResource PlaceChip}"
                                 HorizontalOptions="Start"
-                                Padding="12,0,14,0"
+                                Padding="10,0,14,0"
                                 IsVisible="{Binding HasLocation}"
                                 SemanticProperties.Description="{Binding LocationPath, StringFormat='Stored in {0}. Opens that location'}">
                             <Border.GestureRecognizers>
                                 <TapGestureRecognizer Command="{Binding OpenLocationCommand}" />
                             </Border.GestureRecognizers>
-                            <Label Text="{Binding LocationPath, StringFormat='📍 {0}'}"
-                                   Style="{StaticResource StrongLabel}"
-                                   FontSize="14"
-                                   VerticalOptions="Center"
-                                   TextColor="{AppThemeBinding Light={StaticResource OnPrimarySoft}, Dark={StaticResource OnPrimarySoftDark}}" />
+                            <HorizontalStackLayout Spacing="6" VerticalOptions="Center">
+                                <controls:Icon Glyph="{x:Static controls:Icons.Pin}"
+                                               Size="16"
+                                               Color="{AppThemeBinding Light={StaticResource OnPrimarySoft}, Dark={StaticResource OnPrimarySoftDark}}" />
+                                <Label Text="{Binding LocationPath}"
+                                       Style="{StaticResource StrongLabel}"
+                                       FontSize="14"
+                                       VerticalOptions="Center"
+                                       TextColor="{AppThemeBinding Light={StaticResource OnPrimarySoft}, Dark={StaticResource OnPrimarySoftDark}}" />
+                            </HorizontalStackLayout>
                         </Border>
                         <Label Text="No location yet"
                                Style="{StaticResource Caption}"
@@ -110,7 +145,7 @@
                     <Border Style="{StaticResource Card}" Padding="18,12,12,12">
                         <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
                             <VerticalStackLayout VerticalOptions="Center">
-                                <Label Text="Quantity" Style="{StaticResource Caption}" FontFamily="JakartaSemiBold" />
+                                <Label Text="Quantity" Style="{StaticResource Caption}" FontFamily="JakartaSemiBold" FontSize="12" />
                                 <Label Text="{Binding Quantity}"
                                        Style="{StaticResource Title}"
                                        SemanticProperties.Description="{Binding Quantity, StringFormat='Quantity {0}'}" />
@@ -119,7 +154,9 @@
                                     Text="−"
                                     Style="{StaticResource RoundIconButton}"
                                     FontSize="22"
-                                    BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceSunken}, Dark={StaticResource SurfaceSunkenDark}}"
+                                    BackgroundColor="{AppThemeBinding Light={StaticResource Canvas}, Dark={StaticResource CanvasDark}}"
+                                    BorderColor="{AppThemeBinding Light={StaticResource Hairline}, Dark={StaticResource HairlineDark}}"
+                                    BorderWidth="1"
                                     Command="{Binding DecreaseQuantityCommand}"
                                     SemanticProperties.Description="Decrease quantity" />
                             <Button Grid.Column="2"
@@ -153,13 +190,16 @@
                     </FlexLayout>
 
                     <VerticalStackLayout Spacing="6" IsVisible="{Binding HasDescription}">
-                        <Label Text="Description" Style="{StaticResource Caption}" FontFamily="JakartaSemiBold" />
-                        <Label Text="{Binding Description}" LineHeight="1.4" />
+                        <Label Text="Description" Style="{StaticResource Caption}" FontFamily="JakartaSemiBold" FontSize="12" />
+                        <Label Text="{Binding Description}" LineHeight="1.5" />
                     </VerticalStackLayout>
 
                     <Label Text="{Binding CreatedAt, StringFormat='Added {0:d MMM yyyy}'}"
-                           Style="{StaticResource Caption}" />
+                           Style="{StaticResource Caption}"
+                           FontSize="12"
+                           Margin="0,-14,0,0" />
                 </VerticalStackLayout>
+                </Border>
             </VerticalStackLayout>
         </ScrollView>
 
@@ -169,7 +209,7 @@
         <Grid Grid.Row="1"
               ColumnDefinitions="*,*"
               ColumnSpacing="10"
-              Padding="20,8,20,16"
+              Padding="20,8,20,24"
               IsVisible="{Binding IsMissing, Converter={StaticResource InvertedBoolConverter}}">
             <Button Text="Move"
                     Style="{StaticResource SecondaryButton}"

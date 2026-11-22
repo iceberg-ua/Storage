@@ -7,8 +7,11 @@ using Storage.Core.Repositories;
 
 namespace Storage.App.ViewModels;
 
-/// <summary>One step of the path at the top of a location's page; a null id is the Locations tab.</summary>
-public sealed record PlaceCrumb(string Name, int? LocationId, bool IsFirst);
+/// <summary>
+/// One step of the path at the top of a location's page or the picker; a null id is the
+/// top. In the picker the last one is where you are, shown as plain text rather than a link.
+/// </summary>
+public sealed record PlaceCrumb(string Name, int? LocationId, bool IsFirst, bool IsLast = false);
 
 /// <summary>
 /// One location's page, pushed with a "locationId": its photo, where it sits, the

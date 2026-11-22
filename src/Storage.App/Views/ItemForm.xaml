@@ -65,18 +65,16 @@
                                             StrokeShape="RoundRectangle 14"
                                             BackgroundColor="#D9FFFFFF"
                                             AutomationProperties.IsInAccessibleTree="False">
-                                        <Label Text="{Binding HeartGlyph}"
-                                               FontSize="16"
-                                               TextColor="{StaticResource Ink}"
-                                               HorizontalOptions="Center"
-                                               VerticalOptions="Center"
-                                               AutomationProperties.IsInAccessibleTree="False">
-                                            <Label.Triggers>
-                                                <DataTrigger TargetType="Label" Binding="{Binding IsPrimary}" Value="True">
-                                                    <Setter Property="TextColor" Value="{StaticResource Primary}" />
+                                        <controls:Icon Glyph="{x:Static controls:Icons.Heart}"
+                                                       Size="16"
+                                                       IsFilled="{Binding IsPrimary}"
+                                                       Color="{StaticResource Ink}">
+                                            <controls:Icon.Triggers>
+                                                <DataTrigger TargetType="controls:Icon" Binding="{Binding IsPrimary}" Value="True">
+                                                    <Setter Property="Color" Value="{StaticResource Primary}" />
                                                 </DataTrigger>
-                                            </Label.Triggers>
-                                        </Label>
+                                            </controls:Icon.Triggers>
+                                        </controls:Icon>
                                         <Border.Triggers>
                                             <DataTrigger TargetType="Border" Binding="{Binding IsPrimary}" Value="True">
                                                 <Setter Property="BackgroundColor" Value="White" />
@@ -107,13 +105,10 @@
                                             StrokeShape="RoundRectangle 13"
                                             BackgroundColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}"
                                             AutomationProperties.IsInAccessibleTree="False">
-                                        <Label Text="✕"
-                                               FontSize="11"
-                                               FontFamily="JakartaBold"
-                                               TextColor="{AppThemeBinding Light={StaticResource Canvas}, Dark={StaticResource CanvasDark}}"
-                                               HorizontalOptions="Center"
-                                               VerticalOptions="Center"
-                                               AutomationProperties.IsInAccessibleTree="False" />
+                                        <controls:Icon Glyph="{x:Static controls:Icons.Close}"
+                                                       Size="10"
+                                                       Weight="3.5"
+                                                       Color="{AppThemeBinding Light={StaticResource Canvas}, Dark={StaticResource CanvasDark}}" />
                                     </Border>
                                     </Grid>
                                 </Grid>
@@ -136,11 +131,9 @@
                         <Border.GestureRecognizers>
                             <TapGestureRecognizer Command="{Binding TakePhotoCommand}" />
                         </Border.GestureRecognizers>
-                        <Label Text="📷"
-                               FontSize="24"
-                               HorizontalOptions="Center"
-                               VerticalOptions="Center"
-                               AutomationProperties.IsInAccessibleTree="False" />
+                        <controls:Icon Glyph="{x:Static controls:Icons.Camera}"
+                                       Size="24"
+                                       Color="{AppThemeBinding Light={StaticResource InkMuted}, Dark={StaticResource InkMutedDark}}" />
                     </Border>
                     <Border WidthRequest="84"
                             HeightRequest="84"
@@ -156,11 +149,9 @@
                         <Border.GestureRecognizers>
                             <TapGestureRecognizer Command="{Binding ChooseFromGalleryCommand}" />
                         </Border.GestureRecognizers>
-                        <Label Text="🖼️"
-                               FontSize="24"
-                               HorizontalOptions="Center"
-                               VerticalOptions="Center"
-                               AutomationProperties.IsInAccessibleTree="False" />
+                        <controls:Icon Glyph="{x:Static controls:Icons.Photo}"
+                                       Size="24"
+                                       Color="{AppThemeBinding Light={StaticResource InkMuted}, Dark={StaticResource InkMutedDark}}" />
                     </Border>
                 </HorizontalStackLayout>
             </ScrollView>
@@ -199,10 +190,10 @@
                         <TapGestureRecognizer Command="{Binding PickLocationCommand}" />
                     </Border.GestureRecognizers>
                     <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
-                        <Label Text="📍"
-                               FontSize="14"
-                               VerticalOptions="Center"
-                               AutomationProperties.IsInAccessibleTree="False" />
+                        <controls:Icon Glyph="{x:Static controls:Icons.Pin}"
+                                       Size="16"
+                                       Weight="2.2"
+                                       Color="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
                         <Label Grid.Column="1"
                                Text="{Binding SelectedLocationPath}"
                                Style="{StaticResource StrongLabel}"
@@ -211,12 +202,11 @@
                                MaxLines="1"
                                LineBreakMode="HeadTruncation"
                                AutomationProperties.IsInAccessibleTree="False" />
-                        <Label Grid.Column="2"
-                               Text="▾"
-                               Style="{StaticResource Caption}"
-                               FontSize="14"
-                               VerticalOptions="Center"
-                               AutomationProperties.IsInAccessibleTree="False" />
+                        <controls:Icon Grid.Column="2"
+                                       Glyph="{x:Static controls:Icons.ChevronDown}"
+                                       Size="16"
+                                       Weight="2.2"
+                                       Color="{AppThemeBinding Light={StaticResource InkMuted}, Dark={StaticResource InkMutedDark}}" />
                     </Grid>
                 </Border>
             </VerticalStackLayout>
@@ -257,7 +247,7 @@
                                     </Border.GestureRecognizers>
                                     <!-- Text follows the background: a custom colour can be
                                          any brightness, so white is not always readable. -->
-                                    <HorizontalStackLayout Spacing="6" AutomationProperties.IsInAccessibleTree="False">
+                                    <HorizontalStackLayout Spacing="4" AutomationProperties.IsInAccessibleTree="False">
                                         <Label Text="{Binding Name}"
                                                FontFamily="JakartaBold"
                                                FontSize="14"
@@ -269,12 +259,10 @@
                                                 StrokeThickness="0"
                                                 StrokeShape="RoundRectangle 12"
                                                 BackgroundColor="#33FFFFFF">
-                                            <Label Text="✕"
-                                                   FontSize="10"
-                                                   FontFamily="JakartaBold"
-                                                   HorizontalOptions="Center"
-                                                   VerticalOptions="Center"
-                                                   TextColor="{Binding Color, Converter={StaticResource HexToTextColorConverter}}" />
+                                            <controls:Icon Glyph="{x:Static controls:Icons.Close}"
+                                                           Size="10"
+                                                           Weight="3.5"
+                                                           Color="{Binding Color, Converter={StaticResource HexToTextColorConverter}}" />
                                         </Border>
                                     </HorizontalStackLayout>
                                 </Border>
@@ -301,30 +289,22 @@
                         IsVisible="{Binding HasTagSuggestions}">
                 <BindableLayout.ItemTemplate>
                     <DataTemplate x:DataType="models:Tag">
+                        <!-- A white pill with a hairline, as "+ Tools" in the mockup. -->
                         <Border Style="{StaticResource ChoiceChip}"
                                 Margin="0,0,8,8"
                                 Padding="12,0"
-                                HeightRequest="36"
-                                StrokeShape="RoundRectangle 18"
+                                HeightRequest="32"
+                                StrokeShape="RoundRectangle 16"
                                 SemanticProperties.Description="{Binding Name, StringFormat='Add tag {0}'}">
                             <Border.GestureRecognizers>
                                 <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:AddItemViewModel}}, Path=SelectSuggestionCommand}"
                                                       CommandParameter="{Binding .}" />
                             </Border.GestureRecognizers>
-                            <HorizontalStackLayout Spacing="6" AutomationProperties.IsInAccessibleTree="False">
-                                <!-- Its colour, so a suggestion is recognisable as the
-                                     chip it will become. -->
-                                <Border WidthRequest="10"
-                                        HeightRequest="10"
-                                        VerticalOptions="Center"
-                                        StrokeThickness="0"
-                                        StrokeShape="RoundRectangle 5"
-                                        BackgroundColor="{Binding Color, Converter={StaticResource HexToColorConverter}}" />
-                                <Label Text="{Binding Name, StringFormat='+ {0}'}"
-                                       FontFamily="JakartaSemiBold"
-                                       FontSize="13"
-                                       VerticalOptions="Center" />
-                            </HorizontalStackLayout>
+                            <Label Text="{Binding Name, StringFormat='+ {0}'}"
+                                   FontFamily="JakartaSemiBold"
+                                   FontSize="13"
+                                   VerticalOptions="Center"
+                                   AutomationProperties.IsInAccessibleTree="False" />
                         </Border>
                     </DataTemplate>
                 </BindableLayout.ItemTemplate>

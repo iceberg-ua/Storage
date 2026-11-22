@@ -2,6 +2,7 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:Storage.App.ViewModels"
+             xmlns:controls="clr-namespace:Storage.App.Controls"
              xmlns:views="clr-namespace:Storage.App.Views"
              x:Class="Storage.App.Views.CreatePage"
              x:DataType="vm:CreateViewModel"
@@ -12,10 +13,12 @@
     <Grid RowDefinitions="Auto,Auto,*,Auto">
 
         <Grid Grid.Row="0" ColumnDefinitions="Auto,*" ColumnSpacing="12" Padding="20,20,20,0">
-            <Button Text="✕"
-                    Style="{StaticResource RoundIconButton}"
-                    Command="{Binding CancelCommand}"
-                    SemanticProperties.Description="Cancel" />
+            <controls:IconButton Glyph="{x:Static controls:Icons.Close}"
+                                 IconSize="16"
+                                 IconWeight="2.4"
+                                 Style="{StaticResource RoundIcon}"
+                                 Command="{Binding CancelCommand}"
+                                 SemanticProperties.Description="Cancel" />
             <Label Grid.Column="1"
                    Text="{Binding PageTitle}"
                    Style="{StaticResource Title}"
@@ -36,6 +39,7 @@
                             <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
                             <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}" />
                             <Setter Property="FontFamily" Value="JakartaBold" />
+                            <Setter Property="Shadow" Value="{StaticResource RaisedShadow}" />
                         </DataTrigger>
                     </Button.Triggers>
                 </Button>
@@ -50,6 +54,7 @@
                             <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
                             <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}" />
                             <Setter Property="FontFamily" Value="JakartaBold" />
+                            <Setter Property="Shadow" Value="{StaticResource RaisedShadow}" />
                         </DataTrigger>
                     </Button.Triggers>
                 </Button>
@@ -60,7 +65,7 @@
              other just as it was left. Each sits in a wrapper because the form's own
              BindingContext is its view model, not this page's. -->
         <ScrollView Grid.Row="2">
-            <Grid Padding="20,18,20,24">
+            <Grid Padding="20,12,20,24">
                 <ContentView IsVisible="{Binding IsItem}">
                     <views:ItemForm BindingContext="{Binding Item}" />
                 </ContentView>

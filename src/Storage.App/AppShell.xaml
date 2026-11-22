@@ -6,34 +6,30 @@
     xmlns:views="clr-namespace:Storage.App.Views"
     Title="Storage">
 
+    <!-- The tabs and their routes. Shell's own bar is hidden by the Page style: the tab
+         pages draw Views/AppTabBar instead, which has the raised camera button between
+         Locations and Tags. Home is first, so it is the tab the app opens on. -->
     <TabBar>
-        <!-- Icons are single-colour SVGs; the tab bar tints them with the selected and
-             unselected colours from the Shell style, so one file serves both themes.
-             Home is first, so it is the tab the app opens on. -->
         <ShellContent
             Title="Home"
-            Icon="tab_home.png"
             ContentTemplate="{DataTemplate views:HomePage}"
             Route="home" />
 
         <ShellContent
             Title="Locations"
-            Icon="tab_places.png"
             ContentTemplate="{DataTemplate views:LocationsPage}"
             Route="locations" />
 
-        <!-- Every item, and finding one: what the Items tab used to list, under a search. -->
-        <ShellContent
-            Title="Find"
-            Icon="tab_find.png"
-            ContentTemplate="{DataTemplate views:FindPage}"
-            Route="find" />
-
         <ShellContent
             Title="Tags"
-            Icon="tab_tags.png"
             ContentTemplate="{DataTemplate views:TagsPage}"
             Route="tags" />
+
+        <!-- Every item, and finding one. -->
+        <ShellContent
+            Title="Find"
+            ContentTemplate="{DataTemplate views:FindPage}"
+            Route="find" />
     </TabBar>
 
 </Shell>

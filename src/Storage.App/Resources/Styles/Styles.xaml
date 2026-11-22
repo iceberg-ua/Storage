@@ -1,7 +1,8 @@
 ﻿<?xml version="1.0" encoding="UTF-8" ?>
 <ResourceDictionary 
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
-    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml">
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:controls="clr-namespace:Storage.App.Controls">
 
     <Style TargetType="ActivityIndicator">
         <Setter Property="Color" Value="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource White}}" />
@@ -55,40 +56,39 @@
 
     <!-- The primary action: an accent pill. One per screen. Keyed as well as implicit,
          so page-level styles (segments, overlay buttons) can build on it. -->
+    <!-- 56 high, as Save and Next are in the mockups. -->
     <Style TargetType="Button" x:Key="PrimaryButton" BasedOn="{StaticResource BaseButton}">
         <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource PrimaryDarkText}}" />
         <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
+        <Setter Property="MinimumHeightRequest" Value="56"/>
+        <Setter Property="CornerRadius" Value="28"/>
     </Style>
 
     <Style TargetType="Button" BasedOn="{StaticResource PrimaryButton}" />
 
-    <!-- A white pill beside the primary one: Move, Cancel, Sub-place. -->
+    <!-- A white pill beside the primary one: Move, Cancel, Sub-place. 54 high, as the
+         Move | Edit pair is in the mockups. -->
     <Style TargetType="Button" x:Key="SecondaryButton" BasedOn="{StaticResource BaseButton}">
         <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
         <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}" />
         <Setter Property="BorderColor" Value="{AppThemeBinding Light={StaticResource Hairline}, Dark={StaticResource HairlineDark}}" />
         <Setter Property="BorderWidth" Value="1"/>
+        <Setter Property="MinimumHeightRequest" Value="54"/>
+        <Setter Property="CornerRadius" Value="27"/>
     </Style>
 
-    <!-- Ink-filled: the main action on a read-only screen (Edit) and header actions
-         (New place, New tag), so it does not compete with the accent primary button. -->
+    <!-- Ink-filled: the main action on a read-only screen (Edit), so it does not compete
+         with the accent primary button. Header actions use StrongPill. -->
     <Style TargetType="Button" x:Key="StrongButton" BasedOn="{StaticResource BaseButton}">
         <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource Ink}}" />
         <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
-    </Style>
-
-    <!-- Soft accent fill for in-card actions such as "Add item" on Edit place. -->
-    <Style TargetType="Button" x:Key="SoftPrimaryButton" BasedOn="{StaticResource BaseButton}">
-        <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource OnPrimarySoft}, Dark={StaticResource OnPrimarySoftDark}}" />
-        <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource PrimarySoft}, Dark={StaticResource PrimarySoftDark}}" />
-        <Setter Property="FontSize" Value="14"/>
-        <Setter Property="MinimumHeightRequest" Value="44"/>
-        <Setter Property="CornerRadius" Value="22"/>
-        <Setter Property="Padding" Value="16,0"/>
+        <Setter Property="MinimumHeightRequest" Value="54"/>
+        <Setter Property="CornerRadius" Value="27"/>
     </Style>
 
     <!-- Text-only, for actions that sit in the flow of a page: "See all", "Clear". -->
     <Style TargetType="Button" x:Key="TextButton" BasedOn="{StaticResource BaseButton}">
+        <Setter Property="FontFamily" Value="JakartaSemiBold"/>
         <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
         <Setter Property="BackgroundColor" Value="Transparent" />
         <Setter Property="FontSize" Value="14"/>
@@ -96,25 +96,96 @@
         <Setter Property="Padding" Value="4,0"/>
     </Style>
 
-    <!-- Destructive actions stay text-only and sit apart from Save, so a hurried
-         double tap on Save cannot land on them. -->
-    <Style TargetType="Button" x:Key="DangerTextButton" BasedOn="{StaticResource TextButton}">
-        <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}" />
+    <!-- ===== Shadows =====
+         The mockups' box-shadows. Each is shared by every element that uses it, which is
+         fine for a Shadow: it holds no per-element state. -->
+
+    <!-- Round icon buttons and the selected segment: 0 1px 2px Ink at 8%. -->
+    <Shadow x:Key="RaisedShadow" Brush="#1C1B19" Opacity="0.08" Radius="2" Offset="0,1" />
+    <!-- Location cards and rows: 0 1px 2px Ink at 6%. -->
+    <Shadow x:Key="CardShadow" Brush="#1C1B19" Opacity="0.06" Radius="2" Offset="0,1" />
+    <!-- Home's search box: 0 2px 10px Ink at 6%. -->
+    <Shadow x:Key="FloatShadow" Brush="#1C1B19" Opacity="0.06" Radius="10" Offset="0,2" />
+    <!-- The accent glow under the camera button and a floating primary button. -->
+    <Shadow x:Key="AccentShadow" Brush="#0F6E6E" Opacity="0.35" Radius="16" Offset="0,6" />
+
+    <!-- ===== Icon buttons (Controls:IconButton) =====
+         A button that draws one of the mockups' icons, alone or beside a label. An
+         icon-only one needs SemanticProperties.Description: the icon tells a screen
+         reader nothing. -->
+
+    <Style TargetType="controls:IconButton" x:Key="BaseIconButton">
+        <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+        <Setter Property="BackgroundColor" Value="Transparent" />
+        <Setter Property="StrokeThickness" Value="0" />
+        <Setter Property="MinimumHeightRequest" Value="44" />
+        <Setter Property="MinimumWidthRequest" Value="44" />
     </Style>
 
-    <!-- Icon-only action button on the screens that are not redesigned yet. Left as it
-         was so those headers keep their layout; RoundIconButton replaces it per screen.
-         Always pair with SemanticProperties.Description, since the glyph alone tells a
-         screen reader nothing. -->
-    <Style TargetType="Button" x:Key="IconButton">
-        <Setter Property="FontSize" Value="20" />
-        <Setter Property="WidthRequest" Value="52" />
+    <!-- A 44 disc on white: back, search, ⋯, close. -->
+    <Style TargetType="controls:IconButton" x:Key="RoundIcon" BasedOn="{StaticResource BaseIconButton}">
+        <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}" />
+        <Setter Property="StrokeShape" Value="RoundRectangle 22" />
+        <Setter Property="WidthRequest" Value="44" />
         <Setter Property="HeightRequest" Value="44" />
-        <Setter Property="Padding" Value="0" />
+        <Setter Property="Shadow" Value="{StaticResource RaisedShadow}" />
     </Style>
 
-    <!-- Icon-only round button on a white disc: back, search, edit, more. Same
-         SemanticProperties.Description rule as IconButton. -->
+    <!-- Ink-filled header action with a plus: "New tag", "New". -->
+    <Style TargetType="controls:IconButton" x:Key="StrongPill" BasedOn="{StaticResource BaseIconButton}">
+        <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource Ink}}" />
+        <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+        <Setter Property="StrokeShape" Value="RoundRectangle 22" />
+        <Setter Property="HeightRequest" Value="44" />
+        <Setter Property="Padding" Value="16,0" />
+        <Setter Property="IconSize" Value="16" />
+        <Setter Property="IconWeight" Value="2.4" />
+    </Style>
+
+    <!-- The accent button with an icon: "New item here", 56 high with its glow. -->
+    <Style TargetType="controls:IconButton" x:Key="PrimaryPill" BasedOn="{StaticResource BaseIconButton}">
+        <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource PrimaryDarkText}}" />
+        <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
+        <Setter Property="StrokeShape" Value="RoundRectangle 28" />
+        <Setter Property="HeightRequest" Value="56" />
+        <Setter Property="Padding" Value="20,0" />
+        <Setter Property="FontSize" Value="16" />
+        <Setter Property="IconSize" Value="22" />
+        <Setter Property="Spacing" Value="10" />
+        <Setter Property="Shadow" Value="{StaticResource AccentShadow}" />
+    </Style>
+
+    <!-- Soft accent fill for in-card actions: "Show items", "Add item here", "Change". -->
+    <Style TargetType="controls:IconButton" x:Key="SoftPill" BasedOn="{StaticResource BaseIconButton}">
+        <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource OnPrimarySoft}, Dark={StaticResource OnPrimarySoftDark}}" />
+        <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource PrimarySoft}, Dark={StaticResource PrimarySoftDark}}" />
+        <Setter Property="StrokeShape" Value="RoundRectangle 22" />
+        <Setter Property="HeightRequest" Value="44" />
+        <Setter Property="Padding" Value="16,0" />
+        <Setter Property="IconSize" Value="18" />
+        <Setter Property="Spacing" Value="8" />
+    </Style>
+
+    <!-- Delete, with its bin: text-only and apart from Save, so a hurried double tap on
+         Save cannot land on it. -->
+    <Style TargetType="controls:IconButton" x:Key="DangerTextIcon" BasedOn="{StaticResource BaseIconButton}">
+        <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}" />
+        <Setter Property="HorizontalOptions" Value="Start" />
+        <Setter Property="HeightRequest" Value="44" />
+        <Setter Property="Padding" Value="4,0" />
+        <Setter Property="FontSize" Value="15" />
+        <Setter Property="IconSize" Value="18" />
+        <Setter Property="Spacing" Value="8" />
+    </Style>
+
+    <!-- An icon in a row with no fill of its own: a tag's pencil, a picker row's chevron. -->
+    <Style TargetType="controls:IconButton" x:Key="PlainIcon" BasedOn="{StaticResource BaseIconButton}">
+        <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource InkMuted}, Dark={StaticResource InkMutedDark}}" />
+        <Setter Property="IconSize" Value="18" />
+    </Style>
+
+    <!-- A Button on a white disc, for the text glyphs − and + of a stepper. Same
+         SemanticProperties.Description rule as the icon buttons. -->
     <Style TargetType="Button" x:Key="RoundIconButton" BasedOn="{StaticResource BaseButton}">
         <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
         <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}" />
@@ -136,12 +207,18 @@
         <Setter Property="Padding" Value="16" />
     </Style>
 
-    <!-- The white box an Entry, Editor or picker row sits in, and its only outline: the
-         control inside stays transparent, and MauiProgram takes away Android's underline.
-         controls:FocusRing on the field gives this box the accent ring while it has focus. -->
+    <!-- A card that sits up off the canvas: location cards and rows, Home's search box. -->
+    <Style TargetType="Border" x:Key="RaisedCard" BasedOn="{StaticResource Card}">
+        <Setter Property="Shadow" Value="{StaticResource CardShadow}" />
+    </Style>
+
+    <!-- The white box an Entry, Editor or picker row sits in: white on the canvas, with no
+         outline at rest, as in the mockups. The control inside stays transparent, and
+         MauiProgram takes away Android's underline. controls:FocusRing on the field gives
+         this box the accent ring while it has focus. -->
     <Style TargetType="Border" x:Key="FieldSurface">
         <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}" />
-        <Setter Property="Stroke" Value="{AppThemeBinding Light={StaticResource Hairline}, Dark={StaticResource HairlineDark}}" />
+        <Setter Property="Stroke" Value="Transparent" />
         <!-- Two, not one: the focus ring is the same width in the accent, so only the
              colour changes and the field inside does not shift. -->
         <Setter Property="StrokeThickness" Value="2" />
@@ -518,13 +595,6 @@
         </Setter>
     </Style>
 
-    <Style TargetType="Shadow">
-        <Setter Property="Radius" Value="15" />
-        <Setter Property="Opacity" Value="0.5" />
-        <Setter Property="Brush" Value="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource White}}" />
-        <Setter Property="Offset" Value="10,10" />
-    </Style>
-
     <Style TargetType="Slider">
         <Setter Property="MinimumTrackColor" Value="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource White}}" />
         <Setter Property="MaximumTrackColor" Value="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource Gray600}}" />
@@ -625,6 +695,9 @@
 
     <Style TargetType="Page" ApplyToDerivedTypes="True">
         <Setter Property="Padding" Value="0"/>
+        <!-- The tab pages draw their own bar (Views/AppTabBar), and pushed pages have
+             none, as in the mockups. -->
+        <Setter Property="Shell.TabBarIsVisible" Value="False"/>
         <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource Canvas}, Dark={StaticResource CanvasDark}}" />
     </Style>
 

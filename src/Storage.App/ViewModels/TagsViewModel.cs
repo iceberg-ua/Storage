@@ -73,6 +73,10 @@ public partial class TagsViewModel : ObservableObject
     [RelayCommand]
     private Task NewTagAsync() => Shell.Current.GoToAsync(Routes.EditTag());
 
+    // The tab bar's camera, as on the other tabs.
+    [RelayCommand]
+    private Task NewItemAsync() => Shell.Current.GoToAsync(Routes.Snap());
+
     [RelayCommand]
     private Task OpenTagAsync(TagRow row) => Shell.Current.GoToAsync(Routes.TaggedItems(row.Tag.Id));
 

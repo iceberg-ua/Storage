@@ -68,7 +68,7 @@ public class NumericStepper : ContentView
         row.Add(_entry);
         row.Add(increment);
 
-        // The same white box as the other fields beside it.
+        // The same white box as the other fields beside it, with no outline at rest.
         var surface = new Border
         {
             StrokeThickness = 2,
@@ -78,7 +78,7 @@ public class NumericStepper : ContentView
             Content = row
         };
         surface.SetAppThemeColor(BackgroundColorProperty, Resource("Surface"), Resource("SurfaceDark"));
-        surface.SetAppThemeColor(Border.StrokeProperty, Resource("Hairline"), Resource("HairlineDark"));
+        surface.Stroke = Colors.Transparent;
 
         Content = surface;
     }

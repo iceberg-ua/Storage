@@ -2,6 +2,8 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:Storage.App.ViewModels"
+             xmlns:views="clr-namespace:Storage.App.Views"
+             xmlns:controls="clr-namespace:Storage.App.Controls"
              x:Class="Storage.App.Views.TagsPage"
              x:DataType="vm:TagsViewModel"
              Title="Tags"
@@ -10,6 +12,7 @@
     <!-- A ScrollView of rows rather than a CollectionView: the rows sit together in one
          card, which a CollectionView cannot size to its content, and a household has
          tens of tags, not thousands. -->
+    <Grid RowDefinitions="*,Auto">
     <RefreshView IsRefreshing="{Binding IsLoading}" Command="{Binding LoadTagsCommand}">
         <ScrollView>
             <VerticalStackLayout Padding="20,28,20,24" Spacing="18">
@@ -21,14 +24,10 @@
                                Style="{StaticResource Display}"
                                SemanticProperties.HeadingLevel="Level1" />
                     </VerticalStackLayout>
-                    <Button Grid.Column="1"
-                            Text="+  New tag"
-                            Style="{StaticResource StrongButton}"
-                            FontSize="14"
-                            Padding="16,0"
-                            MinimumHeightRequest="44"
-                            HeightRequest="44"
-                            CornerRadius="22"
+                    <controls:IconButton Grid.Column="1"
+                            Glyph="{x:Static controls:Icons.Plus}"
+                            Text="New tag"
+                            Style="{StaticResource StrongPill}"
                             VerticalOptions="End"
                             Command="{Binding NewTagCommand}"
                             SemanticProperties.Description="New tag" />
@@ -50,11 +49,15 @@
                                                            CommandParameter="{Binding .}">
                                                 <Grid BackgroundColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}"
                                                       WidthRequest="96">
-                                                    <Label Text="Delete"
-                                                           FontFamily="JakartaBold"
-                                                           TextColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource Ink}}"
-                                                           HorizontalOptions="Center"
-                                                           VerticalOptions="Center" />
+                                                    <VerticalStackLayout Spacing="4" HorizontalOptions="Center" VerticalOptions="Center">
+                                                        <controls:Icon Glyph="{x:Static controls:Icons.Trash}"
+                                                                       Color="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource Ink}}" />
+                                                        <Label Text="Delete"
+                                                               FontFamily="JakartaBold"
+                                                               FontSize="14"
+                                                               TextColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource Ink}}"
+                                                               HorizontalOptions="Center" />
+                                                    </VerticalStackLayout>
                                                 </Grid>
                                             </SwipeItemView>
                                         </SwipeItems>
@@ -88,11 +91,9 @@
                                                     StrokeShape="RoundRectangle 20"
                                                     BackgroundColor="{Binding Tag.Color, Converter={StaticResource HexToColorConverter}}"
                                                     AutomationProperties.IsInAccessibleTree="False">
-                                                <Label Text="🏷"
-                                                       FontSize="16"
-                                                       HorizontalOptions="Center"
-                                                       VerticalOptions="Center"
-                                                       TextColor="{Binding Tag.Color, Converter={StaticResource HexToTextColorConverter}}" />
+                                                <controls:Icon Glyph="{x:Static controls:Icons.Tag}"
+                                                               Size="18"
+                                                               Color="{Binding Tag.Color, Converter={StaticResource HexToTextColorConverter}}" />
                                             </Border>
                                             <VerticalStackLayout Grid.Column="1"
                                                                  Spacing="1"
@@ -108,12 +109,11 @@
                                         </Grid>
 
                                         <!-- The pencil opens the tag itself: name, colour, delete. -->
-                                        <Button Grid.Row="1"
+                                        <controls:IconButton Grid.Row="1"
                                                 Grid.Column="1"
-                                                Text="✎"
-                                                Style="{StaticResource TextButton}"
-                                                TextColor="{AppThemeBinding Light={StaticResource InkMuted}, Dark={StaticResource InkMutedDark}}"
-                                                FontSize="18"
+                                                Glyph="{x:Static controls:Icons.Pencil}"
+                                                IconWeight="1.8"
+                                                Style="{StaticResource PlainIcon}"
                                                 WidthRequest="52"
                                                 HeightRequest="64"
                                                 Command="{Binding Source={RelativeSource AncestorType={x:Type vm:TagsViewModel}}, Path=EditTagCommand}"
@@ -142,5 +142,8 @@
             </VerticalStackLayout>
         </ScrollView>
     </RefreshView>
+
+    <views:AppTabBar Grid.Row="1" Current="tags" SnapCommand="{Binding NewItemCommand}" />
+    </Grid>
 
 </ContentPage>

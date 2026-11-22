@@ -2,6 +2,8 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:Storage.App.ViewModels"
+             xmlns:views="clr-namespace:Storage.App.Views"
+             xmlns:controls="clr-namespace:Storage.App.Controls"
              xmlns:models="clr-namespace:Storage.Core.Models;assembly=Storage.Core"
              x:Class="Storage.App.Views.FindPage"
              x:DataType="vm:FindViewModel"
@@ -12,9 +14,10 @@
         <!-- A tag filter in force: the tag's own fill, and a cross to take it off. -->
         <DataTemplate x:Key="TagFilterChip" x:DataType="models:Tag">
             <Border Style="{StaticResource Chip}"
-                    HeightRequest="36"
-                    Padding="12,0,6,0"
+                    HeightRequest="34"
+                    Padding="12,0,5,0"
                     Margin="0,0,8,8"
+                    StrokeShape="RoundRectangle 17"
                     BackgroundColor="{Binding Color, Converter={StaticResource HexToColorConverter}}">
                 <HorizontalStackLayout Spacing="4" VerticalOptions="Center">
                     <Label Text="{Binding Name, StringFormat='tag: {0}'}"
@@ -22,112 +25,165 @@
                            FontSize="14"
                            VerticalOptions="Center"
                            TextColor="{Binding Color, Converter={StaticResource HexToTextColorConverter}}" />
-                    <Button Text="✕"
-                            Style="{StaticResource TextButton}"
-                            FontSize="12"
-                            Padding="0"
-                            WidthRequest="28"
-                            MinimumWidthRequest="28"
-                            MinimumHeightRequest="28"
-                            TextColor="{Binding Color, Converter={StaticResource HexToTextColorConverter}}"
-                            Command="{Binding Source={RelativeSource AncestorType={x:Type vm:FindViewModel}}, Path=RemoveTagFilterCommand}"
-                            CommandParameter="{Binding .}"
-                            SemanticProperties.Description="{Binding Name, StringFormat='Remove the tag filter {0}'}" />
+                    <controls:IconButton Glyph="{x:Static controls:Icons.Close}"
+                                         IconSize="12"
+                                         IconWeight="3"
+                                         Style="{StaticResource BaseIconButton}"
+                                         WidthRequest="24"
+                                         HeightRequest="24"
+                                         MinimumWidthRequest="24"
+                                         MinimumHeightRequest="24"
+                                         StrokeShape="RoundRectangle 12"
+                                         BackgroundColor="#33FFFFFF"
+                                         TextColor="{Binding Color, Converter={StaticResource HexToTextColorConverter}}"
+                                         Command="{Binding Source={RelativeSource AncestorType={x:Type vm:FindViewModel}}, Path=RemoveTagFilterCommand}"
+                                         CommandParameter="{Binding .}"
+                                         SemanticProperties.Description="{Binding Name, StringFormat='Remove the tag filter {0}'}" />
                 </HorizontalStackLayout>
             </Border>
         </DataTemplate>
+
+        <!-- A filter to add: a dashed outline, as in the mockup. -->
+        <Style x:Key="AddFilterChip" TargetType="Border" BasedOn="{StaticResource SuggestionChip}">
+            <Setter Property="HeightRequest" Value="32" />
+            <Setter Property="Padding" Value="12,0" />
+        </Style>
     </ContentPage.Resources>
 
-    <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,*,Auto" Padding="20,20,20,0" RowSpacing="12">
+    <!-- No row spacing: the gap above the lists is their margin, so the tab bar's row
+         leaves none behind when it is hidden on a pushed search. -->
+    <Grid RowDefinitions="Auto,*,Auto" Padding="20,20,20,0">
 
-        <!-- The box, with Back beside it when this page was pushed from somewhere. -->
-        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
-            <Button Text="←"
-                    Style="{StaticResource RoundIconButton}"
-                    Command="{Binding BackCommand}"
-                    IsVisible="{Binding IsPushed}"
-                    SemanticProperties.Description="Back" />
+        <!-- A stack, not grid rows, so the parts that are hidden take no spacing either. -->
+        <VerticalStackLayout Spacing="16">
+
+        <!-- The box, with Back beside it when this page was pushed from somewhere. The
+             place filter sits inside it, before the text it narrows. -->
+        <Grid ColumnDefinitions="Auto,*">
+            <controls:IconButton Glyph="{x:Static controls:Icons.Back}"
+                                 Style="{StaticResource RoundIcon}"
+                                 Margin="0,0,10,0"
+                                 Command="{Binding BackCommand}"
+                                 IsVisible="{Binding IsPushed}"
+                                 SemanticProperties.Description="Back" />
             <Border Grid.Column="1"
                     Style="{StaticResource FieldSurface}"
                     StrokeShape="RoundRectangle 28"
                     StrokeThickness="2"
+                    HeightRequest="56"
+                    Padding="16,0,8,0"
                     Stroke="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}">
-                <Entry x:Name="Input"
-                       Text="{Binding Text}"
-                       Placeholder="Search items and locations"
-                       ClearButtonVisibility="WhileEditing"
-                       ReturnType="Search"
-                       VerticalOptions="Center"
-                       SemanticProperties.Description="Search items and locations" />
+                <Border.Triggers>
+                    <DataTrigger TargetType="Border" Binding="{Binding HasPlaceFilter}" Value="True">
+                        <Setter Property="Padding" Value="10,0,8,0" />
+                    </DataTrigger>
+                </Border.Triggers>
+                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+                    <controls:Icon Glyph="{x:Static controls:Icons.Search}"
+                                   Margin="0,0,2,0"
+                                   Color="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}"
+                                   IsVisible="{Binding HasPlaceFilter, Converter={StaticResource InvertedBoolConverter}}" />
+
+                    <Border Style="{StaticResource PlaceChip}"
+                            HeightRequest="34"
+                            Padding="12,0,5,0"
+                            StrokeShape="RoundRectangle 17"
+                            IsVisible="{Binding HasPlaceFilter}">
+                        <HorizontalStackLayout Spacing="4" VerticalOptions="Center">
+                            <Label Text="{Binding PlaceFilterLabel}"
+                                   Style="{StaticResource StrongLabel}"
+                                   FontSize="14"
+                                   MaximumWidthRequest="140"
+                                   VerticalOptions="Center"
+                                   LineBreakMode="TailTruncation"
+                                   TextColor="{AppThemeBinding Light={StaticResource OnPrimarySoft}, Dark={StaticResource OnPrimarySoftDark}}" />
+                            <controls:IconButton Glyph="{x:Static controls:Icons.Close}"
+                                                 IconSize="12"
+                                                 IconWeight="3"
+                                                 Style="{StaticResource BaseIconButton}"
+                                                 WidthRequest="24"
+                                                 HeightRequest="24"
+                                                 MinimumWidthRequest="24"
+                                                 MinimumHeightRequest="24"
+                                                 StrokeShape="RoundRectangle 12"
+                                                 BackgroundColor="#1F0B5555"
+                                                 TextColor="{AppThemeBinding Light={StaticResource OnPrimarySoft}, Dark={StaticResource OnPrimarySoftDark}}"
+                                                 Command="{Binding RemovePlaceFilterCommand}"
+                                                 SemanticProperties.Description="Remove the place filter and search everywhere" />
+                        </HorizontalStackLayout>
+                    </Border>
+
+                    <Entry x:Name="Input"
+                           Grid.Column="1"
+                           Text="{Binding Text}"
+                           Placeholder="Search items, locations, tags"
+                           ReturnType="Search"
+                           VerticalOptions="Center"
+                           SemanticProperties.Description="Search items, locations and tags" />
+
+                    <controls:IconButton Grid.Column="2"
+                                         Glyph="{x:Static controls:Icons.Close}"
+                                         IconSize="14"
+                                         IconWeight="2.6"
+                                         Style="{StaticResource BaseIconButton}"
+                                         WidthRequest="32"
+                                         HeightRequest="32"
+                                         MinimumWidthRequest="32"
+                                         MinimumHeightRequest="32"
+                                         StrokeShape="RoundRectangle 16"
+                                         BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceSunken}, Dark={StaticResource SurfaceSunkenDark}}"
+                                         TextColor="{AppThemeBinding Light={StaticResource InkMuted}, Dark={StaticResource InkMutedDark}}"
+                                         Command="{Binding ClearTextCommand}"
+                                         IsVisible="{Binding HasText}"
+                                         SemanticProperties.Description="Clear text" />
+                </Grid>
             </Border>
         </Grid>
 
-        <!-- The place filter in force, or a way to add one. -->
-        <HorizontalStackLayout Grid.Row="1" Spacing="8">
-            <Border Style="{StaticResource PlaceChip}"
-                    Padding="12,0,6,0"
-                    IsVisible="{Binding HasPlaceFilter}">
-                <HorizontalStackLayout Spacing="4" VerticalOptions="Center">
-                    <Label Text="{Binding PlaceFilterLabel}"
-                           Style="{StaticResource StrongLabel}"
-                           FontSize="14"
-                           VerticalOptions="Center"
-                           LineBreakMode="TailTruncation"
-                           TextColor="{AppThemeBinding Light={StaticResource OnPrimarySoft}, Dark={StaticResource OnPrimarySoftDark}}" />
-                    <Button Text="✕"
-                            Style="{StaticResource TextButton}"
-                            FontSize="12"
-                            Padding="0"
-                            WidthRequest="28"
-                            MinimumWidthRequest="28"
-                            MinimumHeightRequest="28"
-                            Command="{Binding RemovePlaceFilterCommand}"
-                            SemanticProperties.Description="Remove the place filter and search everywhere" />
-                </HorizontalStackLayout>
-            </Border>
-            <Border Style="{StaticResource SuggestionChip}"
-                    HeightRequest="36"
-                    IsVisible="{Binding HasPlaceFilter, Converter={StaticResource InvertedBoolConverter}}"
-                    SemanticProperties.Description="Search in one place only"
-                    SemanticProperties.Hint="Opens the list of locations">
-                <Border.GestureRecognizers>
-                    <TapGestureRecognizer Command="{Binding PickPlaceFilterCommand}" />
-                </Border.GestureRecognizers>
-                <Label Text="+ in: a place" Style="{StaticResource StrongLabel}" FontSize="14" VerticalOptions="Center" />
-            </Border>
-        </HorizontalStackLayout>
-
         <!-- Tag filters in force: a wrapping row of their own, so three or four of them
              wrap instead of running off the edge with their crosses. -->
-        <FlexLayout Grid.Row="2"
-                    Wrap="Wrap"
+        <FlexLayout Wrap="Wrap"
                     Margin="0,0,0,-8"
+                    IsVisible="{Binding TagFilters.Count, Converter={StaticResource CountToBoolConverter}}"
                     BindableLayout.ItemsSource="{Binding TagFilters}"
                     BindableLayout.ItemTemplate="{StaticResource TagFilterChip}" />
 
-        <!-- While typing: tags and places whose names match, as filters to add. -->
-        <VerticalStackLayout Grid.Row="3" Spacing="6" IsVisible="{Binding HasSuggestions}">
-            <Label Text="Add a filter" Style="{StaticResource Caption}" />
-            <FlexLayout BindableLayout.ItemsSource="{Binding Suggestions}" Wrap="Wrap">
-                <BindableLayout.ItemTemplate>
-                    <DataTemplate x:DataType="vm:FindSuggestion">
-                        <Border Style="{StaticResource SuggestionChip}"
-                                HeightRequest="36"
-                                Margin="0,0,8,8"
-                                SemanticProperties.Description="{Binding Label, StringFormat='Add the filter {0}'}">
-                            <Border.GestureRecognizers>
-                                <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:FindViewModel}}, Path=ApplySuggestionCommand}"
-                                                      CommandParameter="{Binding .}" />
-                            </Border.GestureRecognizers>
-                            <Label Text="{Binding Label}" Style="{StaticResource StrongLabel}" FontSize="14" VerticalOptions="Center" />
-                        </Border>
-                    </DataTemplate>
-                </BindableLayout.ItemTemplate>
-            </FlexLayout>
-        </VerticalStackLayout>
+        <!-- While searching: a place to search in, and tags and places whose names match
+             what is typed, as filters to add. -->
+        <ScrollView Orientation="Horizontal"
+                    HorizontalScrollBarVisibility="Never"
+                    Margin="0,0,-20,0"
+                    IsVisible="{Binding ShowAddFilter}">
+            <HorizontalStackLayout Spacing="8" Padding="0,0,20,0">
+                <Label Text="Add filter" Style="{StaticResource Caption}" VerticalOptions="Center" />
+                <Border Style="{StaticResource AddFilterChip}"
+                        IsVisible="{Binding HasPlaceFilter, Converter={StaticResource InvertedBoolConverter}}"
+                        SemanticProperties.Description="Search in one place only"
+                        SemanticProperties.Hint="Opens the list of locations">
+                    <Border.GestureRecognizers>
+                        <TapGestureRecognizer Command="{Binding PickPlaceFilterCommand}" />
+                    </Border.GestureRecognizers>
+                    <Label Text="in: a place" FontFamily="JakartaSemiBold" FontSize="13" VerticalOptions="Center" />
+                </Border>
+                <HorizontalStackLayout BindableLayout.ItemsSource="{Binding Suggestions}" Spacing="8">
+                    <BindableLayout.ItemTemplate>
+                        <DataTemplate x:DataType="vm:FindSuggestion">
+                            <Border Style="{StaticResource AddFilterChip}"
+                                    SemanticProperties.Description="{Binding Label, StringFormat='Add the filter {0}'}">
+                                <Border.GestureRecognizers>
+                                    <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:FindViewModel}}, Path=ApplySuggestionCommand}"
+                                                          CommandParameter="{Binding .}" />
+                                </Border.GestureRecognizers>
+                                <Label Text="{Binding Label}" FontFamily="JakartaSemiBold" FontSize="13" VerticalOptions="Center" />
+                            </Border>
+                        </DataTemplate>
+                    </BindableLayout.ItemTemplate>
+                </HorizontalStackLayout>
+            </HorizontalStackLayout>
+        </ScrollView>
 
         <!-- Items | Places, with what each holds. -->
-        <Border Grid.Row="4" Style="{StaticResource SegmentTrack}">
+        <Border Style="{StaticResource SegmentTrack}" IsVisible="{Binding ShowSegment}">
             <Grid ColumnDefinitions="*,*">
                 <Button Text="{Binding ItemsTabText}"
                         Style="{StaticResource Segment}"
@@ -138,6 +194,7 @@
                             <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
                             <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}" />
                             <Setter Property="FontFamily" Value="JakartaBold" />
+                            <Setter Property="Shadow" Value="{StaticResource RaisedShadow}" />
                         </DataTrigger>
                     </Button.Triggers>
                 </Button>
@@ -151,15 +208,17 @@
                             <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
                             <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}" />
                             <Setter Property="FontFamily" Value="JakartaBold" />
+                            <Setter Property="Shadow" Value="{StaticResource RaisedShadow}" />
                         </DataTrigger>
                     </Button.Triggers>
                 </Button>
             </Grid>
         </Border>
+        </VerticalStackLayout>
 
         <!-- Pull to refresh over either list, as the Items tab had. -->
-        <RefreshView Grid.Row="5"
-                     Margin="-20,0"
+        <RefreshView Grid.Row="1"
+                     Margin="-20,16,-20,0"
                      IsRefreshing="{Binding IsRefreshing}"
                      Command="{Binding RefreshCommand}">
             <Grid>
@@ -172,53 +231,159 @@
                              inside a CollectionView header is unreliable on Android, so the
                              commands below find the view model on this element instead. -->
                         <VerticalStackLayout x:Name="IdleHeader"
-                                             Padding="20,4,20,8"
-                                             Spacing="20"
+                                             Padding="20,6,20,12"
+                                             Spacing="22"
                                              IsVisible="{Binding IsIdle}">
-                            <VerticalStackLayout Spacing="8" IsVisible="{Binding HasRecent}">
-                                <Grid ColumnDefinitions="*,Auto">
-                                    <Label Text="Recent searches" Style="{StaticResource Caption}" FontFamily="JakartaBold" VerticalOptions="Center" />
-                                    <Button Grid.Column="1" Text="Clear" Style="{StaticResource TextButton}" Command="{Binding ClearRecentCommand}" />
-                                </Grid>
-                                <VerticalStackLayout BindableLayout.ItemsSource="{Binding Recent}" Spacing="8">
-                                    <BindableLayout.ItemTemplate>
-                                        <DataTemplate x:DataType="vm:RecentSearch">
-                                            <Border Style="{StaticResource Card}"
-                                                    Padding="16,12"
-                                                    SemanticProperties.Description="{Binding Label, StringFormat='Search again: {0}'}">
-                                                <Border.GestureRecognizers>
-                                                    <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:FindViewModel}}, Path=RunRecentCommand}"
-                                                                          CommandParameter="{Binding .}" />
-                                                </Border.GestureRecognizers>
-                                                <HorizontalStackLayout Spacing="10">
-                                                    <Label Text="🕑" VerticalOptions="Center" AutomationProperties.IsInAccessibleTree="False" />
-                                                    <Label Text="{Binding Label}" VerticalOptions="Center" LineBreakMode="TailTruncation" />
-                                                </HorizontalStackLayout>
-                                            </Border>
-                                        </DataTemplate>
-                                    </BindableLayout.ItemTemplate>
-                                </VerticalStackLayout>
+
+                            <VerticalStackLayout Spacing="10">
+                                <Label Text="Narrow it down" Style="{StaticResource Caption}" FontFamily="JakartaBold" SemanticProperties.HeadingLevel="Level2" />
+                                <HorizontalStackLayout Spacing="8">
+                                    <Border Style="{StaticResource SuggestionChip}"
+                                            HeightRequest="38"
+                                            StrokeShape="RoundRectangle 19"
+                                            SemanticProperties.Description="Search in one place only"
+                                            SemanticProperties.Hint="Opens the list of locations">
+                                        <Border.GestureRecognizers>
+                                            <TapGestureRecognizer Command="{Binding PickPlaceFilterCommand}" />
+                                        </Border.GestureRecognizers>
+                                        <HorizontalStackLayout Spacing="6" VerticalOptions="Center" AutomationProperties.IsInAccessibleTree="False">
+                                            <controls:Icon Glyph="{x:Static controls:Icons.Pin}"
+                                                           Size="16"
+                                                           Color="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+                                            <Label Text="in: a place" FontFamily="JakartaSemiBold" FontSize="14" VerticalOptions="Center" />
+                                        </HorizontalStackLayout>
+                                    </Border>
+                                    <Border Style="{StaticResource SuggestionChip}"
+                                            HeightRequest="38"
+                                            StrokeShape="RoundRectangle 19"
+                                            SemanticProperties.Description="Search by tag"
+                                            SemanticProperties.Hint="Opens the list of tags">
+                                        <Border.GestureRecognizers>
+                                            <TapGestureRecognizer Command="{Binding PickTagFilterCommand}" />
+                                        </Border.GestureRecognizers>
+                                        <HorizontalStackLayout Spacing="6" VerticalOptions="Center" AutomationProperties.IsInAccessibleTree="False">
+                                            <controls:Icon Glyph="{x:Static controls:Icons.Tag}"
+                                                           Size="16"
+                                                           Color="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+                                            <Label Text="tag: a tag" FontFamily="JakartaSemiBold" FontSize="14" VerticalOptions="Center" />
+                                        </HorizontalStackLayout>
+                                    </Border>
+                                </HorizontalStackLayout>
                             </VerticalStackLayout>
 
-                            <VerticalStackLayout Spacing="8" IsVisible="{Binding HasBrowseTags}">
-                                <Label Text="Browse by tag" Style="{StaticResource Caption}" FontFamily="JakartaBold" />
-                                <FlexLayout BindableLayout.ItemsSource="{Binding BrowseTags}" Wrap="Wrap">
+                            <VerticalStackLayout Spacing="4" IsVisible="{Binding HasRecent}">
+                                <Grid ColumnDefinitions="*,Auto" HeightRequest="32">
+                                    <Label Text="Recent searches" Style="{StaticResource Caption}" FontFamily="JakartaBold" VerticalOptions="Center" SemanticProperties.HeadingLevel="Level2" />
+                                    <Button Grid.Column="1"
+                                            Text="Clear"
+                                            Style="{StaticResource TextButton}"
+                                            FontSize="13"
+                                            Padding="0"
+                                            Margin="0,-6"
+                                            Command="{Binding ClearRecentCommand}"
+                                            SemanticProperties.Description="Clear recent searches" />
+                                </Grid>
+                                <!-- One card, the searches divided inside it. -->
+                                <Border Style="{StaticResource Card}" Padding="0,4">
+                                    <VerticalStackLayout BindableLayout.ItemsSource="{Binding Recent}">
+                                        <BindableLayout.ItemTemplate>
+                                            <DataTemplate x:DataType="vm:RecentRow">
+                                                <Grid RowDefinitions="Auto,52"
+                                                      BackgroundColor="Transparent"
+                                                      SemanticProperties.Description="{Binding Search.Label, StringFormat='Search again: {0}'}">
+                                                    <Grid.GestureRecognizers>
+                                                        <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:FindViewModel}}, Path=RunRecentCommand}"
+                                                                              CommandParameter="{Binding Search}" />
+                                                    </Grid.GestureRecognizers>
+                                                    <BoxView HeightRequest="1"
+                                                             Margin="16,0"
+                                                             IsVisible="{Binding HasDivider}"
+                                                             Color="{AppThemeBinding Light={StaticResource Hairline}, Dark={StaticResource HairlineDark}}" />
+                                                    <!-- The text in a star column, so a long one truncates
+                                                         instead of running off the card. -->
+                                                    <Grid Grid.Row="1"
+                                                          ColumnDefinitions="Auto,*"
+                                                          ColumnSpacing="12"
+                                                          Padding="16,0"
+                                                          AutomationProperties.IsInAccessibleTree="False">
+                                                    <HorizontalStackLayout Spacing="12">
+                                                        <controls:Icon Glyph="{x:Static controls:Icons.Clock}"
+                                                                       Size="18"
+                                                                       Color="{AppThemeBinding Light={StaticResource InkMuted}, Dark={StaticResource InkMutedDark}}" />
+                                                        <HorizontalStackLayout BindableLayout.ItemsSource="{Binding Chips}" Spacing="8" VerticalOptions="Center"
+                                                                               IsVisible="{Binding HasChips}">
+                                                            <BindableLayout.ItemTemplate>
+                                                                <DataTemplate x:DataType="vm:RecentChip">
+                                                                    <Grid>
+                                                                        <Border Style="{StaticResource PlaceChip}"
+                                                                                HeightRequest="26"
+                                                                                Padding="10,0"
+                                                                                StrokeShape="RoundRectangle 13"
+                                                                                IsVisible="{Binding IsPlace}">
+                                                                            <Label Text="{Binding Label}"
+                                                                                   FontFamily="JakartaBold"
+                                                                                   FontSize="13"
+                                                                                   VerticalOptions="Center"
+                                                                                   TextColor="{AppThemeBinding Light={StaticResource OnPrimarySoft}, Dark={StaticResource OnPrimarySoftDark}}" />
+                                                                        </Border>
+                                                                        <Border Style="{StaticResource Chip}"
+                                                                                HeightRequest="26"
+                                                                                Padding="10,0"
+                                                                                StrokeShape="RoundRectangle 13"
+                                                                                BackgroundColor="{Binding TagColor, Converter={StaticResource HexToColorConverter}}"
+                                                                                IsVisible="{Binding IsTag}">
+                                                                            <Label Text="{Binding Label}"
+                                                                                   FontFamily="JakartaBold"
+                                                                                   FontSize="13"
+                                                                                   VerticalOptions="Center"
+                                                                                   TextColor="{Binding TagColor, Converter={StaticResource HexToTextColorConverter}}" />
+                                                                        </Border>
+                                                                    </Grid>
+                                                                </DataTemplate>
+                                                            </BindableLayout.ItemTemplate>
+                                                        </HorizontalStackLayout>
+                                                    </HorizontalStackLayout>
+                                                        <Label Grid.Column="1"
+                                                               Text="{Binding Search.Text}"
+                                                               VerticalOptions="Center"
+                                                               MaxLines="1"
+                                                               LineBreakMode="TailTruncation"
+                                                               IsVisible="{Binding HasText}" />
+                                                    </Grid>
+                                                </Grid>
+                                            </DataTemplate>
+                                        </BindableLayout.ItemTemplate>
+                                    </VerticalStackLayout>
+                                </Border>
+                            </VerticalStackLayout>
+
+                            <VerticalStackLayout Spacing="10" IsVisible="{Binding HasBrowseTags}">
+                                <Label Text="Browse by tag" Style="{StaticResource Caption}" FontFamily="JakartaBold" SemanticProperties.HeadingLevel="Level2" />
+                                <FlexLayout BindableLayout.ItemsSource="{Binding BrowseTags}" Wrap="Wrap" Margin="0,0,0,-8">
                                     <BindableLayout.ItemTemplate>
-                                        <DataTemplate x:DataType="models:Tag">
+                                        <DataTemplate x:DataType="vm:TagRow">
                                             <Border Style="{StaticResource Chip}"
                                                     HeightRequest="36"
+                                                    StrokeShape="RoundRectangle 18"
                                                     Margin="0,0,8,8"
-                                                    BackgroundColor="{Binding Color, Converter={StaticResource HexToColorConverter}}"
-                                                    SemanticProperties.Description="{Binding Name, StringFormat='Show items tagged {0}'}">
+                                                    BackgroundColor="{Binding Tag.Color, Converter={StaticResource HexToColorConverter}}"
+                                                    SemanticProperties.Description="{Binding Description, StringFormat='Show items tagged {0}'}">
                                                 <Border.GestureRecognizers>
                                                     <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:FindViewModel}}, Path=AddTagFilterCommand}"
-                                                                          CommandParameter="{Binding .}" />
+                                                                          CommandParameter="{Binding Tag}" />
                                                 </Border.GestureRecognizers>
-                                                <Label Text="{Binding Name}"
-                                                       FontFamily="JakartaBold"
-                                                       FontSize="14"
-                                                       VerticalOptions="Center"
-                                                       TextColor="{Binding Color, Converter={StaticResource HexToTextColorConverter}}" />
+                                                <HorizontalStackLayout Spacing="6" VerticalOptions="Center">
+                                                    <Label Text="{Binding Tag.Name}"
+                                                           FontFamily="JakartaBold"
+                                                           FontSize="14"
+                                                           VerticalOptions="Center"
+                                                           TextColor="{Binding Tag.Color, Converter={StaticResource HexToTextColorConverter}}" />
+                                                    <Label Text="{Binding ItemCount}"
+                                                           FontSize="14"
+                                                           Opacity="0.85"
+                                                           VerticalOptions="Center"
+                                                           TextColor="{Binding Tag.Color, Converter={StaticResource HexToTextColorConverter}}" />
+                                                </HorizontalStackLayout>
                                             </Border>
                                         </DataTemplate>
                                     </BindableLayout.ItemTemplate>
@@ -245,12 +410,9 @@
                                             StrokeThickness="0"
                                             StrokeShape="RoundRectangle 14"
                                             BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceSunken}, Dark={StaticResource SurfaceSunkenDark}}">
-                                        <Grid>
-                                            <Label Text="📦" HorizontalOptions="Center" VerticalOptions="Center" AutomationProperties.IsInAccessibleTree="False" />
-                                            <Image Source="{Binding Item.PrimaryPhotoFileName, Converter={StaticResource PhotoSourceConverter}}"
-                                                   Aspect="AspectFill"
-                                                   IsVisible="{Binding Item.PrimaryPhotoFileName, Converter={StaticResource IsNotNullConverter}}" />
-                                        </Grid>
+                                        <Image Source="{Binding Item.PrimaryPhotoFileName, Converter={StaticResource PhotoSourceConverter}}"
+                                               Aspect="AspectFill"
+                                               IsVisible="{Binding Item.PrimaryPhotoFileName, Converter={StaticResource IsNotNullConverter}}" />
                                     </Border>
                                     <VerticalStackLayout Grid.Column="1" Spacing="3" VerticalOptions="Center">
                                         <!-- The name, with the part that matched highlighted. -->
@@ -264,15 +426,22 @@
                                                 </FormattedString>
                                             </Label.FormattedText>
                                         </Label>
-                                        <Label Text="{Binding Path, StringFormat='📍 {0}'}"
-                                               Style="{StaticResource Caption}"
-                                               LineBreakMode="TailTruncation"
-                                               IsVisible="{Binding HasPath}" />
+                                        <HorizontalStackLayout Spacing="4" IsVisible="{Binding HasPath}">
+                                            <controls:Icon Glyph="{x:Static controls:Icons.Pin}"
+                                                           Size="13"
+                                                           Weight="2.2"
+                                                           Color="{AppThemeBinding Light={StaticResource InkMuted}, Dark={StaticResource InkMutedDark}}" />
+                                            <Label Text="{Binding Path}"
+                                                   Style="{StaticResource Caption}"
+                                                   LineBreakMode="TailTruncation"
+                                                   VerticalOptions="Center" />
+                                        </HorizontalStackLayout>
                                     </VerticalStackLayout>
                                     <Border Grid.Column="2"
                                             Style="{StaticResource Chip}"
                                             HeightRequest="26"
                                             Padding="10,0"
+                                            StrokeShape="RoundRectangle 13"
                                             VerticalOptions="Center"
                                             BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceSunken}, Dark={StaticResource SurfaceSunkenDark}}"
                                             IsVisible="{Binding ShowQuantity}">
@@ -289,6 +458,7 @@
                                     Style="{StaticResource TextButton}"
                                     IsVisible="{Binding HasOutside}"
                                     Command="{Binding RemovePlaceFilterCommand}"
+                                    HorizontalOptions="Center"
                                     Margin="20,0,20,16" />
                         </DataTemplate>
                     </CollectionView.FooterTemplate>
@@ -314,11 +484,15 @@
                                                        CommandParameter="{Binding .}">
                                             <Grid BackgroundColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}"
                                                   WidthRequest="96">
-                                                <Label Text="Delete"
-                                                       FontFamily="JakartaBold"
-                                                       TextColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource Ink}}"
-                                                       HorizontalOptions="Center"
-                                                       VerticalOptions="Center" />
+                                                <VerticalStackLayout Spacing="4" HorizontalOptions="Center" VerticalOptions="Center">
+                                                    <controls:Icon Glyph="{x:Static controls:Icons.Trash}"
+                                                                   Color="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource Ink}}" />
+                                                    <Label Text="Delete"
+                                                           FontFamily="JakartaBold"
+                                                           FontSize="14"
+                                                           TextColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource Ink}}"
+                                                           HorizontalOptions="Center" />
+                                                </VerticalStackLayout>
                                             </Grid>
                                         </SwipeItemView>
                                     </SwipeItems>
@@ -360,12 +534,13 @@
             </Grid>
         </RefreshView>
 
-        <!-- As on the other tabs. With a place filter, the new item starts in that place. -->
-        <Button Grid.Row="6"
-                Text="📷  New item"
-                Command="{Binding NewItemCommand}"
-                Margin="0,8,0,16"
-                SemanticProperties.Description="New item: opens the camera" />
+        <!-- The tab bar, as on the other tabs; with a place filter its camera starts the
+             new item in that place. Not when this page is pushed for a search. -->
+        <views:AppTabBar Grid.Row="2"
+                         Margin="-20,0"
+                         Current="find"
+                         SnapCommand="{Binding NewItemCommand}"
+                         IsVisible="{Binding IsPushed, Converter={StaticResource InvertedBoolConverter}}" />
     </Grid>
 
 </ContentPage>

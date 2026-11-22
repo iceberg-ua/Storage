@@ -23,6 +23,12 @@ public sealed partial class PickRow : ObservableObject
     }
 
     public int? LocationId { get; }
+
+    /// <summary>The top row of the list, which has no divider above it.</summary>
+    public bool IsFirst { get; set; }
+
+    public bool HasDivider => !IsFirst;
+
     public string Name { get; }
     public string Meta { get; }
     public bool CanOpen { get; }
@@ -82,7 +88,10 @@ public partial class PickPlaceViewModel : ObservableObject
     private ObservableCollection<PlaceCrumb> _crumbs = [];
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasNoRows))]
     private ObservableCollection<PickRow> _rows = [];
+
+    public bool HasNoRows => Rows.Count == 0;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsBrowsing))]
@@ -217,7 +226,10 @@ public partial class PickPlaceViewModel : ObservableObject
         if (!_isLoaded)
             return;
 
-        Rows = new ObservableCollection<PickRow>(IsBrowsing ? LevelRows() : SearchRows());
+        var rows = (IsBrowsing ? LevelRows() : SearchRows()).ToList();
+        if (rows.Count > 0)
+            rows[0].IsFirst = true;
+        Rows = new ObservableCollection<PickRow>(rows);
         Crumbs = new ObservableCollection<PlaceCrumb>(LevelCrumbs());
         UpdateConfirm();
     }
@@ -280,9 +292,10 @@ public partial class PickPlaceViewModel : ObservableObject
 
     private IEnumerable<PlaceCrumb> LevelCrumbs()
     {
-        yield return new PlaceCrumb("All locations", null, IsFirst: true);
-        foreach (var location in PathTo(_levelId))
-            yield return new PlaceCrumb(location.Name, location.Id, IsFirst: false);
+        var path = PathTo(_levelId);
+        yield return new PlaceCrumb("All locations", null, IsFirst: true, IsLast: path.Count == 0);
+        for (var i = 0; i < path.Count; i++)
+            yield return new PlaceCrumb(path[i].Name, path[i].Id, IsFirst: false, IsLast: i == path.Count - 1);
     }
 
     private string? PathOf(int? id)

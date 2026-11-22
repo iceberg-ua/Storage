@@ -2,6 +2,7 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:Storage.App.ViewModels"
+             xmlns:controls="clr-namespace:Storage.App.Controls"
              xmlns:views="clr-namespace:Storage.App.Views"
              x:Class="Storage.App.Views.AddItemPage"
              x:DataType="vm:AddItemViewModel"
@@ -12,10 +13,12 @@
     <Grid RowDefinitions="Auto,*,Auto">
 
         <Grid Grid.Row="0" ColumnDefinitions="Auto,*" ColumnSpacing="12" Padding="20,20,20,12">
-            <Button Text="✕"
-                    Style="{StaticResource RoundIconButton}"
-                    Command="{Binding CancelCommand}"
-                    SemanticProperties.Description="Cancel" />
+            <controls:IconButton Glyph="{x:Static controls:Icons.Close}"
+                                 IconSize="16"
+                                 IconWeight="2.4"
+                                 Style="{StaticResource RoundIcon}"
+                                 Command="{Binding CancelCommand}"
+                                 SemanticProperties.Description="Cancel" />
             <Label Grid.Column="1"
                    Text="{Binding PageTitle}"
                    Style="{StaticResource Title}"
