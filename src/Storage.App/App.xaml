@@ -11,8 +11,8 @@
                 <ResourceDictionary Source="Resources/Styles/Styles.xaml" />
             </ResourceDictionary.MergedDictionaries>
 
-            <!-- Converters. PhotoSourceConverter needs IPhotoService, so it is added
-                 in App.xaml.cs instead of here. -->
+            <!-- Converters. PhotoSourceConverter and ThumbnailSourceConverter need
+                 IPhotoService, so they are added in App.xaml.cs instead of here. -->
             <converters:IsNotNullConverter x:Key="IsNotNullConverter" />
             <converters:InvertedBoolConverter x:Key="InvertedBoolConverter" />
             <converters:CountToBoolConverter x:Key="CountToBoolConverter" />

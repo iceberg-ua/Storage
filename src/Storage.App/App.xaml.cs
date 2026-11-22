@@ -17,10 +17,12 @@ public partial class App : Application
 
 		_serviceProvider = serviceProvider;
 
-		// XAML can't construct a converter that needs a service, so this one is
-		// added to the app resources by hand before any page is parsed.
-		Resources["PhotoSourceConverter"] =
-			new PhotoSourceConverter(serviceProvider.GetRequiredService<IPhotoService>());
+		// XAML can't construct a converter that needs a service, so these two are
+		// added to the app resources by hand before any page is parsed: the full photo,
+		// and the small copy the lists use.
+		var photoService = serviceProvider.GetRequiredService<IPhotoService>();
+		Resources["PhotoSourceConverter"] = new PhotoSourceConverter(photoService);
+		Resources["ThumbnailSourceConverter"] = new PhotoSourceConverter(photoService, thumbnail: true);
 
 		// The database is created and migrated in MauiProgram. Deliberately not touched
 		// here: EnsureCreated builds a schema with no migrations-history table, so having
@@ -53,9 +55,15 @@ public partial class App : Application
 			var photoService = _serviceProvider.GetRequiredService<IPhotoService>();
 			var removed = await photoService.CleanupOrphansAsync(referenced);
 
+			// Photos stored before thumbnails existed get theirs now. Lists show the full
+			// photo until then, so nothing waits on this.
+			// On a worker thread: the first launch after the update reads and writes a
+			// file per photo, which would otherwise hop back to the UI thread each time.
+			var thumbnails = await Task.Run(() => photoService.CreateMissingThumbnailsAsync(referenced));
+
 			logger.LogInformation(
-				"Photo sweep finished: {Removed} orphan(s) removed, {Referenced} referenced.",
-				removed, referenced.Count);
+				"Photo sweep finished: {Removed} orphan(s) removed, {Thumbnails} thumbnail(s) made, {Referenced} referenced.",
+				removed, thumbnails, referenced.Count);
 		}
 		catch (Exception ex)
 		{

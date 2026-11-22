@@ -19,7 +19,7 @@
                        IsVisible="{Binding HasNoPicture}" />
 
         <!-- The location's own photo wins: it is the one picture the user chose. -->
-        <Image Source="{Binding OwnPhoto, Converter={StaticResource PhotoSourceConverter}}"
+        <Image Source="{Binding OwnPhoto, Converter={StaticResource ThumbnailSourceConverter}}"
                Aspect="AspectFill"
                IsVisible="{Binding HasOwnPhoto}" />
 
@@ -34,17 +34,17 @@
             <Image Grid.Row="0" Grid.Column="0" Aspect="AspectFill"
                    Grid.RowSpan="{Binding Photo1RowSpan}"
                    Grid.ColumnSpan="{Binding Photo1ColumnSpan}"
-                   Source="{Binding Photo1, Converter={StaticResource PhotoSourceConverter}}" />
+                   Source="{Binding Photo1, Converter={StaticResource ThumbnailSourceConverter}}" />
             <Image Grid.Row="0" Grid.Column="1" Aspect="AspectFill"
                    Grid.RowSpan="{Binding Photo2RowSpan}"
-                   Source="{Binding Photo2, Converter={StaticResource PhotoSourceConverter}}"
+                   Source="{Binding Photo2, Converter={StaticResource ThumbnailSourceConverter}}"
                    IsVisible="{Binding Photo2, Converter={StaticResource IsNotNullConverter}}" />
             <Image Grid.Row="1" Aspect="AspectFill"
                    Grid.Column="{Binding Photo3Column}"
-                   Source="{Binding Photo3, Converter={StaticResource PhotoSourceConverter}}"
+                   Source="{Binding Photo3, Converter={StaticResource ThumbnailSourceConverter}}"
                    IsVisible="{Binding Photo3, Converter={StaticResource IsNotNullConverter}}" />
             <Image Grid.Row="1" Grid.Column="1" Aspect="AspectFill"
-                   Source="{Binding Photo4, Converter={StaticResource PhotoSourceConverter}}"
+                   Source="{Binding Photo4, Converter={StaticResource ThumbnailSourceConverter}}"
                    IsVisible="{Binding Photo4, Converter={StaticResource IsNotNullConverter}}" />
         </Grid>
     </Grid>

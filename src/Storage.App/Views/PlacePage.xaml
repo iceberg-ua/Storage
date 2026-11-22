@@ -31,7 +31,7 @@
                                        Weight="1.6"
                                        Opacity="0.35"
                                        Color="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
-                        <Image Source="{Binding PrimaryPhotoFileName, Converter={StaticResource PhotoSourceConverter}}"
+                        <Image Source="{Binding PrimaryPhotoFileName, Converter={StaticResource ThumbnailSourceConverter}}"
                                Aspect="AspectFill"
                                IsVisible="{Binding PrimaryPhotoFileName, Converter={StaticResource IsNotNullConverter}}"
                                SemanticProperties.Description="{Binding Name, StringFormat='Photo of {0}'}" />

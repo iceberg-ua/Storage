@@ -172,7 +172,7 @@
                                                     <Setter Property="StrokeThickness" Value="2" />
                                                 </DataTrigger>
                                             </Border.Triggers>
-                                            <Image Source="{Binding FileName, Converter={StaticResource PhotoSourceConverter}}" Aspect="AspectFill" />
+                                            <Image Source="{Binding FileName, Converter={StaticResource ThumbnailSourceConverter}}" Aspect="AspectFill" />
                                         </Border>
                                         <Border WidthRequest="20"
                                                 HeightRequest="20"

@@ -3,7 +3,8 @@ using Microsoft.Extensions.Logging;
 namespace Storage.Core.Services;
 
 /// <summary>
-/// Stores item photos as compressed JPEGs under <c>{baseDirectory}/photos/</c>.
+/// Stores item photos as compressed JPEGs under <c>{baseDirectory}/photos/</c>, each
+/// with a small copy of the same name under <c>photos/thumbs/</c> for the lists.
 /// The base directory is injected rather than read from MAUI's FileSystem so the
 /// service can be pointed at a temp folder in tests.
 /// </summary>
@@ -19,6 +20,14 @@ public sealed class PhotoService : IPhotoService
     /// exist only to stop a pathological input.</summary>
     public const long MaxFileBytes = 1024 * 1024;
 
+    /// <summary>Longest edge of a thumbnail. The biggest list tile is about 170 × 150 dp,
+    /// some 450 × 400 px on a Pixel 8; a 4:3 photo needs a short edge of 400+ to fill it
+    /// without being stretched, hence 640 rather than 480.</summary>
+    public const int ThumbnailEdgePixels = 640;
+
+    /// <summary>A thumbnail is only seen small, where JPEG artefacts do not show.</summary>
+    public const float ThumbnailQuality = 0.7f;
+
     /// <summary>
     /// How recently written a file has to be for the sweep to leave it alone. A photo
     /// staged in the edit form is not referenced by any item yet, so to the sweep it is
@@ -29,9 +38,13 @@ public sealed class PhotoService : IPhotoService
     /// </summary>
     public static readonly TimeSpan OrphanGracePeriod = TimeSpan.FromMinutes(5);
 
+    // A thumbnail being written. Never a photo's name, since those end in .jpg.
+    private const string TempSuffix = ".tmp";
+
     private static readonly float[] QualityLadder = [0.75f, 0.65f, 0.55f, 0.45f];
 
     private readonly string _photosDirectory;
+    private readonly string _thumbnailsDirectory;
     private readonly IImageCompressor _compressor;
     private readonly IGalleryPicker _galleryPicker;
     private readonly ILogger<PhotoService> _logger;
@@ -43,6 +56,10 @@ public sealed class PhotoService : IPhotoService
         ILogger<PhotoService> logger)
     {
         _photosDirectory = Path.Combine(baseDirectory, "photos");
+
+        // A folder of its own, so the orphan sweep, which looks only at the photos
+        // folder's own files, never takes a thumbnail for a photo nobody owns.
+        _thumbnailsDirectory = Path.Combine(_photosDirectory, "thumbs");
         _compressor = compressor;
         _galleryPicker = galleryPicker;
         _logger = logger;
@@ -67,6 +84,10 @@ public sealed class PhotoService : IPhotoService
                 await compressed.CopyToAsync(file);
             }
 
+            // From the original rather than the stored copy: one generation of JPEG loss
+            // fewer, and the source is in memory already.
+            await TryWriteThumbnailAsync(source, fileName);
+
             return fileName;
         }
         finally
@@ -84,10 +105,55 @@ public sealed class PhotoService : IPhotoService
     public string? GetFullPath(string? fileName) =>
         string.IsNullOrWhiteSpace(fileName) ? null : Path.Combine(_photosDirectory, fileName);
 
+    public string? GetThumbnailPath(string? fileName)
+    {
+        if (string.IsNullOrWhiteSpace(fileName))
+            return null;
+
+        // Until the launch pass has made one, a photo saved before thumbnails existed
+        // shows full size, as it always did, rather than not at all.
+        var thumbnail = Path.Combine(_thumbnailsDirectory, fileName);
+        return File.Exists(thumbnail) ? thumbnail : GetFullPath(fileName);
+    }
+
+    public async Task<int> CreateMissingThumbnailsAsync(IEnumerable<string> fileNames)
+    {
+        var created = 0;
+        foreach (var fileName in fileNames.Where(n => !string.IsNullOrWhiteSpace(n)).Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            var photo = Path.Combine(_photosDirectory, fileName);
+            if (File.Exists(Path.Combine(_thumbnailsDirectory, fileName)) || !File.Exists(photo))
+                continue;
+
+            try
+            {
+                using var source = new MemoryStream();
+                using (var file = File.OpenRead(photo))
+                {
+                    await file.CopyToAsync(source);
+                }
+
+                if (await TryWriteThumbnailAsync(source, fileName))
+                    created++;
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                // Deleted, locked or unreadable between the check and the read. One photo
+                // must not stop the rest; the next launch tries it again.
+                _logger.LogWarning(ex, "Could not read {FileName} to make its thumbnail.", fileName);
+            }
+        }
+
+        return created;
+    }
+
     public Task DeleteAsync(string? fileName)
     {
         if (GetFullPath(fileName) is string path)
+        {
             TryDelete(path);
+            TryDelete(Path.Combine(_thumbnailsDirectory, fileName!));
+        }
 
         return Task.CompletedTask;
     }
@@ -117,7 +183,29 @@ public sealed class PhotoService : IPhotoService
                 continue;
 
             if (TryDelete(path))
+            {
                 removed++;
+                TryDelete(Path.Combine(_thumbnailsDirectory, Path.GetFileName(path)));
+            }
+        }
+
+        // A thumbnail is written after its photo, so one whose photo is gone is left over
+        // from a delete that only got halfway. No grace period needed.
+        if (Directory.Exists(_thumbnailsDirectory))
+        {
+            foreach (var path in Directory.EnumerateFiles(_thumbnailsDirectory))
+            {
+                // A thumbnail still being written is spared; one left by a crash is not.
+                if (path.EndsWith(TempSuffix, StringComparison.OrdinalIgnoreCase))
+                {
+                    if (File.GetLastWriteTimeUtc(path) <= cutoff)
+                        TryDelete(path);
+                    continue;
+                }
+
+                if (!File.Exists(Path.Combine(_photosDirectory, Path.GetFileName(path))))
+                    TryDelete(path);
+            }
         }
 
         return Task.FromResult(removed);
@@ -162,6 +250,37 @@ public sealed class PhotoService : IPhotoService
 
         best.Position = 0;
         return (best, bestQuality);
+    }
+
+    // Best effort: a photo without a thumbnail still shows, full size, so a failure here
+    // must not cost the user the photo they just took.
+    private async Task<bool> TryWriteThumbnailAsync(MemoryStream source, string fileName)
+    {
+        var temp = Path.Combine(_thumbnailsDirectory, fileName + TempSuffix);
+        try
+        {
+            source.Position = 0;
+            using var thumbnail = await _compressor.CompressAsync(source, ThumbnailEdgePixels, ThumbnailQuality);
+
+            // Written under a temporary name and renamed when complete. A thumbnail
+            // under its final name is taken as finished: shown by the lists (and cached
+            // by the image loader), and skipped by the backfill. A half-written one
+            // would be a broken tile for good.
+            Directory.CreateDirectory(_thumbnailsDirectory);
+            using (var file = File.Create(temp))
+            {
+                await thumbnail.CopyToAsync(file);
+            }
+
+            File.Move(temp, Path.Combine(_thumbnailsDirectory, fileName), overwrite: true);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            TryDelete(temp);
+            _logger.LogWarning(ex, "Could not make a thumbnail for {FileName}; lists will show the full photo.", fileName);
+            return false;
+        }
     }
 
     // A photo we cannot delete is not worth failing a save or a startup over.

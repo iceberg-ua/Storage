@@ -585,6 +585,7 @@ public partial class AddItemViewModel : ObservableObject, IQueryAttributable
     private void ResetPhotosTo(IEnumerable<string> fileNames) =>
         Photos = new ObservableCollection<PhotoSlot>(fileNames.Select(CreateSlot));
 
+    // The strip shows 84 px tiles, so the small copy.
     private PhotoSlot CreateSlot(string fileName) =>
-        new(fileName, _photoService.GetFullPath(fileName) is string path ? ImageSource.FromFile(path) : null);
+        new(fileName, _photoService.GetThumbnailPath(fileName) is string path ? ImageSource.FromFile(path) : null);
 }
