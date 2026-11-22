@@ -13,6 +13,7 @@ Storage is a local-first mobile inventory app built with .NET MAUI. The user is 
 
 ## Important
 - Phases, scope and build status all live in Linear (project "Storage", `VOL-*` issues) — there is no phases or status document in the repo
+- `docs/design/` is the visual reference: one HTML mockup per screen, mapped to its XAML in `docs/design/README.md`. A UI change is not done until its mockup matches the code, or the difference is listed under "Known differences" there. Colours live in `docs/design/tokens.json` and are checked by `DesignTokenTests`
 
 ## Code Guidelines
 

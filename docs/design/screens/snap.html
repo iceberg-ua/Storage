@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Snapshot — Camera</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#7FD1C9}a:hover{color:#A6E2DC}
+button{font-family:inherit}
+</style>
+</head>
+<body>
+<div style="width: 390px; height: 844px; box-sizing: border-box; position: relative; overflow: hidden; background: #0E0F0F; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; color: #FFFFFF">
+  <div style="position: absolute; left: 0; right: 0; top: 0; height: 620px; background: #2B302F; display: flex; align-items: center; justify-content: center">
+    <div aria-hidden="true" style="position: relative; width: 240px; height: 240px">
+      <span style="position: absolute; left: 0; top: 0; width: 36px; height: 36px; border-left: 3px solid rgba(255,255,255,0.8); border-top: 3px solid rgba(255,255,255,0.8); border-radius: 12px 0 0 0"></span>
+      <span style="position: absolute; right: 0; top: 0; width: 36px; height: 36px; border-right: 3px solid rgba(255,255,255,0.8); border-top: 3px solid rgba(255,255,255,0.8); border-radius: 0 12px 0 0"></span>
+      <span style="position: absolute; left: 0; bottom: 0; width: 36px; height: 36px; border-left: 3px solid rgba(255,255,255,0.8); border-bottom: 3px solid rgba(255,255,255,0.8); border-radius: 0 0 0 12px"></span>
+      <span style="position: absolute; right: 0; bottom: 0; width: 36px; height: 36px; border-right: 3px solid rgba(255,255,255,0.8); border-bottom: 3px solid rgba(255,255,255,0.8); border-radius: 0 0 12px 0"></span>
+    </div>
+    <span style="position: absolute; left: 0; right: 0; bottom: 20px; text-align: center; font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.85)">Camera preview</span>
+    <div style="position: absolute; left: 20px; right: 20px; top: 20px; display: flex; align-items: center; justify-content: space-between; gap: 10px">
+      <a href="location.html" aria-label="Close camera" style="width: 44px; height: 44px; border-radius: 22px; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+      </a>
+      <a href="pick-location.html" style="height: 40px; padding: 0 14px 0 12px; border-radius: 20px; background: rgba(0,0,0,0.5); color: #FFFFFF; font-size: 14px; font-weight: 700; text-decoration: none; display: flex; align-items: center; gap: 6px">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"></path><circle cx="12" cy="9.5" r="2.5"></circle></svg>
+        Into Garage › Shelf 2
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg>
+      </a>
+      <button aria-label="Flash: off" style="width: 44px; height: 44px; border-radius: 22px; border: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M13 3L5 14h6l-1 7 8-11h-6z"></path></svg>
+      </button>
+    </div>
+  </div>
+  <div style="position: absolute; left: 0; right: 0; bottom: 0; height: 224px; padding: 18px 20px 28px 20px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between">
+    <div style="display: flex; align-items: center; gap: 8px">
+      <span style="position: relative; width: 52px; height: 52px; border-radius: 12px; background: #9DB8B3; border: 2px solid #FFFFFF; box-sizing: border-box">
+        <svg style="position: absolute; top: -7px; right: -7px" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="#0F6E6E"></circle><path d="M12 17s-4.5-2.8-4.5-6A2.4 2.4 0 0 1 12 9.5a2.4 2.4 0 0 1 4.5 1.5c0 3.2-4.5 6-4.5 6z" fill="#FFFFFF"></path></svg>
+      </span>
+      <span style="width: 52px; height: 52px; border-radius: 12px; background: #B8B09F"></span>
+      <span style="margin-left: auto; font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.8)">2 of 10 photos</span>
+    </div>
+    <div style="display: flex; align-items: center; justify-content: space-between">
+      <button aria-label="Choose from gallery" style="width: 56px; height: 56px; border-radius: 16px; border: 0; background: #262A29; display: flex; align-items: center; justify-content: center">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.8" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="3"></rect><circle cx="9" cy="10" r="1.6"></circle><path d="M21 16l-5-5-8 8"></path></svg>
+      </button>
+      <button aria-label="Take photo" style="width: 80px; height: 80px; border-radius: 40px; border: 5px solid #FFFFFF; background: transparent; padding: 5px; box-sizing: border-box">
+        <span style="display: block; width: 100%; height: 100%; border-radius: 50%; background: #FFFFFF"></span>
+      </button>
+      <a href="item-form.html" style="height: 56px; padding: 0 20px; border-radius: 28px; background: #0F6E6E; color: #FFFFFF; font-size: 16px; font-weight: 700; text-decoration: none; display: flex; align-items: center; gap: 6px">Next
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg>
+      </a>
+    </div>
+  </div>
+</div>
+</body>
+</html>
