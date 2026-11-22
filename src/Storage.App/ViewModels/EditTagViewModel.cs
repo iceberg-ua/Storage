@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Storage.App.Services;
 using Storage.Core.Models;
 using Storage.Core.Repositories;
 
@@ -10,9 +11,14 @@ namespace Storage.App.ViewModels;
 public partial class PaletteSwatch : ObservableObject
 {
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(Description))]
     private bool _isSelected;
 
     public required string Color { get; init; }
+
+    public required string Name { get; init; }
+
+    public string Description => IsSelected ? $"{Name}, selected" : Name;
 }
 
 // Backs both "add" and "edit" for a tag. Shell passes an optional "tagId" query
@@ -20,8 +26,12 @@ public partial class PaletteSwatch : ObservableObject
 public partial class EditTagViewModel : ObservableObject, IQueryAttributable
 {
     private readonly ITagRepository _tagRepository;
+    private readonly TagDeletion _deletion;
 
     private int _tagId;
+
+    // The name as stored, for the delete question: the field may hold an unsaved rename.
+    private string _savedName = string.Empty;
     private bool _isLoaded;
 
     [ObservableProperty]
@@ -36,7 +46,25 @@ public partial class EditTagViewModel : ObservableObject, IQueryAttributable
     private bool _isEditMode;
 
     [ObservableProperty]
-    private string _pageTitle = "Add Tag";
+    private string _pageTitle = "New tag";
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(UsageText))]
+    [NotifyPropertyChangedFor(nameof(HasItems))]
+    private int _itemCount;
+
+    public bool HasItems => ItemCount > 0;
+
+    /// <summary>"Used by 21 items", on the card that leads to them.</summary>
+    public string UsageText => ItemCount switch
+    {
+        0 => "Not on any items yet",
+        1 => "Used by 1 item",
+        var n => $"Used by {n} items"
+    };
+
+    /// <summary>What the preview chip says: the name as typed, or a stand-in while it is empty.</summary>
+    public string PreviewName => string.IsNullOrWhiteSpace(Name) ? "Tag name" : Name.Trim();
 
     [ObservableProperty]
     private string _selectedColor = TagPalette.Default;
@@ -59,9 +87,10 @@ public partial class EditTagViewModel : ObservableObject, IQueryAttributable
     // the same way NumericStepper guards its value/text pair.
     private bool _syncingColor;
 
-    public EditTagViewModel(ITagRepository tagRepository)
+    public EditTagViewModel(ITagRepository tagRepository, TagDeletion deletion)
     {
         _tagRepository = tagRepository;
+        _deletion = deletion;
     }
 
     // Shell calls this on the page's BindingContext before the page appears.
@@ -74,7 +103,7 @@ public partial class EditTagViewModel : ObservableObject, IQueryAttributable
         }
 
         IsEditMode = _tagId != 0;
-        PageTitle = IsEditMode ? "Edit Tag" : "Add Tag";
+        PageTitle = IsEditMode ? "Edit tag" : "New tag";
     }
 
     [RelayCommand]
@@ -97,7 +126,9 @@ public partial class EditTagViewModel : ObservableObject, IQueryAttributable
             }
 
             Name = tag.Name;
+            _savedName = tag.Name;
             SelectedColor = tag.Color;
+            ItemCount = await _tagRepository.CountItemsAsync(_tagId);
         }
         else
         {
@@ -108,7 +139,7 @@ public partial class EditTagViewModel : ObservableObject, IQueryAttributable
         }
 
         Swatches = new ObservableCollection<PaletteSwatch>(
-            TagPalette.Colors.Select(c => new PaletteSwatch { Color = c }));
+            TagPalette.Colors.Select((c, i) => new PaletteSwatch { Color = c, Name = TagPalette.Names[i] }));
 
         MarkSelectedSwatch();
         SyncSlidersFromSelectedColor();
@@ -229,7 +260,25 @@ public partial class EditTagViewModel : ObservableObject, IQueryAttributable
     }
 
     // The message has done its job once the user starts changing the name.
-    partial void OnNameChanged(string value) => NameError.Clear();
+    partial void OnNameChanged(string value)
+    {
+        NameError.Clear();
+        OnPropertyChanged(nameof(PreviewName));
+    }
+
+    // The Find page, filtered to this tag, on top of this one: the edit stays as it is.
+    [RelayCommand]
+    private Task ShowItemsAsync() => Shell.Current.GoToAsync(Routes.TaggedItems(_tagId));
+
+    [RelayCommand]
+    private async Task DeleteAsync()
+    {
+        if (!IsEditMode)
+            return;
+
+        if (await _deletion.ConfirmAndDeleteAsync(_tagId, _savedName, ItemCount))
+            await Shell.Current.GoToAsync("..");
+    }
 
     [RelayCommand]
     private async Task CancelAsync()

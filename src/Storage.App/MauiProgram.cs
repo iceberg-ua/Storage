@@ -65,6 +65,7 @@ public static class MauiProgram
 		builder.Services.AddSingleton<IImageCompressor, MauiImageCompressor>();
 		builder.Services.AddSingleton<IGalleryPicker, MauiGalleryPicker>();
 		builder.Services.AddTransient<LocationDeletion>();
+		builder.Services.AddTransient<TagDeletion>();
 		// One picker request at a time, shared by whoever opens it and the page itself.
 		builder.Services.AddSingleton<PlacePicker>();
 		builder.Services.AddSingleton<IPhotoService>(sp => new PhotoService(

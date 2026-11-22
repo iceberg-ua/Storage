@@ -37,6 +37,15 @@ public class TagRepository : ITagRepository
         return await context.Tags.FirstOrDefaultAsync(t => t.Id == id);
     }
 
+    public async Task<int> CountItemsAsync(int tagId)
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        return await context.Tags
+            .Where(t => t.Id == tagId)
+            .Select(t => t.Items.Count)
+            .FirstOrDefaultAsync();
+    }
+
     public async Task<Tag> AddAsync(string name, string color)
     {
         await using var context = await _contextFactory.CreateDbContextAsync();

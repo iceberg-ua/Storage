@@ -241,6 +241,24 @@ public class TagRepositoryTests : IDisposable
         Assert.Equal(2, Assert.Single(tags).Items.Count);
     }
 
+    [Fact]
+    public async Task CountItemsCountsOnlyThatTagsItems()
+    {
+        var drill = await _itemRepo.AddAsync(new Item { Name = "Drill" });
+        var saw = await _itemRepo.AddAsync(new Item { Name = "Saw" });
+        var tent = await _itemRepo.AddAsync(new Item { Name = "Tent" });
+
+        await _tagRepo.SetItemTagsAsync(drill.Id, ["tools"]);
+        await _tagRepo.SetItemTagsAsync(saw.Id, ["tools"]);
+        await _tagRepo.SetItemTagsAsync(tent.Id, ["camping"]);
+
+        var tags = (await _tagRepo.GetAllAsync()).ToDictionary(t => t.Name);
+
+        Assert.Equal(2, await _tagRepo.CountItemsAsync(tags["tools"].Id));
+        Assert.Equal(1, await _tagRepo.CountItemsAsync(tags["camping"].Id));
+        Assert.Equal(0, await _tagRepo.CountItemsAsync(9999));
+    }
+
     public void Dispose()
     {
         _context.Dispose();
