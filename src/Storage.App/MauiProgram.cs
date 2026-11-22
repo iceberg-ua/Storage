@@ -39,6 +39,10 @@ public static class MauiProgram
 			handler.PlatformView.BackgroundTintList = noTint);
 		Microsoft.Maui.Handlers.EditorHandler.Mapper.AppendToMapping("NoUnderline", (handler, _) =>
 			handler.PlatformView.BackgroundTintList = noTint);
+#elif IOS || MACCATALYST
+		// The same on iOS, where an Entry draws a rounded border of its own instead.
+		Microsoft.Maui.Handlers.EntryHandler.Mapper.AppendToMapping("NoUnderline", (handler, _) =>
+			handler.PlatformView.BorderStyle = UIKit.UITextBorderStyle.None);
 #endif
 
 		// Configure SQLite database

@@ -46,7 +46,8 @@ public class NumericStepper : ContentView
             VerticalOptions = LayoutOptions.Center,
             FontFamily = "JakartaExtraBold",
             FontSize = 18,
-            WidthRequest = 48,
+            // A floor, not a width: four digits and more still fit.
+            MinimumWidthRequest = 56,
             Text = Value.ToString(CultureInfo.InvariantCulture)
         };
         SemanticProperties.SetDescription(_entry, "Quantity");
@@ -70,13 +71,14 @@ public class NumericStepper : ContentView
         // The same white box as the other fields beside it.
         var surface = new Border
         {
-            StrokeThickness = 0,
+            StrokeThickness = 2,
             StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 16 },
             Padding = new Thickness(4, 0),
             HeightRequest = 52,
             Content = row
         };
         surface.SetAppThemeColor(BackgroundColorProperty, Resource("Surface"), Resource("SurfaceDark"));
+        surface.SetAppThemeColor(Border.StrokeProperty, Resource("Hairline"), Resource("HairlineDark"));
 
         Content = surface;
     }

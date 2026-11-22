@@ -2,7 +2,8 @@ namespace Storage.App.Controls;
 
 /// <summary>
 /// Set on an Entry or Editor inside a FieldSurface border: while the field has focus, the
-/// border takes the accent ring, two pixels wide. The border goes back to its style after.
+/// border's stroke takes the accent colour. Only the colour: FieldSurface's stroke is
+/// already the ring's width, so the field does not shift. The border goes back to its style after.
 /// </summary>
 /// <remarks>
 /// An attached property on the field rather than a trigger on the border: a trigger would
@@ -41,12 +42,13 @@ public static class FocusRing
         if (FindSurface(sender) is not { } surface)
             return;
 
-        var accent = Application.Current?.RequestedTheme == AppTheme.Dark ? "PrimaryDark" : "Primary";
-        if (Application.Current?.Resources.TryGetValue(accent, out var color) == true && color is Color ring)
-            surface.Stroke = ring;
-
-        surface.StrokeThickness = 2;
+        // Per theme, so switching light and dark while the field has focus follows along.
+        if (Resource("Primary") is { } light && Resource("PrimaryDark") is { } dark)
+            surface.SetAppThemeColor(Border.StrokeProperty, light, dark);
     }
+
+    private static Color? Resource(string key) =>
+        Application.Current?.Resources.TryGetValue(key, out var value) == true ? value as Color : null;
 
     private static void OnUnfocused(object? sender, FocusEventArgs e)
     {
@@ -55,7 +57,6 @@ public static class FocusRing
 
         // Back to whatever the FieldSurface style says, theme binding included.
         surface.ClearValue(Border.StrokeProperty);
-        surface.ClearValue(Border.StrokeThicknessProperty);
     }
 
     // The nearest border up the tree: the field may sit in a layout inside it.

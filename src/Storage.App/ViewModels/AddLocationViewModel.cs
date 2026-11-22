@@ -54,7 +54,7 @@ public partial class AddLocationViewModel : ObservableObject, IQueryAttributable
 
     public bool HasPhoto => PhotoFileName is not null;
 
-    public string PhotoFrameDescription => HasPhoto ? "Location photo. Double tap to take a new one" : "Take a photo";
+    public string PhotoFrameDescription => HasPhoto ? "Location photo. Double tap to take a new one" : "No photo yet. Double tap to take one";
 
     [ObservableProperty]
     private string _name = string.Empty;

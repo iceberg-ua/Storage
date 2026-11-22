@@ -100,7 +100,12 @@ public partial class AddItemViewModel : ObservableObject, IQueryAttributable
     public bool IsAtTagLimit => !CanAddMoreTags;
 
     /// <summary>"· 2 of 5", after the Tags label; empty until there is a tag.</summary>
-    public string TagCountText => ItemTags.Count == 0 ? string.Empty : $"· {ItemTags.Count} of {MaxTagsPerItem}";
+    public string TagCountText => ItemTags.Count switch
+    {
+        0 => string.Empty,
+        _ when IsAtTagLimit => $"· {ItemTags.Count} of {MaxTagsPerItem}, the most for one item",
+        _ => $"· {ItemTags.Count} of {MaxTagsPerItem}"
+    };
 
     [ObservableProperty]
     private string _tagInput = string.Empty;
@@ -569,7 +574,7 @@ public partial class AddItemViewModel : ObservableObject, IQueryAttributable
             // backstop for a file that arrived anyway — and it is already written, so
             // dropping it on the floor would leak it until the next launch sweep.
             await _photoService.DeleteAsync(fileName);
-            await Shell.Current.DisplayAlertAsync("Too many photos", PhotoLimitMessage, "OK");
+            await Shell.Current.DisplayAlertAsync("Too many photos", $"An item takes up to {MaxPhotosPerItem} photos.", "OK");
             return;
         }
 

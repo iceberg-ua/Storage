@@ -142,7 +142,9 @@
     <Style TargetType="Border" x:Key="FieldSurface">
         <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}" />
         <Setter Property="Stroke" Value="{AppThemeBinding Light={StaticResource Hairline}, Dark={StaticResource HairlineDark}}" />
-        <Setter Property="StrokeThickness" Value="1" />
+        <!-- Two, not one: the focus ring is the same width in the accent, so only the
+             colour changes and the field inside does not shift. -->
+        <Setter Property="StrokeThickness" Value="2" />
         <Setter Property="StrokeShape" Value="RoundRectangle 16" />
         <Setter Property="Padding" Value="14,0" />
         <Setter Property="MinimumHeightRequest" Value="52" />

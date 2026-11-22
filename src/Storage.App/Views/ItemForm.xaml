@@ -40,6 +40,22 @@
                                     <!-- Filled on the main photo, hollow on the rest; tapping
                                          one moves that photo to the front, which is what being
                                          main is. On a white disc, since a photo can be any colour. -->
+                                    <!-- A 44 square to tap, around the 28 disc that shows. -->
+                                    <Grid WidthRequest="44"
+                                          HeightRequest="44"
+                                          HorizontalOptions="Start"
+                                          VerticalOptions="End"
+                                          BackgroundColor="Transparent"
+                                          SemanticProperties.Description="Make this the main photo">
+                                        <Grid.GestureRecognizers>
+                                            <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:AddItemViewModel}}, Path=MakePrimaryCommand}"
+                                                                  CommandParameter="{Binding .}" />
+                                        </Grid.GestureRecognizers>
+                                        <Grid.Triggers>
+                                            <DataTrigger TargetType="Grid" Binding="{Binding IsPrimary}" Value="True">
+                                                <Setter Property="SemanticProperties.Description" Value="Main photo" />
+                                            </DataTrigger>
+                                        </Grid.Triggers>
                                     <Border WidthRequest="28"
                                             HeightRequest="28"
                                             Margin="6,0,0,6"
@@ -48,11 +64,7 @@
                                             StrokeThickness="0"
                                             StrokeShape="RoundRectangle 14"
                                             BackgroundColor="#D9FFFFFF"
-                                            SemanticProperties.Description="Make this the main photo">
-                                        <Border.GestureRecognizers>
-                                            <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:AddItemViewModel}}, Path=MakePrimaryCommand}"
-                                                                  CommandParameter="{Binding .}" />
-                                        </Border.GestureRecognizers>
+                                            AutomationProperties.IsInAccessibleTree="False">
                                         <Label Text="{Binding HeartGlyph}"
                                                FontSize="16"
                                                TextColor="{StaticResource Ink}"
@@ -68,13 +80,24 @@
                                         <Border.Triggers>
                                             <DataTrigger TargetType="Border" Binding="{Binding IsPrimary}" Value="True">
                                                 <Setter Property="BackgroundColor" Value="White" />
-                                                <Setter Property="SemanticProperties.Description" Value="Main photo" />
                                             </DataTrigger>
                                         </Border.Triggers>
                                     </Border>
+                                    </Grid>
 
                                     <!-- Ringed in the canvas colour so it reads as sitting on
                                          top of the photo's corner. -->
+                                    <!-- 40 to tap around the 26 that shows; clear of the heart's. -->
+                                    <Grid WidthRequest="40"
+                                          HeightRequest="40"
+                                          HorizontalOptions="End"
+                                          VerticalOptions="Start"
+                                          BackgroundColor="Transparent"
+                                          SemanticProperties.Description="Remove this photo">
+                                        <Grid.GestureRecognizers>
+                                            <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:AddItemViewModel}}, Path=RemovePhotoCommand}"
+                                                                  CommandParameter="{Binding .}" />
+                                        </Grid.GestureRecognizers>
                                     <Border WidthRequest="26"
                                             HeightRequest="26"
                                             HorizontalOptions="End"
@@ -83,11 +106,7 @@
                                             Stroke="{AppThemeBinding Light={StaticResource Canvas}, Dark={StaticResource CanvasDark}}"
                                             StrokeShape="RoundRectangle 13"
                                             BackgroundColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}"
-                                            SemanticProperties.Description="Remove this photo">
-                                        <Border.GestureRecognizers>
-                                            <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:AddItemViewModel}}, Path=RemovePhotoCommand}"
-                                                                  CommandParameter="{Binding .}" />
-                                        </Border.GestureRecognizers>
+                                            AutomationProperties.IsInAccessibleTree="False">
                                         <Label Text="✕"
                                                FontSize="11"
                                                FontFamily="JakartaBold"
@@ -96,6 +115,7 @@
                                                VerticalOptions="Center"
                                                AutomationProperties.IsInAccessibleTree="False" />
                                     </Border>
+                                    </Grid>
                                 </Grid>
                             </DataTemplate>
                         </BindableLayout.ItemTemplate>
