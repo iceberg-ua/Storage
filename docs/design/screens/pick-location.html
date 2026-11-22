@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Snapshot — Place picker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#0F6E6E}a:hover{color:#084A4A}
+button{font-family:inherit}
+</style>
+</head>
+<body>
+<div style="width: 390px; height: 844px; box-sizing: border-box; position: relative; overflow: hidden; background: #DCE6E4; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; color: #1C1B19">
+  <div aria-hidden="true" style="position: absolute; inset: 0; background: rgba(28,27,25,0.5)"></div>
+  <section aria-label="Move to a place" style="position: absolute; left: 0; right: 0; top: 120px; bottom: 0; background: #F6F4EF; border-radius: 28px 28px 0 0; padding: 10px 20px 24px 20px; box-sizing: border-box; display: flex; flex-direction: column; gap: 16px">
+    <div style="display: flex; justify-content: center">
+      <span style="width: 40px; height: 4px; border-radius: 2px; background: #CFC8BA"></span>
+    </div>
+    <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 12px">
+      <div style="display: flex; flex-direction: column; gap: 4px">
+        <h1 style="margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -0.01em">Move to…</h1>
+        <span style="font-size: 13px; color: #5F5B53">Winter tyres · now in Garage › Shelf 2</span>
+      </div>
+      <a href="item.html" aria-label="Close" style="flex: 0 0 auto; width: 40px; height: 40px; border-radius: 20px; background: #FFFFFF; display: flex; align-items: center; justify-content: center">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1C1B19" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+      </a>
+    </div>
+    <label style="display: flex; align-items: center; gap: 10px; height: 48px; padding: 0 16px; background: #FFFFFF; border-radius: 24px">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5F5B53" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>
+      <input placeholder="Find a place" aria-label="Find a place" style="flex: 1; border: 0; outline: 0; background: transparent; font-family: inherit; font-size: 15px; color: #1C1B19">
+    </label>
+    <nav aria-label="Place path" style="display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 600">
+      <a href="#" style="text-decoration: none">All places</a>
+      <span style="color: #8A857B">›</span>
+      <span style="color: #1C1B19">Garage</span>
+    </nav>
+    <div style="display: flex; flex-direction: column; background: #FFFFFF; border-radius: 22px; overflow: hidden">
+        <div style="display: flex; align-items: center; height: 60px; background: #FFFFFF; border-bottom: 1px solid #F0ECE4">
+          <button style="flex: 1; height: 60px; padding: 0 0 0 16px; border: 0; background: transparent; display: flex; align-items: center; gap: 12px; text-align: left">
+            <span style="flex: 0 0 auto; width: 22px; height: 22px; border-radius: 11px; box-sizing: border-box; border: 2px solid #CFC8BA; display: flex; align-items: center; justify-content: center">
+              <span style="width: 10px; height: 10px; border-radius: 5px; background: transparent"></span>
+            </span>
+            <span style="flex: 1; display: flex; flex-direction: column; gap: 1px">
+              <span style="font-size: 15px; font-weight: 700; color: #1C1B19">Garage itself</span>
+              <span style="font-size: 12px; color: #5F5B53">Not on a shelf</span>
+            </span>
+          </button>
+        </div>
+        <div style="display: flex; align-items: center; height: 60px; background: #FFFFFF; border-bottom: 1px solid #F0ECE4">
+          <button style="flex: 1; height: 60px; padding: 0 0 0 16px; border: 0; background: transparent; display: flex; align-items: center; gap: 12px; text-align: left">
+            <span style="flex: 0 0 auto; width: 22px; height: 22px; border-radius: 11px; box-sizing: border-box; border: 2px solid #CFC8BA; display: flex; align-items: center; justify-content: center">
+              <span style="width: 10px; height: 10px; border-radius: 5px; background: transparent"></span>
+            </span>
+            <span style="flex: 1; display: flex; flex-direction: column; gap: 1px">
+              <span style="font-size: 15px; font-weight: 700; color: #1C1B19">Car box</span>
+              <span style="font-size: 12px; color: #5F5B53">7 items</span>
+            </span>
+          </button>
+        </div>
+        <div style="display: flex; align-items: center; height: 60px; background: #FFFFFF; border-bottom: 1px solid #F0ECE4">
+          <button style="flex: 1; height: 60px; padding: 0 0 0 16px; border: 0; background: transparent; display: flex; align-items: center; gap: 12px; text-align: left">
+            <span style="flex: 0 0 auto; width: 22px; height: 22px; border-radius: 11px; box-sizing: border-box; border: 2px solid #CFC8BA; display: flex; align-items: center; justify-content: center">
+              <span style="width: 10px; height: 10px; border-radius: 5px; background: transparent"></span>
+            </span>
+            <span style="flex: 1; display: flex; flex-direction: column; gap: 1px">
+              <span style="font-size: 15px; font-weight: 700; color: #1C1B19">Shelf 2</span>
+              <span style="font-size: 12px; color: #5F5B53">Current place · 18 items</span>
+            </span>
+          </button>
+            <button aria-label="Open Shelf 2" style="width: 52px; height: 60px; border: 0; border-left: 1px solid #F0ECE4; background: transparent; display: flex; align-items: center; justify-content: center">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5F5B53" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg>
+            </button>
+        </div>
+        <div style="display: flex; align-items: center; height: 60px; background: #EAF4F2; border-bottom: 1px solid #F0ECE4">
+          <button style="flex: 1; height: 60px; padding: 0 0 0 16px; border: 0; background: transparent; display: flex; align-items: center; gap: 12px; text-align: left">
+            <span style="flex: 0 0 auto; width: 22px; height: 22px; border-radius: 11px; box-sizing: border-box; border: 2px solid #0F6E6E; display: flex; align-items: center; justify-content: center">
+              <span style="width: 10px; height: 10px; border-radius: 5px; background: #0F6E6E"></span>
+            </span>
+            <span style="flex: 1; display: flex; flex-direction: column; gap: 1px">
+              <span style="font-size: 15px; font-weight: 700; color: #1C1B19">Tyre rack</span>
+              <span style="font-size: 12px; color: #5F5B53">3 items</span>
+            </span>
+          </button>
+        </div>
+        <div style="display: flex; align-items: center; height: 60px; background: #FFFFFF; border-bottom: 1px solid #F0ECE4">
+          <button style="flex: 1; height: 60px; padding: 0 0 0 16px; border: 0; background: transparent; display: flex; align-items: center; gap: 12px; text-align: left">
+            <span style="flex: 0 0 auto; width: 22px; height: 22px; border-radius: 11px; box-sizing: border-box; border: 2px solid #CFC8BA; display: flex; align-items: center; justify-content: center">
+              <span style="width: 10px; height: 10px; border-radius: 5px; background: transparent"></span>
+            </span>
+            <span style="flex: 1; display: flex; flex-direction: column; gap: 1px">
+              <span style="font-size: 15px; font-weight: 700; color: #1C1B19">Workbench</span>
+              <span style="font-size: 12px; color: #5F5B53">9 items · 2 drawers</span>
+            </span>
+          </button>
+            <button aria-label="Open Workbench" style="width: 52px; height: 60px; border: 0; border-left: 1px solid #F0ECE4; background: transparent; display: flex; align-items: center; justify-content: center">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5F5B53" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg>
+            </button>
+        </div>
+      <button style="height: 56px; padding: 0 16px; border: 0; background: transparent; display: flex; align-items: center; gap: 12px; font-size: 15px; font-weight: 700; color: #0F6E6E">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>New place in Garage</button>
+    </div>
+    <a href="item.html" style="margin-top: auto; height: 56px; border-radius: 28px; background: #0F6E6E; color: #FFFFFF; font-size: 16px; font-weight: 700; text-decoration: none; display: flex; align-items: center; justify-content: center">Move to Tyre rack</a>
+  </section>
+</div>
+</body>
+</html>

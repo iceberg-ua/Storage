@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Snapshot — Edit place</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#0F6E6E}a:hover{color:#084A4A}
+button{font-family:inherit}
+</style>
+</head>
+<body>
+<div style="width: 390px; height: 844px; box-sizing: border-box; position: relative; overflow: hidden; background: #F6F4EF; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; color: #1C1B19">
+  <div style="padding: 20px 20px 0 20px; display: flex; flex-direction: column; gap: 20px">
+    <div style="display: flex; align-items: center; gap: 12px">
+      <a href="location-with-photo.html" aria-label="Cancel" style="width: 44px; height: 44px; border-radius: 22px; background: #FFFFFF; display: flex; align-items: center; justify-content: center; box-shadow: 0 1px 2px rgba(28,27,25,0.08)">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1C1B19" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+      </a>
+      <h1 style="margin: 0; font-size: 22px; font-weight: 800">Edit place</h1>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 6px">
+      <span style="font-size: 13px; font-weight: 700">Photo <span style="font-weight: 500; color: #5F5B53">· optional</span></span>
+      <div style="display: flex; align-items: center; gap: 14px; padding: 8px 14px 8px 8px; border-radius: 20px; background: #FFFFFF">
+        <div style="flex: 0 0 auto; width: 112px; height: 84px; border-radius: 14px; background: #C9D9D6; display: flex; align-items: center; justify-content: center">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#1C1B19" stroke-opacity="0.35" stroke-width="1.6" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="3"></rect><circle cx="9" cy="10" r="1.6"></circle><path d="M21 16l-5-5-8 8"></path></svg>
+        </div>
+        <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px">
+          <span style="font-size: 12px; line-height: 1.4; color: #5F5B53">Shown at the top of the place and on its card</span>
+          <div style="display: flex; gap: 6px">
+            <a href="snap.html" style="height: 36px; padding: 0 14px; border-radius: 18px; background: #DCEDEA; color: #0B5555; font-size: 13px; font-weight: 700; text-decoration: none; display: flex; align-items: center">Change</a>
+            <button style="height: 36px; padding: 0 10px; border: 0; background: transparent; color: #B3261E; font-size: 13px; font-weight: 700">Remove</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <label style="display: flex; flex-direction: column; gap: 6px">
+      <span style="font-size: 13px; font-weight: 700">Name</span>
+      <input value="Garage" style="height: 52px; padding: 0 16px; border-radius: 16px; border: 2px solid #0F6E6E; background: #FFFFFF; font-family: inherit; font-size: 16px; color: #1C1B19; outline: 0">
+    </label>
+    <div style="display: flex; flex-direction: column; gap: 6px">
+      <span style="font-size: 13px; font-weight: 700">Inside</span>
+      <a href="pick-location.html" style="height: 52px; padding: 0 14px; border-radius: 16px; background: #FFFFFF; color: #1C1B19; text-decoration: none; display: flex; align-items: center; gap: 8px">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0F6E6E" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="2"></rect><rect x="14" y="3" width="7" height="7" rx="2"></rect><rect x="3" y="14" width="7" height="7" rx="2"></rect><rect x="14" y="14" width="7" height="7" rx="2"></rect></svg>
+        <span style="flex: 1; font-size: 15px; font-weight: 700">Top level</span>
+        <span style="font-size: 14px; font-weight: 600; color: #0F6E6E">Change</span>
+      </a>
+    </div>
+    <label style="display: flex; flex-direction: column; gap: 6px">
+      <span style="font-size: 13px; font-weight: 700">Description <span style="font-weight: 500; color: #5F5B53">· shown on one line in lists, found by search</span></span>
+      <textarea style="height: 72px; padding: 12px 16px; box-sizing: border-box; border-radius: 16px; border: 0; background: #FFFFFF; font-family: inherit; font-size: 15px; line-height: 1.5; color: #1C1B19; resize: none">Tools, car and sports gear</textarea>
+    </label>
+    <div style="display: flex; flex-direction: column; gap: 12px; padding: 16px; border-radius: 22px; background: #FFFFFF">
+      <div style="display: flex; align-items: baseline; justify-content: space-between">
+        <span style="font-size: 15px; font-weight: 700">In this place</span>
+        <span style="font-size: 13px; color: #5F5B53">64 items · 4 sub-places</span>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px">
+        <a href="snap.html" style="height: 48px; border-radius: 24px; background: #DCEDEA; color: #0B5555; font-size: 14px; font-weight: 700; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 8px">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"></path><circle cx="12" cy="13" r="3.5"></circle></svg>Add item</a>
+        <button style="height: 48px; border-radius: 24px; border: 1px solid #E4DFD4; background: #FFFFFF; color: #1C1B19; font-size: 14px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 8px">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>Sub-place</button>
+      </div>
+    </div>
+    <button style="align-self: flex-start; height: 44px; padding: 0 4px; border: 0; background: transparent; color: #B3261E; font-size: 15px; font-weight: 700; display: flex; align-items: center; gap: 8px">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"></path></svg>Delete place</button>
+  </div>
+  <div style="position: absolute; left: 0; right: 0; bottom: 0; padding: 12px 20px 24px 20px; background: #F6F4EF; border-top: 1px solid #E4DFD4">
+    <a href="location-with-photo.html" style="height: 56px; border-radius: 28px; background: #0F6E6E; color: #FFFFFF; font-size: 16px; font-weight: 700; text-decoration: none; display: flex; align-items: center; justify-content: center">Save changes</a>
+  </div>
+</div>
+</body>
+</html>
