@@ -2,105 +2,145 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:Storage.App.ViewModels"
-             xmlns:models="clr-namespace:Storage.Core.Models;assembly=Storage.Core"
              x:Class="Storage.App.Views.TagsPage"
              x:DataType="vm:TagsViewModel"
-             Title="Tags">
+             Title="Tags"
+             Shell.NavBarIsVisible="False">
 
-    <Grid RowDefinitions="Auto,*">
-        <!-- Header with Add Button -->
-        <Button Grid.Row="0"
-                Text="➕"
-                Style="{StaticResource IconButton}"
-                Command="{Binding NavigateToAddTagCommand}"
-                Margin="10"
-                HorizontalOptions="End"
-                SemanticProperties.Description="Add tag"
-                ToolTipProperties.Text="Add tag" />
+    <!-- A ScrollView of rows rather than a CollectionView: the rows sit together in one
+         card, which a CollectionView cannot size to its content, and a household has
+         tens of tags, not thousands. -->
+    <RefreshView IsRefreshing="{Binding IsLoading}" Command="{Binding LoadTagsCommand}">
+        <ScrollView>
+            <VerticalStackLayout Padding="20,28,20,24" Spacing="18">
 
-        <!-- Tags List -->
-        <RefreshView Grid.Row="1"
-                     IsRefreshing="{Binding IsLoading}"
-                     Command="{Binding LoadTagsCommand}">
-            <CollectionView ItemsSource="{Binding Tags}">
-                <CollectionView.EmptyView>
-                    <StackLayout Padding="20" VerticalOptions="CenterAndExpand" HorizontalOptions="CenterAndExpand">
-                        <Label Text="🏷️ No tags yet"
-                               FontSize="24"
-                               HorizontalTextAlignment="Center"
-                               TextColor="{AppThemeBinding Light={StaticResource Gray500}, Dark={StaticResource Gray300}}" />
-                        <Label Text="Tags appear here once you add them to an item"
-                               FontSize="16"
-                               HorizontalTextAlignment="Center"
-                               TextColor="{AppThemeBinding Light={StaticResource Gray400}, Dark={StaticResource Gray400}}"
-                               Margin="0,10,0,0" />
-                    </StackLayout>
-                </CollectionView.EmptyView>
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                    <VerticalStackLayout Spacing="2" VerticalOptions="End">
+                        <Label Text="{Binding Summary}" Style="{StaticResource Caption}" FontFamily="JakartaSemiBold" />
+                        <Label Text="Tags"
+                               Style="{StaticResource Display}"
+                               SemanticProperties.HeadingLevel="Level1" />
+                    </VerticalStackLayout>
+                    <Button Grid.Column="1"
+                            Text="+  New tag"
+                            Style="{StaticResource StrongButton}"
+                            FontSize="14"
+                            Padding="16,0"
+                            MinimumHeightRequest="44"
+                            HeightRequest="44"
+                            CornerRadius="22"
+                            VerticalOptions="End"
+                            Command="{Binding NewTagCommand}"
+                            SemanticProperties.Description="New tag" />
+                </Grid>
 
-                <CollectionView.ItemTemplate>
-                    <DataTemplate x:DataType="models:Tag">
-                        <SwipeView>
-                            <SwipeView.RightItems>
-                                <SwipeItems>
-                                    <SwipeItemView Command="{Binding Source={RelativeSource AncestorType={x:Type vm:TagsViewModel}}, Path=DeleteTagCommand}"
-                                                   CommandParameter="{Binding .}">
-                                        <Grid BackgroundColor="#FF3B30"
-                                              WidthRequest="100"
-                                              Padding="10">
-                                            <VerticalStackLayout VerticalOptions="Center"
-                                                                HorizontalOptions="Center">
-                                                <Label Text="🗑️"
-                                                       FontSize="24"
-                                                       HorizontalOptions="Center"/>
-                                                <Label Text="Delete"
-                                                       TextColor="White"
-                                                       FontSize="14"
-                                                       HorizontalOptions="Center"/>
+                <Border Style="{StaticResource Card}"
+                        Padding="0"
+                        StrokeShape="RoundRectangle 22"
+                        IsVisible="{Binding HasTags}">
+                    <VerticalStackLayout BindableLayout.ItemsSource="{Binding Tags}">
+                        <BindableLayout.ItemTemplate>
+                            <DataTemplate x:DataType="vm:TagRow">
+                                <!-- Swipe left to delete, as on the Locations tab; the
+                                     tag's own page has Delete too. -->
+                                <SwipeView>
+                                    <SwipeView.RightItems>
+                                        <SwipeItems>
+                                            <SwipeItemView Command="{Binding Source={RelativeSource AncestorType={x:Type vm:TagsViewModel}}, Path=DeleteTagCommand}"
+                                                           CommandParameter="{Binding .}">
+                                                <Grid BackgroundColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}"
+                                                      WidthRequest="96">
+                                                    <Label Text="Delete"
+                                                           FontFamily="JakartaBold"
+                                                           TextColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource Ink}}"
+                                                           HorizontalOptions="Center"
+                                                           VerticalOptions="Center" />
+                                                </Grid>
+                                            </SwipeItemView>
+                                        </SwipeItems>
+                                    </SwipeView.RightItems>
+
+                                    <Grid RowDefinitions="1,64"
+                                          ColumnDefinitions="*,52"
+                                          BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}">
+
+                                        <!-- The row opens the tag's items. -->
+                                        <BoxView Grid.ColumnSpan="2"
+                                                 HeightRequest="1"
+                                                 IsVisible="{Binding HasDivider}"
+                                                 Color="{AppThemeBinding Light={StaticResource Hairline}, Dark={StaticResource HairlineDark}}" />
+
+                                        <Grid Grid.Row="1"
+                                              ColumnDefinitions="Auto,*"
+                                              ColumnSpacing="14"
+                                              Padding="14,0,0,0"
+                                              BackgroundColor="Transparent"
+                                              SemanticProperties.Description="{Binding Description}"
+                                              SemanticProperties.Hint="Shows the items with this tag">
+                                            <Grid.GestureRecognizers>
+                                                <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:TagsViewModel}}, Path=OpenTagCommand}"
+                                                                      CommandParameter="{Binding .}" />
+                                            </Grid.GestureRecognizers>
+                                            <Border WidthRequest="40"
+                                                    HeightRequest="40"
+                                                    VerticalOptions="Center"
+                                                    StrokeThickness="0"
+                                                    StrokeShape="RoundRectangle 20"
+                                                    BackgroundColor="{Binding Tag.Color, Converter={StaticResource HexToColorConverter}}"
+                                                    AutomationProperties.IsInAccessibleTree="False">
+                                                <Label Text="🏷"
+                                                       FontSize="16"
+                                                       HorizontalOptions="Center"
+                                                       VerticalOptions="Center"
+                                                       TextColor="{Binding Tag.Color, Converter={StaticResource HexToTextColorConverter}}" />
+                                            </Border>
+                                            <VerticalStackLayout Grid.Column="1"
+                                                                 Spacing="1"
+                                                                 VerticalOptions="Center"
+                                                                 AutomationProperties.IsInAccessibleTree="False">
+                                                <Label Text="{Binding Tag.Name}"
+                                                       Style="{StaticResource StrongLabel}"
+                                                       FontSize="16"
+                                                       MaxLines="1"
+                                                       LineBreakMode="TailTruncation" />
+                                                <Label Text="{Binding CountText}" Style="{StaticResource Caption}" />
                                             </VerticalStackLayout>
                                         </Grid>
-                                    </SwipeItemView>
-                                </SwipeItems>
-                            </SwipeView.RightItems>
 
-                            <Frame Margin="10,5"
-                                   Padding="10"
-                                   CornerRadius="5"
-                                   BackgroundColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource Gray900}}"
-                                   BorderColor="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource Gray600}}">
-                                <Frame.GestureRecognizers>
-                                    <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:TagsViewModel}}, Path=EditTagCommand}"
-                                                          CommandParameter="{Binding .}" />
-                                </Frame.GestureRecognizers>
-                                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
-                                    <!-- The tag's colour, shown as the chip it will render as. -->
-                                    <Border Grid.Column="0"
-                                            WidthRequest="28"
-                                            HeightRequest="28"
-                                            Padding="0"
-                                            StrokeThickness="0"
-                                            VerticalOptions="Center"
-                                            BackgroundColor="{Binding Color, Converter={StaticResource HexToColorConverter}}">
-                                        <Border.StrokeShape>
-                                            <RoundRectangle CornerRadius="14" />
-                                        </Border.StrokeShape>
-                                    </Border>
+                                        <!-- The pencil opens the tag itself: name, colour, delete. -->
+                                        <Button Grid.Row="1"
+                                                Grid.Column="1"
+                                                Text="✎"
+                                                Style="{StaticResource TextButton}"
+                                                TextColor="{AppThemeBinding Light={StaticResource InkMuted}, Dark={StaticResource InkMutedDark}}"
+                                                FontSize="18"
+                                                WidthRequest="52"
+                                                HeightRequest="64"
+                                                Command="{Binding Source={RelativeSource AncestorType={x:Type vm:TagsViewModel}}, Path=EditTagCommand}"
+                                                CommandParameter="{Binding .}"
+                                                SemanticProperties.Description="{Binding Tag.Name, StringFormat='Edit tag {0}'}" />
+                                    </Grid>
+                                </SwipeView>
+                            </DataTemplate>
+                        </BindableLayout.ItemTemplate>
+                    </VerticalStackLayout>
+                </Border>
 
-                                    <StackLayout Grid.Column="1">
-                                        <Label Text="{Binding Name}"
-                                               FontSize="18"
-                                               FontAttributes="Bold"
-                                               TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}" />
-                                        <Label Text="{Binding Items.Count, StringFormat='{0} items'}"
-                                               FontSize="12"
-                                               TextColor="{AppThemeBinding Light={StaticResource Gray500}, Dark={StaticResource Gray400}}" />
-                                    </StackLayout>
-                                </Grid>
-                            </Frame>
-                        </SwipeView>
-                    </DataTemplate>
-                </CollectionView.ItemTemplate>
-            </CollectionView>
-        </RefreshView>
-    </Grid>
+                <!-- No tags yet: say what they are for, and how they usually start. -->
+                <Border Style="{StaticResource Card}" IsVisible="{Binding HasNoTags}">
+                    <VerticalStackLayout Spacing="12">
+                        <Label Text="No tags yet" Style="{StaticResource StrongLabel}" />
+                        <Label Text="A tag groups items across locations: everything for camping, say, wherever it is kept. Add one here, or type one on an item."
+                               Style="{StaticResource Caption}" />
+                        <Button Text="Add a tag"
+                                Style="{StaticResource SecondaryButton}"
+                                Command="{Binding NewTagCommand}"
+                                HorizontalOptions="Start" />
+                    </VerticalStackLayout>
+                </Border>
+
+            </VerticalStackLayout>
+        </ScrollView>
+    </RefreshView>
 
 </ContentPage>

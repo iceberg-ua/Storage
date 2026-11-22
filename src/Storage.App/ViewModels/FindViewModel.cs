@@ -63,6 +63,7 @@ public partial class FindViewModel : ObservableObject, IQueryAttributable
     private bool _focusRequested;
     private bool _skipDebounce;
     private int? _pendingPlaceId;
+    private int? _pendingTagId;
 
     // Each search gets a number; a slower, older one that finishes after a newer one
     // started does not overwrite its results.
@@ -171,13 +172,16 @@ public partial class FindViewModel : ObservableObject, IQueryAttributable
     }
 
     // "reset" starts afresh (the tab page lives on between visits), "in" sets a place,
-    // "tab=places" opens on Places, "focus" puts the caret in the box, "pushed" shows Back.
+    // "tag" a tag filter, "tab=places" opens on Places, "focus" puts the caret in the box,
+    // "pushed" shows Back.
     public void ApplyQueryAttributes(IDictionary<string, object> query)
     {
         if (query.ContainsKey("reset"))
             Reset();
         if (query.TryGetValue("in", out var place) && int.TryParse(Convert.ToString(place), out var placeId))
             _pendingPlaceId = placeId;
+        if (query.TryGetValue("tag", out var tagValue) && int.TryParse(Convert.ToString(tagValue), out var tagId))
+            _pendingTagId = tagId;
         if (query.TryGetValue("tab", out var tab))
             ShowingItems = Convert.ToString(tab) != "places";
         if (query.ContainsKey("focus"))
@@ -223,6 +227,21 @@ public partial class FindViewModel : ObservableObject, IQueryAttributable
                 PlaceFilter = _locationsById.GetValueOrDefault(id);
                 if (PlaceFilter is null)
                     await Shell.Current.DisplayAlertAsync(null, "That location no longer exists, so this searches everywhere.", "OK");
+            }
+
+            if (_pendingTagId is int tagId)
+            {
+                _pendingTagId = null;
+                if (_allTags.FirstOrDefault(t => t.Id == tagId) is { } tag)
+                {
+                    if (TagFilters.All(t => t.Id != tag.Id))
+                        TagFilters.Add(tag);
+                    ShowingItems = true;
+                }
+                else
+                {
+                    await Shell.Current.DisplayAlertAsync(null, "That tag no longer exists, so this shows everything.", "OK");
+                }
             }
 
             RefreshFilters();

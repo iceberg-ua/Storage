@@ -21,6 +21,10 @@ public static class TagPalette
         "#37474F"  // blue grey
     ];
 
+    /// <summary>What a screen reader calls each colour, in the same order as <see cref="Colors"/>.</summary>
+    public static readonly string[] Names =
+        ["Red", "Pink", "Purple", "Indigo", "Blue", "Teal", "Green", "Orange", "Brown", "Blue grey"];
+
     public const string Default = "#37474F";
 
     /// <summary>

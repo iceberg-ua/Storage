@@ -14,6 +14,9 @@ public interface ITagRepository
 
     Task<Tag?> GetByIdAsync(int id);
 
+    /// <summary>How many items carry the tag; 0 for a tag that does not exist.</summary>
+    Task<int> CountItemsAsync(int tagId);
+
     Task<Tag> AddAsync(string name, string color);
 
     Task UpdateAsync(Tag tag);

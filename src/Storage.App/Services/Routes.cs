@@ -58,6 +58,14 @@ public static class Routes
         return route;
     }
 
+    /// <summary>The Find page pushed on top of the current one, listing the items with this tag.</summary>
+    /// <remarks>Read back by <see cref="FindViewModel.ApplyQueryAttributes"/>.</remarks>
+    public static string TaggedItems(int tagId) => $"search?pushed=1&tag={tagId}";
+
+    /// <summary>The edit form for an existing tag, or a new one with no id.</summary>
+    /// <remarks>Read back by <see cref="EditTagViewModel.ApplyQueryAttributes"/>.</remarks>
+    public static string EditTag(int? tagId = null) => tagId is int id ? $"edittag?tagId={id}" : "edittag";
+
     /// <summary>The edit form for an existing location.</summary>
     /// <remarks>Read back by <see cref="AddLocationViewModel.ApplyQueryAttributes"/>.</remarks>
     public static string EditLocation(int locationId) => $"editlocation?locationId={locationId}";
