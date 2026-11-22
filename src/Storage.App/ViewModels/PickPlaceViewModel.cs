@@ -38,7 +38,8 @@ public sealed partial class PickRow : ObservableObject
 /// <summary>
 /// The place picker: one level of the location tree at a time, with the path above it
 /// to step back up, and a search box that finds any location by name. Used for moving an
-/// item and for choosing an item's location on its form.
+/// item, for choosing an item's location on its form, and for choosing the location a
+/// location sits inside.
 /// </summary>
 /// <remarks>
 /// Reads every location once when it opens and walks the tree in memory: the app holds
@@ -115,7 +116,12 @@ public partial class PickPlaceViewModel : ObservableObject
 
         try
         {
-            var all = (await _locationRepository.GetAllAsync()).ToList();
+            // Left out entirely, not shown greyed: a location cannot go inside itself or
+            // anything inside it, and the request lists all of those.
+            var excluded = _request.ExcludedIds ?? new HashSet<int>();
+            var all = (await _locationRepository.GetAllAsync())
+                .Where(l => !excluded.Contains(l.Id))
+                .ToList();
             _byId = all.ToDictionary(l => l.Id);
             _children = all
                 .OrderBy(l => l.Name, StringComparer.CurrentCultureIgnoreCase)
@@ -221,9 +227,9 @@ public partial class PickPlaceViewModel : ObservableObject
         if (!_hasSelection)
             ConfirmText = "Choose a location";
         else if (_selectedId == _request.CurrentId)
-            ConfirmText = _selectedId is null ? "Already in no location" : "Already here";
+            ConfirmText = "Already here";
         else
-            ConfirmText = string.Format(_request.ConfirmFormat, _selectedId is int id ? _byId[id].Name : "no location");
+            ConfirmText = string.Format(_request.ConfirmFormat, _selectedId is int id ? _byId[id].Name : _request.NoneInSentence);
 
         ConfirmCommand.NotifyCanExecuteChanged();
     }
@@ -234,7 +240,7 @@ public partial class PickPlaceViewModel : ObservableObject
         if (_levelId is int level)
             yield return Row(level, $"{_byId[level].Name} itself", "Not in anything inside it", canOpen: false);
         else if (_request.AllowNone)
-            yield return new PickRow(null, "No location", "Not stored anywhere yet", canOpen: false,
+            yield return new PickRow(null, _request.NoneName, _request.NoneMeta, canOpen: false,
                 isSelected: _hasSelection && _selectedId is null);
 
         foreach (var child in _children[_levelId])

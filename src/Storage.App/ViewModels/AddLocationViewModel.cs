@@ -19,6 +19,7 @@ namespace Storage.App.ViewModels;
 public partial class AddLocationViewModel : ObservableObject, IQueryAttributable
 {
     private readonly ILocationRepository _locationRepository;
+    private readonly PlacePicker _placePicker;
     private readonly IPhotoService _photoService;
 
     private int _locationId;
@@ -40,7 +41,7 @@ public partial class AddLocationViewModel : ObservableObject, IQueryAttributable
     // Set while "Add Item Here" has the create page on top: the form is covered, not left.
     private bool _isCoveredByCreate;
 
-    /// <summary>True while the camera page or the gallery picker covers the form.</summary>
+    /// <summary>True while the camera page, the gallery picker or the place picker covers the form.</summary>
     public bool IsAwaitingPhotoSource { get; private set; }
 
     [ObservableProperty]
@@ -58,10 +59,32 @@ public partial class AddLocationViewModel : ObservableObject, IQueryAttributable
     private string _description = string.Empty;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ParentPath))]
     private StorageLocation? _parentLocation;
 
-    [ObservableProperty]
-    private ObservableCollection<StorageLocation> _availableParents = [];
+    // Every location this one may sit inside: all of them but itself and what is inside
+    // it. Nothing binds it; the form shows only the chosen one, as a path.
+    private List<StorageLocation> _availableParents = [];
+    private IReadOnlySet<int> _excludedParentIds = new HashSet<int>();
+
+    /// <summary>"Garage › Shelf 2", or "Top level".</summary>
+    public string ParentPath
+    {
+        get
+        {
+            if (ParentLocation is null)
+                return "Top level";
+
+            var byId = _availableParents.ToDictionary(l => l.Id);
+            var names = new List<string>();
+            var seen = new HashSet<int>();
+            for (int? id = ParentLocation.Id; id is int current && seen.Add(current) && byId.TryGetValue(current, out var l); id = l.ParentId)
+                names.Add(l.Name);
+
+            names.Reverse();
+            return string.Join(" › ", names);
+        }
+    }
 
     [ObservableProperty]
     private bool _isEditMode;
@@ -69,10 +92,14 @@ public partial class AddLocationViewModel : ObservableObject, IQueryAttributable
     [ObservableProperty]
     private string _pageTitle = "Add Location";
 
-    public AddLocationViewModel(ILocationRepository locationRepository, IPhotoService photoService)
+    public AddLocationViewModel(
+        ILocationRepository locationRepository,
+        IPhotoService photoService,
+        PlacePicker placePicker)
     {
         _locationRepository = locationRepository;
         _photoService = photoService;
+        _placePicker = placePicker;
     }
 
     // The edit page's entry point: Shell calls this on its BindingContext with the
@@ -121,15 +148,7 @@ public partial class AddLocationViewModel : ObservableObject, IQueryAttributable
 
         _isLoaded = true;
 
-        var locations = await _locationRepository.GetAllAsync();
-
-        // A location can't be its own parent, nor sit inside something stored in it.
-        var descendantIds = IsEditMode
-            ? await _locationRepository.GetDescendantIdsAsync(_locationId)
-            : new HashSet<int>();
-
-        AvailableParents = new ObservableCollection<StorageLocation>(
-            locations.Where(l => l.Id != _locationId && !descendantIds.Contains(l.Id)));
+        await LoadAvailableParentsAsync();
 
         if (IsEditMode)
         {
@@ -143,7 +162,7 @@ public partial class AddLocationViewModel : ObservableObject, IQueryAttributable
 
             Name = location.Name;
             Description = location.Description ?? string.Empty;
-            ParentLocation = AvailableParents.FirstOrDefault(l => l.Id == location.ParentId);
+            ParentLocation = _availableParents.FirstOrDefault(l => l.Id == location.ParentId);
 
             _savedPhotoFileName = location.PhotoFileName;
 
@@ -154,7 +173,63 @@ public partial class AddLocationViewModel : ObservableObject, IQueryAttributable
         }
         else if (_parentId is int parent)
         {
-            ParentLocation = AvailableParents.FirstOrDefault(l => l.Id == parent);
+            ParentLocation = _availableParents.FirstOrDefault(l => l.Id == parent);
+        }
+    }
+
+    private async Task LoadAvailableParentsAsync()
+    {
+        var locations = await _locationRepository.GetAllAsync();
+
+        // A location can't be its own parent, nor sit inside something stored in it.
+        var excluded = IsEditMode
+            ? new HashSet<int>(await _locationRepository.GetDescendantIdsAsync(_locationId)) { _locationId }
+            : new HashSet<int>();
+
+        _excludedParentIds = excluded;
+        _availableParents = locations.Where(l => !excluded.Contains(l.Id)).ToList();
+    }
+
+    // The place picker, as on the item form: a flat list cannot tell two "Shelf 2"s
+    // apart. Itself and everything inside it are left out of the picker, so a move that
+    // would make a loop cannot be chosen.
+    [RelayCommand]
+    private async Task PickParentAsync()
+    {
+        // The picker covers the page, which then disappears; without this the form would
+        // take that as being left and throw away the photo taken on it.
+        IsAwaitingPhotoSource = true;
+        try
+        {
+            var pick = await _placePicker.PickAsync(new PlacePickRequest(
+                "Put it inside…",
+                string.IsNullOrWhiteSpace(Name) ? null : Name.Trim(),
+                ParentLocation?.Id,
+                "Put it in {0}",
+                AllowNone: true,
+                NoneName: "Top level",
+                NoneMeta: "Not inside another location",
+                NoneInSentence: "the top level",
+                ExcludedIds: _excludedParentIds));
+
+            if (pick is null)
+                return;
+
+            // The picker reads the locations afresh, so it can offer one added since this
+            // form loaded its list; reload once rather than call that "top level".
+            if (pick.LocationId is int id && _availableParents.All(l => l.Id != id))
+                await LoadAvailableParentsAsync();
+
+            ParentLocation = _availableParents.FirstOrDefault(l => l.Id == pick.LocationId);
+        }
+        catch (Exception ex)
+        {
+            await Shell.Current.DisplayAlertAsync(
+                "Couldn't set where it goes", $"Try again in a moment.\n\n{ex.Message}".TrimEnd(), "OK");
+        }
+        finally
+        {
+            IsAwaitingPhotoSource = false;
         }
     }
 

@@ -5,13 +5,21 @@ namespace Storage.App.Services;
 /// <param name="Subject">One line under the title saying what is being placed, or null.</param>
 /// <param name="CurrentId">Where it is now, marked and preselected; null for nowhere.</param>
 /// <param name="ConfirmFormat">The confirm button, with {0} for the chosen place: "Move to {0}".</param>
-/// <param name="AllowNone">Whether "No location" is one of the choices.</param>
+/// <param name="AllowNone">Whether choosing nothing is one of the choices.</param>
+/// <param name="NoneName">The row for choosing nothing: "No location", or "Top level" for a parent.</param>
+/// <param name="NoneMeta">The line under that row.</param>
+/// <param name="NoneInSentence">That choice inside <paramref name="ConfirmFormat"/>: "Use no location".</param>
+/// <param name="ExcludedIds">Locations that may not be chosen, left out of the list altogether.</param>
 public sealed record PlacePickRequest(
     string Title,
     string? Subject,
     int? CurrentId,
     string ConfirmFormat,
-    bool AllowNone);
+    bool AllowNone,
+    string NoneName = "No location",
+    string NoneMeta = "Not stored anywhere yet",
+    string NoneInSentence = "no location",
+    IReadOnlySet<int>? ExcludedIds = null);
 
 /// <summary>The place chosen; a null id is "no location".</summary>
 public sealed record PlacePick(int? LocationId);
