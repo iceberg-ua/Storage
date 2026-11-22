@@ -704,6 +704,20 @@ public class RepositoryTests : IDisposable
     }
 
     [Fact]
+    public async Task SavingUnderADeletedParentIsRefusedAndWritesNothing()
+    {
+        // What the location form guards against: a parent chosen, then deleted elsewhere
+        // before Save. The foreign key refuses the write; the form shows that, not a crash.
+        var locationRepo = new LocationRepository(_db);
+        var shelf = await locationRepo.AddAsync(new Location { Name = "Shelf" });
+        await locationRepo.DeleteAsync(shelf.Id);
+
+        await Assert.ThrowsAsync<DbUpdateException>(() =>
+            locationRepo.AddAsync(new Location { Name = "Bin", ParentId = shelf.Id }));
+        Assert.False(await _context.Locations.AnyAsync(l => l.Name == "Bin"));
+    }
+
+    [Fact]
     public async Task SetQuantityChangesOnlyTheQuantity()
     {
         var itemRepo = new ItemRepository(_db);
