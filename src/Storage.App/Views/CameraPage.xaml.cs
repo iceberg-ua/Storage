@@ -4,7 +4,6 @@ using Storage.App.Services;
 using Storage.App.ViewModels;
 using Storage.Core.Repositories;
 using Storage.Core.Services;
-using StorageLocation = Storage.Core.Models.Location;
 
 namespace Storage.App.Views;
 
@@ -35,10 +34,27 @@ public partial class CameraPage : ContentPage, IQueryAttributable
     // Snap mode: the photos taken so far, in order, and where the item will go. The
     // files are written as they are taken; until Next hands them to the form, closing
     // the camera is what deletes them.
-    private readonly ObservableCollection<string> _snapPhotos = [];
+    private readonly List<string> _snapPhotos = [];
     private bool _isSnap;
+    private bool _isOpened;
     private int? _snapLocationId;
     private bool _isPicking;
+
+    // The strip, rebuilt from _snapPhotos so each thumbnail can say which one it is.
+    private readonly ObservableCollection<SnapThumb> _strip = [];
+
+    // Photos still being written (a shot or a gallery pick being compressed). Next and
+    // Cancel wait for them, so none lands after the page has handed its photos over or
+    // thrown them away, and the limit counts them, so quick taps cannot pass it.
+    private readonly List<Task> _pendingSaves = [];
+    private int _savesInFlight;
+
+    // Set by Cancel's "Discard": a save that finishes after it deletes its file.
+    private bool _isDiscarding;
+
+    // The system gallery picker covers the page; coming back from it is not a reason to
+    // run the permission check and start the camera again.
+    private bool _isPickingFromGallery;
 
     // Every transition that binds or unbinds the camera takes this first. Without it
     // OnAppearing and Window.Resumed — which both fire when Android brings the app
@@ -59,15 +75,20 @@ public partial class CameraPage : ContentPage, IQueryAttributable
         _photoService = photoService;
         _locationRepository = locationRepository;
         _placePicker = placePicker;
-        BindableLayout.SetItemsSource(SnapStrip, _snapPhotos);
-        _snapPhotos.CollectionChanged += (_, _) => UpdateSnapCount();
+        BindableLayout.SetItemsSource(SnapStrip, _strip);
         Camera.MediaCaptured += OnMediaCaptured;
         Camera.MediaCaptureFailed += OnMediaCaptureFailed;
     }
 
-    // "snap" turns on the new-item flow; "locationId" is where the item starts out.
+    // "snap" turns on the new-item flow; "locationId" is where the item starts out. Only
+    // on the way in: Shell can send the route's query again when a page on top (the place
+    // picker) pops, and the place picked there must not be reset to the original one.
     public void ApplyQueryAttributes(IDictionary<string, object> query)
     {
+        if (_isOpened)
+            return;
+
+        _isOpened = true;
         if (query.ContainsKey("snap"))
         {
             _isSnap = true;
@@ -93,7 +114,7 @@ public partial class CameraPage : ContentPage, IQueryAttributable
         AttachWindow();
 
         // A capture waiting on Retake/Use photo must survive the page coming back.
-        if (ReviewLayer.IsVisible)
+        if (ReviewLayer.IsVisible || _isPickingFromGallery)
             return;
 
         await StartAsync();
@@ -318,7 +339,7 @@ public partial class CameraPage : ContentPage, IQueryAttributable
         if (_isClosing || !_previewRunning || Camera.IsBusy)
             return;
 
-        if (_isSnap && _snapPhotos.Count >= AddItemViewModel.MaxPhotosPerItem)
+        if (_isSnap && IsSnapFull)
         {
             await DisplayAlertAsync("That's the most for one item", $"An item takes up to {AddItemViewModel.MaxPhotosPerItem} photos. Tap Next to describe it.", "OK");
             return;
@@ -352,7 +373,10 @@ public partial class CameraPage : ContentPage, IQueryAttributable
         {
             var bytes = _pendingCapture;
             _pendingCapture = null;
-            Dispatcher.Dispatch(async () => await KeepSnapAsync(bytes));
+
+            // Counted at once, on this thread, so a second tap right after sees it.
+            Interlocked.Increment(ref _savesInFlight);
+            Dispatcher.Dispatch(() => Track(KeepSnapAsync(bytes)));
             return;
         }
 
@@ -409,36 +433,62 @@ public partial class CameraPage : ContentPage, IQueryAttributable
 
     private async void OnGalleryClicked(object? sender, EventArgs e)
     {
-        if (_isSnap && _snapPhotos.Count >= AddItemViewModel.MaxPhotosPerItem)
+        if (_isSnap && IsSnapFull)
         {
             await DisplayAlertAsync("That's the most for one item", $"An item takes up to {AddItemViewModel.MaxPhotosPerItem} photos.", "OK");
             return;
         }
 
         SetBusy(true);
+        _isPickingFromGallery = true;
+        if (_isSnap)
+            Interlocked.Increment(ref _savesInFlight);
+
+        var fromMessage = MessageLayer.IsVisible;
+        var pick = PickFromGalleryAsync();
+        if (_isSnap)
+            Track(pick);
+
+        // Picked from the message about the camera not opening: there is no strip on
+        // show to add to, so carry on to the form with it. Out here, not in the pick,
+        // because Next waits for every pending save, the pick among them.
+        if (await pick && _isSnap && fromMessage)
+            await NextAsync();
+    }
+
+    // True when a photo was picked.
+    private async Task<bool> PickFromGalleryAsync()
+    {
         try
         {
+            // Writes the file too, compressing it on the way, so it is a pending save.
             var fileName = await _photoService.PickFromGalleryAsync();
             if (fileName is null)
+                return false;
+
+            if (!_isSnap)
             {
-                SetBusy(false);
-                return;
+                await CloseAsync(fileName);
+                return true;
             }
 
-            // In Snap a gallery photo joins the strip like a taken one; the camera stays.
-            if (_isSnap)
-            {
-                _snapPhotos.Add(fileName);
-                SetBusy(false);
-                return;
-            }
-
-            await CloseAsync(fileName);
+            await KeepAsync(fileName);
+            return true;
         }
         catch (Exception ex)
         {
-            SetBusy(false);
             await DisplayAlertAsync("Couldn't import photo", $"Try a different image.\n\n{ex.Message}".TrimEnd(), "OK");
+            return false;
+        }
+        finally
+        {
+            _isPickingFromGallery = false;
+            SetBusy(false);
+
+            // OnAppearing left the camera alone while the picker was up; it comes back on
+            // here if it was showing. A no-op when it is already running or the page closing.
+            if (LiveLayer.IsVisible)
+                await StartPreviewAsync();
         }
     }
 
@@ -459,14 +509,22 @@ public partial class CameraPage : ContentPage, IQueryAttributable
         if (_isClosing)
             return;
 
-        if (_isSnap && _snapPhotos.Count > 0)
+        if (_isSnap)
         {
-            var count = _snapPhotos.Count == 1 ? "the photo" : $"the {_snapPhotos.Count} photos";
-            if (!await DisplayAlertAsync("Discard the photos?", $"No item was made yet; {count} will be deleted.", "Discard", "Keep taking"))
-                return;
+            // A shot still being written counts as taken.
+            await WaitForSavesAsync();
 
+            if (_snapPhotos.Count > 0)
+            {
+                var count = _snapPhotos.Count == 1 ? "the photo" : $"the {_snapPhotos.Count} photos";
+                if (!await DisplayAlertAsync("Discard the photos?", $"No item was made yet; {count} will be deleted.", "Discard", "Keep taking"))
+                    return;
+            }
+
+            _isDiscarding = true;
             await _photoService.DeleteAllAsync(_snapPhotos.ToList());
             _snapPhotos.Clear();
+            RefreshStrip();
         }
 
         await CloseAsync(null);
@@ -474,15 +532,49 @@ public partial class CameraPage : ContentPage, IQueryAttributable
 
     // --- Snap ----------------------------------------------------------------
 
+    private bool IsSnapFull => _snapPhotos.Count + Volatile.Read(ref _savesInFlight) >= AddItemViewModel.MaxPhotosPerItem;
+
+    // Keeps the save in the list Next and Cancel wait on, and takes it off the in-flight
+    // count once it is done, however it ends. The count went up when the save started.
+    private async void Track(Task save)
+    {
+        _pendingSaves.Add(save);
+        try
+        {
+            await save;
+        }
+        catch (Exception)
+        {
+            // Reported by the save itself.
+        }
+        finally
+        {
+            _pendingSaves.Remove(save);
+            Interlocked.Decrement(ref _savesInFlight);
+            UpdateSnapCount();
+        }
+    }
+
+    // Goes by the count, not the list: a shot is counted the moment it is taken but only
+    // joins the list once the dispatcher gets to it.
+    private async Task WaitForSavesAsync()
+    {
+        while (Volatile.Read(ref _savesInFlight) > 0)
+        {
+            var pending = _pendingSaves.ToList();
+            await (pending.Count > 0 ? Task.WhenAll(pending) : Task.Delay(50));
+        }
+    }
+
     private async Task KeepSnapAsync(byte[]? bytes)
     {
-        if (bytes is null || _isClosing)
+        if (bytes is null)
             return;
 
         try
         {
             using var stream = new MemoryStream(bytes);
-            _snapPhotos.Add(await _photoService.SaveAsync(stream));
+            await KeepAsync(await _photoService.SaveAsync(stream));
         }
         catch (Exception ex)
         {
@@ -490,14 +582,41 @@ public partial class CameraPage : ContentPage, IQueryAttributable
         }
     }
 
-    // Tapping a thumbnail drops that photo: the file is not anybody's yet.
+    // A file written after Discard is nobody's, so it goes; otherwise it joins the strip,
+    // including one that finishes while Next is waiting for it.
+    private async Task KeepAsync(string fileName)
+    {
+        if (_isDiscarding)
+        {
+            await _photoService.DeleteAsync(fileName);
+            return;
+        }
+
+        _snapPhotos.Add(fileName);
+        RefreshStrip();
+    }
+
+    // Asks first: a tap meant to look at a photo should not lose it.
     private async void OnSnapPhotoTapped(object? sender, TappedEventArgs e)
     {
         if (e.Parameter is not string fileName || _isClosing)
             return;
 
+        if (!await DisplayAlertAsync("Remove this photo?", "It will be deleted.", "Remove", "Keep"))
+            return;
+
         _snapPhotos.Remove(fileName);
+        RefreshStrip();
         await _photoService.DeleteAsync(fileName);
+    }
+
+    private void RefreshStrip()
+    {
+        _strip.Clear();
+        for (var i = 0; i < _snapPhotos.Count; i++)
+            _strip.Add(new SnapThumb(_snapPhotos[i], $"Photo {i + 1} of {_snapPhotos.Count}. Double tap to remove it"));
+
+        UpdateSnapCount();
     }
 
     private void UpdateSnapCount()
@@ -543,7 +662,7 @@ public partial class CameraPage : ContentPage, IQueryAttributable
 
             var path = LocationPath.Of(_snapLocationId, byId);
             PlaceLabel.Text = path.Length == 0 ? "📍  No location  ▾" : $"📍  {path}  ▾";
-            SemanticProperties.SetDescription(PlaceLabel, path.Length == 0 ? "Where it goes: no location. Change" : $"Where it goes: {path}. Change");
+            SemanticProperties.SetDescription(PlacePill, path.Length == 0 ? "Where it goes: no location. Change" : $"Where it goes: {path}. Change");
         }
         catch (Exception)
         {
@@ -552,25 +671,39 @@ public partial class CameraPage : ContentPage, IQueryAttributable
         }
     }
 
+    private async void OnNextClicked(object? sender, EventArgs e) => await NextAsync();
+
     // Next, or "Continue without the camera": this page gives way to the item form, which
-    // takes over the photos — its own Cancel is what deletes them from here on.
-    private async void OnNextClicked(object? sender, EventArgs e)
+    // takes over the photos — its own Cancel is what deletes them from here on. The form
+    // is pushed first and this page taken out from under it after, so the page below
+    // never shows in between (a location's edit form would take that as being left).
+    private async Task NextAsync()
     {
         if (_isClosing)
             return;
 
+        var wasLive = LiveLayer.IsVisible;
         _isClosing = true;
         await StopPreviewAsync();
+
+        // A shot still being written goes with the others.
+        await WaitForSavesAsync();
 
         try
         {
             await Shell.Current.GoToAsync(Routes.CreateFromSnap(_snapLocationId, _snapPhotos));
+            Shell.Current.Navigation.RemovePage(this);
         }
         catch (Exception ex)
         {
             _isClosing = false;
             await DisplayAlertAsync("Couldn't open the item form", $"Try again.\n\n{ex.Message}".TrimEnd(), "OK");
-            await ShowLiveAsync();
+
+            // Back to whatever was showing: a camera that would not open stays a message.
+            if (wasLive)
+                await ShowLiveAsync();
+            else
+                MessageLayer.IsVisible = true;
         }
     }
 
@@ -608,3 +741,6 @@ public partial class CameraPage : ContentPage, IQueryAttributable
         BusyIndicator.IsRunning = busy;
     }
 }
+
+/// <summary>One thumbnail in the Snap strip, with what a screen reader says for it.</summary>
+public sealed record SnapThumb(string FileName, string Description);

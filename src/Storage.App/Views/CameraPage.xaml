@@ -82,7 +82,8 @@
                         Padding="0"
                         Clicked="OnCancelClicked"
                         SemanticProperties.Description="Close the camera" />
-                <Border Grid.Column="1"
+                <Border x:Name="PlacePill"
+                        Grid.Column="1"
                         HorizontalOptions="Center"
                         HeightRequest="40"
                         Padding="14,0"
@@ -94,6 +95,7 @@
                         <TapGestureRecognizer Tapped="OnPlaceTapped" />
                     </Border.GestureRecognizers>
                     <Label x:Name="PlaceLabel"
+                           AutomationProperties.IsInAccessibleTree="False"
                            Text="📍  No location  ▾"
                            TextColor="White"
                            FontFamily="JakartaBold"
@@ -113,17 +115,17 @@
                     <ScrollView Orientation="Horizontal" HorizontalScrollBarVisibility="Never">
                         <HorizontalStackLayout x:Name="SnapStrip" Spacing="8">
                             <BindableLayout.ItemTemplate>
-                                <DataTemplate x:DataType="x:String">
+                                <DataTemplate x:DataType="views:SnapThumb">
                                     <Border WidthRequest="52"
                                             HeightRequest="52"
                                             StrokeThickness="2"
                                             Stroke="White"
                                             StrokeShape="RoundRectangle 12"
-                                            SemanticProperties.Description="Photo taken. Double tap to remove it">
+                                            SemanticProperties.Description="{Binding Description}">
                                         <Border.GestureRecognizers>
-                                            <TapGestureRecognizer Tapped="OnSnapPhotoTapped" CommandParameter="{Binding .}" />
+                                            <TapGestureRecognizer Tapped="OnSnapPhotoTapped" CommandParameter="{Binding FileName}" />
                                         </Border.GestureRecognizers>
-                                        <Image Source="{Binding ., Converter={StaticResource PhotoSourceConverter}}" Aspect="AspectFill" />
+                                        <Image Source="{Binding FileName, Converter={StaticResource PhotoSourceConverter}}" Aspect="AspectFill" />
                                     </Border>
                                 </DataTemplate>
                             </BindableLayout.ItemTemplate>

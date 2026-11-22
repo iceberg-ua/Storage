@@ -28,14 +28,14 @@ public static class Routes
         locationId is int id ? $"snap?snap=1&locationId={id}" : "snap?snap=1";
 
     /// <summary>
-    /// The create page on an item, with the photos the camera took for it. Replaces the
-    /// camera page rather than going on top of it, so Back from the form leaves the flow.
+    /// The create page on an item, with the photos the camera took for it. The camera
+    /// takes itself out from under it once it is pushed, so Back from the form leaves the flow.
     /// </summary>
     public static string CreateFromSnap(int? locationId, IEnumerable<string> photoFileNames)
     {
         var photos = string.Join('|', photoFileNames);
         var route = Create(CreateKind.Item, locationId);
-        return photos.Length == 0 ? $"../{route}" : $"../{route}&photos={Uri.EscapeDataString(photos)}";
+        return photos.Length == 0 ? route : $"{route}&photos={Uri.EscapeDataString(photos)}";
     }
 
     /// <summary>One location's page: its sub-locations and the items stored in it.</summary>
