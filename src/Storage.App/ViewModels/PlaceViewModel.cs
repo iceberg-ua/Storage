@@ -16,9 +16,8 @@ public sealed record PlaceCrumb(string Name, int? LocationId, bool IsFirst);
 /// its own pushed page, so Back walks up one level the way it does everywhere else.
 /// </summary>
 /// <remarks>
-/// The items list is a <see cref="SearchViewModel"/> scoped to this location, the same
-/// object the tabs use, so the search toolbar here behaves as it does there. It does not
-/// offer the switch to locations: the ones inside this one are the chips at the top.
+/// Search from here opens the Find page with this location as its place filter, which
+/// reaches everything inside it too.
 /// </remarks>
 public partial class PlaceViewModel : ObservableObject, IQueryAttributable
 {
@@ -28,7 +27,9 @@ public partial class PlaceViewModel : ObservableObject, IQueryAttributable
 
     public int LocationId { get; private set; }
 
-    public SearchViewModel Search { get; }
+    /// <summary>The items stored here itself, newest first; those in sub-locations are behind their chips.</summary>
+    [ObservableProperty]
+    private ObservableCollection<Item> _items = [];
 
     [ObservableProperty]
     private string _name = string.Empty;
@@ -65,7 +66,6 @@ public partial class PlaceViewModel : ObservableObject, IQueryAttributable
         _locationRepository = locationRepository;
         _itemRepository = itemRepository;
         _deletion = deletion;
-        Search = new SearchViewModel(itemRepository, locationRepository, canSearchLocations: false);
     }
 
     public void ApplyQueryAttributes(IDictionary<string, object> query)
@@ -74,7 +74,6 @@ public partial class PlaceViewModel : ObservableObject, IQueryAttributable
             int.TryParse(Convert.ToString(locationId), out var parsed))
         {
             LocationId = parsed;
-            Search.ScopeTo(parsed);
         }
     }
 
@@ -100,14 +99,11 @@ public partial class PlaceViewModel : ObservableObject, IQueryAttributable
                     .Select(l => new PlaceCrumb(l.Name, l.Id, IsFirst: false))
                     .Prepend(new PlaceCrumb("Locations", null, IsFirst: true)));
 
-            // Counted on its own rather than taken from the list, which holds matches
-            // instead while a search is under way.
-            Summary = FormatSummary(await _itemRepository.CountInLocationAsync(LocationId), location.Description);
+            Items = new ObservableCollection<Item>(await _itemRepository.GetByLocationIdAsync(LocationId));
+            Summary = FormatSummary(Items.Count, location.Description);
 
             SubPlaces = new ObservableCollection<LocationSummary>(
                 await _locationRepository.GetChildSummariesAsync(LocationId));
-
-            await Search.LoadAsync();
         }
         catch (Exception ex)
         {
@@ -133,6 +129,12 @@ public partial class PlaceViewModel : ObservableObject, IQueryAttributable
 
     [RelayCommand]
     private Task BackAsync() => Shell.Current.GoToAsync("..");
+
+    [RelayCommand]
+    private Task SearchAsync() => Shell.Current.GoToAsync(Routes.Search(LocationId));
+
+    [RelayCommand]
+    private Task OpenItemAsync(Item item) => Shell.Current.GoToAsync($"itemdetail?itemId={item.Id}");
 
     // Edit and Delete share one menu: Delete is rare and should not sit one tap away
     // in the header, next to search.

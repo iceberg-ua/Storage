@@ -35,10 +35,10 @@
                         Command="{Binding BackCommand}"
                         SemanticProperties.Description="Back" />
                 <Button Grid.Column="2"
-                        Text="{Binding Search.ToggleIcon}"
+                        Text="🔍"
                         Style="{StaticResource RoundIconButton}"
-                        Command="{Binding Search.ToggleCommand}"
-                        SemanticProperties.Description="{Binding Search.ToggleDescription}" />
+                        Command="{Binding SearchCommand}"
+                        SemanticProperties.Description="{Binding Name, StringFormat='Search in {0}'}" />
                 <Button Grid.Column="3"
                         Text="⋯"
                         Style="{StaticResource RoundIconButton}"

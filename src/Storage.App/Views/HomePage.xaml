@@ -27,7 +27,7 @@
                         Padding="18,0"
                         HeightRequest="56"
                         SemanticProperties.Description="Search items and locations"
-                        SemanticProperties.Hint="Opens search on the Items tab">
+                        SemanticProperties.Hint="Opens the Find tab">
                     <Border.GestureRecognizers>
                         <TapGestureRecognizer Command="{Binding OpenSearchCommand}" />
                     </Border.GestureRecognizers>

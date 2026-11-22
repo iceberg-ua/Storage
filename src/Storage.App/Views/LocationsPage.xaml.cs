@@ -1,4 +1,3 @@
-using System.ComponentModel;
 using Storage.App.ViewModels;
 
 namespace Storage.App.Views;
@@ -12,13 +11,6 @@ public partial class LocationsPage : ContentPage
         InitializeComponent();
         _viewModel = viewModel;
         BindingContext = _viewModel;
-        _viewModel.Search.PropertyChanged += OnSearchPropertyChanged;
-    }
-
-    private void OnSearchPropertyChanged(object? sender, PropertyChangedEventArgs e)
-    {
-        if (e.PropertyName == nameof(SearchViewModel.IsOpen) && _viewModel.Search.IsOpen)
-            Toolbar.Focus();
     }
 
     protected override async void OnAppearing()

@@ -26,6 +26,10 @@ public partial class AppShell : Shell
 		// Pushed with an optional "tagId" to edit an existing tag instead of adding one.
 		Routing.RegisterRoute("edittag", typeof(EditTagPage));
 
+		// The Find page pushed over a location's page or the Locations tab, with the place
+		// or the Places tab already chosen; the Find tab is the same page at the root.
+		Routing.RegisterRoute("search", typeof(FindPage));
+
 		// Modal. Opened through PlacePicker, which hands the choice back to its caller.
 		Routing.RegisterRoute("pickplace", typeof(PickPlacePage));
 

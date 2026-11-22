@@ -23,6 +23,21 @@ public static class Routes
     /// <remarks>Read back by <see cref="PlaceViewModel.ApplyQueryAttributes"/>.</remarks>
     public static string Place(int locationId) => $"place?locationId={locationId}";
 
+    /// <summary>
+    /// The Find page pushed on top of the current one, searching in
+    /// <paramref name="inLocationId"/> and everything inside it, or on the Places tab.
+    /// </summary>
+    /// <remarks>Read back by <see cref="FindViewModel.ApplyQueryAttributes"/>.</remarks>
+    public static string Search(int? inLocationId = null, bool places = false)
+    {
+        var route = "search?pushed=1";
+        if (inLocationId is int id)
+            route += $"&in={id}";
+        if (places)
+            route += "&tab=places";
+        return route;
+    }
+
     /// <summary>The edit form for an existing location.</summary>
     /// <remarks>Read back by <see cref="AddLocationViewModel.ApplyQueryAttributes"/>.</remarks>
     public static string EditLocation(int locationId) => $"editlocation?locationId={locationId}";

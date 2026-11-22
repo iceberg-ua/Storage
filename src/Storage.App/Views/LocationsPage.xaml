@@ -72,8 +72,9 @@
         </DataTemplate>
     </ContentPage.Resources>
 
-    <Grid RowDefinitions="Auto,Auto,*,Auto">
-        <!-- Header: what there is, then search and add. Items come from "New item" below. -->
+    <Grid RowDefinitions="Auto,*,Auto">
+        <!-- Header: what there is, then search (the Find page, on Places) and add. Items
+             come from "New item" below. -->
         <Grid Grid.Row="0"
               ColumnDefinitions="*,Auto,Auto"
               ColumnSpacing="8"
@@ -85,12 +86,12 @@
                        SemanticProperties.HeadingLevel="Level1" />
             </VerticalStackLayout>
             <Button Grid.Column="1"
-                    Text="{Binding Search.ToggleIcon}"
+                    Text="🔍"
                     Style="{StaticResource RoundIconButton}"
-                    Command="{Binding Search.ToggleCommand}"
+                    Command="{Binding SearchCommand}"
                     VerticalOptions="End"
-                    SemanticProperties.Description="{Binding Search.ToggleDescription}"
-                    ToolTipProperties.Text="{Binding Search.ToggleDescription}" />
+                    SemanticProperties.Description="Search locations"
+                    ToolTipProperties.Text="Search locations" />
             <Button Grid.Column="2"
                     Text="+ New"
                     Style="{StaticResource StrongButton}"
@@ -103,15 +104,7 @@
                     SemanticProperties.Description="Add a location" />
         </Grid>
 
-        <!-- The same toolbar the other pages use, so the search does not change shape
-             depending on which tab it was opened from. -->
-        <views:SearchToolbar x:Name="Toolbar"
-                             Grid.Row="1"
-                             BindingContext="{Binding Search}" />
-
-        <!-- Browsing: the cards. -->
-        <RefreshView Grid.Row="2"
-                     IsVisible="{Binding IsBrowsing}"
+        <RefreshView Grid.Row="1"
                      IsRefreshing="{Binding IsLoading}"
                      Command="{Binding LoadLocationsCommand}">
             <CollectionView ItemsSource="{Binding Places}"
@@ -131,28 +124,9 @@
             </CollectionView>
         </RefreshView>
 
-        <!-- Searching: matching locations at any level, or items when the toggle is
-             flipped. The same rows as in every other search, and pull to refresh works
-             here too: LoadLocations reloads the search while it is open. -->
-        <RefreshView Grid.Row="2"
-                     IsVisible="{Binding IsSearching}"
-                     IsRefreshing="{Binding IsLoading}"
-                     Command="{Binding LoadLocationsCommand}">
-            <Grid BindingContext="{Binding Search}">
-                <CollectionView ItemsSource="{Binding Locations}"
-                                IsVisible="{Binding ShowLocationList}"
-                                ItemTemplate="{StaticResource DeletableLocationRow}"
-                                EmptyViewTemplate="{StaticResource EmptyState}" />
-                <CollectionView ItemsSource="{Binding Items}"
-                                IsVisible="{Binding ShowItemList}"
-                                ItemTemplate="{StaticResource ItemRow}"
-                                EmptyViewTemplate="{StaticResource EmptyState}" />
-            </Grid>
-        </RefreshView>
-
         <!-- Its own row under the lists, not floating over them, so it never covers a
              row's swipe action and the lists need no spacer at the end. -->
-        <Button Grid.Row="3"
+        <Button Grid.Row="2"
                 Text="New item"
                 Command="{Binding NewItemCommand}"
                 Margin="20,8,20,16"

@@ -3,32 +3,102 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:Storage.App.ViewModels"
              xmlns:views="clr-namespace:Storage.App.Views"
+             xmlns:models="clr-namespace:Storage.Core.Models;assembly=Storage.Core"
              x:Class="Storage.App.Views.PlacePage"
              x:DataType="vm:PlaceViewModel"
              Title="{Binding Name}"
              Shell.NavBarIsVisible="False">
 
+    <ContentPage.Resources>
+        <!-- An item as a photo tile, for the two-column grid on a location's page: you
+             recognise a thing by sight faster than by its name. Padding gives the gutter,
+             since GridItemsLayout spacing would also indent the full-width header. -->
+        <DataTemplate x:Key="ItemTile" x:DataType="models:Item">
+            <VerticalStackLayout Padding="8,0,8,16" Spacing="8">
+                <VerticalStackLayout.GestureRecognizers>
+                    <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:PlaceViewModel}}, Path=OpenItemCommand}"
+                                          CommandParameter="{Binding .}" />
+                </VerticalStackLayout.GestureRecognizers>
+
+                <Border HeightRequest="150"
+                        StrokeThickness="0"
+                        StrokeShape="RoundRectangle 20"
+                        BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceSunken}, Dark={StaticResource SurfaceSunkenDark}}">
+                    <Grid>
+                        <Label Text="📦"
+                               FontSize="28"
+                               AutomationProperties.IsInAccessibleTree="False"
+                               HorizontalOptions="Center"
+                               VerticalOptions="Center" />
+                        <Image Source="{Binding PrimaryPhotoFileName, Converter={StaticResource PhotoSourceConverter}}"
+                               Aspect="AspectFill"
+                               IsVisible="{Binding PrimaryPhotoFileName, Converter={StaticResource IsNotNullConverter}}"
+                               SemanticProperties.Description="{Binding Name, StringFormat='Photo of {0}'}" />
+
+                        <!-- Over the photo, so it carries its own white pill rather than
+                             relying on whatever colour the photo happens to be there. -->
+                        <Border Style="{StaticResource Chip}"
+                                HeightRequest="24"
+                                Padding="8,0"
+                                Margin="10"
+                                HorizontalOptions="End"
+                                VerticalOptions="Start"
+                                BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}"
+                                IsVisible="{Binding Quantity, Converter={StaticResource GreaterThanOneConverter}}">
+                            <Label Text="{Binding Quantity, StringFormat='×{0}'}"
+                                   Style="{StaticResource StrongLabel}"
+                                   FontSize="12"
+                                   VerticalOptions="Center" />
+                        </Border>
+                    </Grid>
+                </Border>
+
+                <Label Text="{Binding Name}"
+                       Style="{StaticResource StrongLabel}"
+                       MaxLines="2"
+                       LineBreakMode="TailTruncation"
+                       Margin="4,0" />
+
+                <!-- Tag colours only: the names would not fit two to a row, and the
+                     detail page shows them in full. -->
+                <HorizontalStackLayout BindableLayout.ItemsSource="{Binding Tags}"
+                                       Spacing="6"
+                                       Margin="4,0"
+                                       IsVisible="{Binding Tags.Count, Converter={StaticResource CountToBoolConverter}}">
+                    <BindableLayout.ItemTemplate>
+                        <DataTemplate x:DataType="models:Tag">
+                            <Border WidthRequest="10"
+                                    HeightRequest="10"
+                                    StrokeThickness="0"
+                                    StrokeShape="RoundRectangle 5"
+                                    BackgroundColor="{Binding Color, Converter={StaticResource HexToColorConverter}}"
+                                    SemanticProperties.Description="{Binding Name}" />
+                        </DataTemplate>
+                    </BindableLayout.ItemTemplate>
+                </HorizontalStackLayout>
+            </VerticalStackLayout>
+        </DataTemplate>
+    </ContentPage.Resources>
+
     <!-- The page draws its own back button in the header, over the photo when there is
          one, so Shell's bar is hidden. Android's Back button still pops as usual. -->
-    <Grid RowDefinitions="Auto,*,Auto">
+    <Grid RowDefinitions="*,Auto">
 
-        <views:SearchToolbar x:Name="Toolbar"
-                             Grid.Row="0"
-                             Margin="0,12,0,0"
-                             BindingContext="{Binding Search}" />
-
-        <!-- Items stored here, two to a row, under the header. One list only: the
-             locations inside this one are the header's chips, so the search here does
-             not offer to list locations instead. The wrapper hides it, rather than just
-             covering it, while the location is missing, so a screen reader does not
-             reach the list underneath the message. -->
-        <Grid Grid.Row="1"
+        <!-- Items stored here, two to a row, under the header. The locations inside this
+             one are the header's chips. The wrapper hides it, rather than just covering
+             it, while the location is missing, so a screen reader does not reach the list
+             underneath the message. -->
+        <Grid Grid.Row="0"
               IsVisible="{Binding IsMissing, Converter={StaticResource InvertedBoolConverter}}">
             <CollectionView Margin="8,0"
-                            BindingContext="{Binding Search}"
                             ItemsSource="{Binding Items}"
-                            ItemTemplate="{StaticResource ItemTile}"
-                            EmptyViewTemplate="{StaticResource EmptyState}">
+                            ItemTemplate="{StaticResource ItemTile}">
+                <CollectionView.EmptyView>
+                    <Label Text="Nothing stored here itself yet. Tap New item here to add something."
+                           Style="{StaticResource Caption}"
+                           HorizontalTextAlignment="Center"
+                           Margin="32,16" />
+                </CollectionView.EmptyView>
                 <CollectionView.ItemsLayout>
                     <GridItemsLayout Orientation="Vertical" Span="2" />
                 </CollectionView.ItemsLayout>
@@ -39,7 +109,7 @@
             </CollectionView>
         </Grid>
 
-        <Button Grid.Row="2"
+        <Button Grid.Row="1"
                 Text="New item here"
                 Command="{Binding NewItemCommand}"
                 IsVisible="{Binding IsMissing, Converter={StaticResource InvertedBoolConverter}}"
@@ -48,7 +118,7 @@
 
         <!-- Deleted while this page was underneath another one, from a search on a
              tab. Said plainly, with a way out, instead of popping during OnAppearing. -->
-        <VerticalStackLayout Grid.RowSpan="3"
+        <VerticalStackLayout Grid.RowSpan="2"
                              IsVisible="{Binding IsMissing}"
                              BackgroundColor="{AppThemeBinding Light={StaticResource Canvas}, Dark={StaticResource CanvasDark}}"
                              Padding="32"

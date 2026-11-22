@@ -44,6 +44,13 @@ public interface ILocationRepository
     /// </summary>
     Task<IEnumerable<Location>> SearchAsync(string? query, int? parentId = null);
 
+    /// <summary>
+    /// Locations whose name or description contains <paramref name="text"/>, matched as
+    /// <see cref="SearchAsync"/> does, anywhere under <paramref name="withinLocationId"/>
+    /// (not counting it) or anywhere at all when that is null. Name order, ignoring case.
+    /// </summary>
+    Task<IReadOnlyList<Location>> FindAsync(string? text, int? withinLocationId);
+
     Task<Location> AddAsync(Location location);
     /// <exception cref="LocationCycleException">
     /// The location's parent is itself or one of its own descendants. Nothing is saved.
