@@ -78,7 +78,7 @@
 
     <Grid RowDefinitions="Auto,*,Auto">
         <!-- Header: what there is, then search (the Find page, on Places) and add. Items
-             come from "New item" below. -->
+             come from the tab bar's camera. -->
         <Grid Grid.Row="0"
               ColumnDefinitions="*,Auto,Auto"
               ColumnSpacing="8"

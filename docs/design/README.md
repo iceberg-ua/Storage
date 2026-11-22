@@ -70,7 +70,8 @@ code and delete the line. An open question (rather than a decided difference) be
 `VOL-*` issue in Linear; link it from its line here.
 
 **Everywhere**
-- **"Location", not "Place".** The mockups say Place(s); the app says Location(s). Undecided.
+- **"Location", not "Place".** The mockups say Place(s); the app says Location(s). Undecided:
+  [VOL-75](https://linear.app/melnyk/issue/VOL-75/decide-location-or-place).
 - **Find keeps the tab bar.** The mockups open Find from the tab bar onto a screen with Back
   and no tab bar; in the app Find is a tab like the others, so it has the bar and no Back.
   Find pushed from a location's page or the Locations tab has Back and no bar, as drawn.
@@ -124,6 +125,7 @@ code and delete the line. An open question (rather than a decided difference) be
 - Tag filters in force sit in a row under the box (the mockup only shows a place filter,
   which sits inside the box as drawn).
 - "tag: a tag" picks from a list of tags; the mockup does not say what it opens.
+- Results hide ×1 (`find-results.html`), as the location page's tiles do.
 
 **Tag page** (`edit-tag.html`)
 - "Custom colour…" opens RGB sliders under the palette; the mockup has the palette only.

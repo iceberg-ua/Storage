@@ -49,6 +49,7 @@ public sealed record RecentChip(string Label, string? TagColor)
 public sealed record RecentRow(RecentSearch Search, IReadOnlyList<RecentChip> Chips, bool IsFirst)
 {
     public bool HasDivider => !IsFirst;
+    public bool HasChips => Chips.Count > 0;
     public bool HasText => Search.Text.Length > 0;
 }
 

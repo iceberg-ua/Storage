@@ -24,10 +24,6 @@ public partial class AppTabBar : ContentView
     {
         InitializeComponent();
         UpdateTabs();
-
-        // The colours below are set in code, so they follow a theme change by hand.
-        if (Application.Current is { } app)
-            app.RequestedThemeChanged += (_, _) => UpdateTabs();
     }
 
     public string Current
@@ -59,11 +55,12 @@ public partial class AppTabBar : ContentView
     }
 
     // The selected tab in the accent, bolder and with a heavier line; the rest muted.
+    // Colours are set per theme, as an AppThemeBinding would, so they follow a theme
+    // change without this listening to the app (which would keep every bar alive).
     private void UpdateTabs()
     {
-        var dark = Application.Current?.RequestedTheme == AppTheme.Dark;
-        var accent = Resource(dark ? "PrimaryDark" : "Primary");
-        var muted = Resource(dark ? "InkMutedDark" : "InkMuted");
+        var accent = (Light: Resource("Primary"), Dark: Resource("PrimaryDark"));
+        var muted = (Light: Resource("InkMuted"), Dark: Resource("InkMutedDark"));
 
         Style("home", HomeTab, HomeIcon, HomeLabel);
         Style("locations", LocationsTab, LocationsIcon, LocationsLabel);
@@ -73,9 +70,10 @@ public partial class AppTabBar : ContentView
         void Style(string route, View tab, Icon icon, Label label)
         {
             var selected = route == Current;
-            icon.Color = selected ? accent : muted;
+            var colour = selected ? accent : muted;
+            icon.SetAppThemeColor(Icon.ColorProperty, colour.Light, colour.Dark);
             icon.Weight = selected ? 2 : 1.8;
-            label.TextColor = selected ? accent : muted;
+            label.SetAppThemeColor(Label.TextColorProperty, colour.Light, colour.Dark);
             label.FontFamily = selected ? "JakartaBold" : "JakartaSemiBold";
             SemanticProperties.SetDescription(tab, selected ? $"{label.Text}, selected" : label.Text);
         }

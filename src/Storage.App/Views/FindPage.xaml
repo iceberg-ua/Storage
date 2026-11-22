@@ -50,7 +50,9 @@
         </Style>
     </ContentPage.Resources>
 
-    <Grid RowDefinitions="Auto,*,Auto" Padding="20,20,20,0" RowSpacing="16">
+    <!-- No row spacing: the gap above the lists is their margin, so the tab bar's row
+         leaves none behind when it is hidden on a pushed search. -->
+    <Grid RowDefinitions="Auto,*,Auto" Padding="20,20,20,0">
 
         <!-- A stack, not grid rows, so the parts that are hidden take no spacing either. -->
         <VerticalStackLayout Spacing="16">
@@ -216,7 +218,7 @@
 
         <!-- Pull to refresh over either list, as the Items tab had. -->
         <RefreshView Grid.Row="1"
-                     Margin="-20,0"
+                     Margin="-20,16,-20,0"
                      IsRefreshing="{Binding IsRefreshing}"
                      Command="{Binding RefreshCommand}">
             <Grid>
@@ -297,14 +299,19 @@
                                                              Margin="16,0"
                                                              IsVisible="{Binding HasDivider}"
                                                              Color="{AppThemeBinding Light={StaticResource Hairline}, Dark={StaticResource HairlineDark}}" />
-                                                    <HorizontalStackLayout Grid.Row="1"
-                                                                           Spacing="12"
-                                                                           Padding="16,0"
-                                                                           AutomationProperties.IsInAccessibleTree="False">
+                                                    <!-- The text in a star column, so a long one truncates
+                                                         instead of running off the card. -->
+                                                    <Grid Grid.Row="1"
+                                                          ColumnDefinitions="Auto,*"
+                                                          ColumnSpacing="12"
+                                                          Padding="16,0"
+                                                          AutomationProperties.IsInAccessibleTree="False">
+                                                    <HorizontalStackLayout Spacing="12">
                                                         <controls:Icon Glyph="{x:Static controls:Icons.Clock}"
                                                                        Size="18"
                                                                        Color="{AppThemeBinding Light={StaticResource InkMuted}, Dark={StaticResource InkMutedDark}}" />
-                                                        <HorizontalStackLayout BindableLayout.ItemsSource="{Binding Chips}" Spacing="8" VerticalOptions="Center">
+                                                        <HorizontalStackLayout BindableLayout.ItemsSource="{Binding Chips}" Spacing="8" VerticalOptions="Center"
+                                                                               IsVisible="{Binding HasChips}">
                                                             <BindableLayout.ItemTemplate>
                                                                 <DataTemplate x:DataType="vm:RecentChip">
                                                                     <Grid>
@@ -335,11 +342,14 @@
                                                                 </DataTemplate>
                                                             </BindableLayout.ItemTemplate>
                                                         </HorizontalStackLayout>
-                                                        <Label Text="{Binding Search.Text}"
+                                                    </HorizontalStackLayout>
+                                                        <Label Grid.Column="1"
+                                                               Text="{Binding Search.Text}"
                                                                VerticalOptions="Center"
+                                                               MaxLines="1"
                                                                LineBreakMode="TailTruncation"
                                                                IsVisible="{Binding HasText}" />
-                                                    </HorizontalStackLayout>
+                                                    </Grid>
                                                 </Grid>
                                             </DataTemplate>
                                         </BindableLayout.ItemTemplate>

@@ -77,6 +77,8 @@
                             <Label.Triggers>
                                 <DataTrigger TargetType="Label" Binding="{Binding IsLast}" Value="True">
                                     <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+                                    <!-- Where you are, not a link, so not "Go to". -->
+                                    <Setter Property="SemanticProperties.Description" Value="{Binding Name, StringFormat='{0}, where you are'}" />
                                 </DataTrigger>
                             </Label.Triggers>
                             <Label.GestureRecognizers>

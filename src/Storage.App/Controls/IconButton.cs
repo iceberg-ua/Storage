@@ -11,7 +11,8 @@ namespace Storage.App.Controls;
 /// </summary>
 /// <remarks>
 /// Give an icon-only one SemanticProperties.Description, as with any icon button: the
-/// icon is not in the accessibility tree.
+/// icon is not in the accessibility tree. A labelled one is announced by its label unless
+/// it is given fuller words.
 /// </remarks>
 public class IconButton : Border
 {
@@ -57,6 +58,14 @@ public class IconButton : Border
     private readonly Label _label = new() { VerticalOptions = LayoutOptions.Center, MaxLines = 1, LineBreakMode = LineBreakMode.TailTruncation };
     private bool _isPressing;
 
+    // The command whose CanExecuteChanged this listens to, only while on screen: a view
+    // model outlives its pages, and a list row's button held by its command would never
+    // be freed. (Button does the same with a weak subscription.)
+    private ICommand? _listening;
+
+    // The description this set from Text, told apart from one the page gave.
+    private string? _textDescription;
+
     /// <summary>Raised on a tap, after the command; for pages that handle taps in code.</summary>
     public event EventHandler? Clicked;
 
@@ -82,9 +91,15 @@ public class IconButton : Border
         row.SetBinding(HorizontalStackLayout.SpacingProperty, static (IconButton b) => b.Spacing, source: this);
         Content = row;
 
+        // The button is what a screen reader stops on, so the label is not a second stop.
+        AutomationProperties.SetIsInAccessibleTree(_label, false);
+
         var tap = new TapGestureRecognizer();
         tap.Tapped += OnTapped;
         GestureRecognizers.Add(tap);
+
+        Loaded += (_, _) => Listen();
+        Unloaded += (_, _) => StopListening();
 
         UpdateParts();
     }
@@ -106,6 +121,13 @@ public class IconButton : Border
     {
         _icon.IsVisible = !string.IsNullOrEmpty(Glyph);
         _label.IsVisible = !string.IsNullOrEmpty(Text);
+
+        var description = SemanticProperties.GetDescription(this);
+        if (description is null || description == _textDescription)
+        {
+            _textDescription = Text;
+            SemanticProperties.SetDescription(this, Text);
+        }
     }
 
     private void UpdateOrder()
@@ -126,11 +148,29 @@ public class IconButton : Border
     private static void OnCommandChanged(BindableObject bindable, object? oldValue, object? newValue)
     {
         var button = (IconButton)bindable;
-        if (oldValue is ICommand old)
-            old.CanExecuteChanged -= button.OnCanExecuteChanged;
-        if (newValue is ICommand command)
-            command.CanExecuteChanged += button.OnCanExecuteChanged;
-        button.UpdateEnabled();
+        if (button.IsLoaded)
+            button.Listen();
+        else
+            button.UpdateEnabled();
+    }
+
+    private void Listen()
+    {
+        StopListening();
+        if (Command is { } command)
+        {
+            command.CanExecuteChanged += OnCanExecuteChanged;
+            _listening = command;
+        }
+
+        UpdateEnabled();
+    }
+
+    private void StopListening()
+    {
+        if (_listening is { } command)
+            command.CanExecuteChanged -= OnCanExecuteChanged;
+        _listening = null;
     }
 
     private void OnCanExecuteChanged(object? sender, EventArgs e) => UpdateEnabled();
