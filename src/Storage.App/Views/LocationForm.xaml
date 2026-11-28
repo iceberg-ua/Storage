@@ -43,7 +43,7 @@
                                            Opacity="0.35"
                                            Color="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}"
                                            IsVisible="{Binding HasPhoto, Converter={StaticResource InvertedBoolConverter}}" />
-                            <Image Source="{Binding PhotoFileName, Converter={StaticResource PhotoSourceConverter}}"
+                            <Image Source="{Binding PhotoFileName, Converter={StaticResource ThumbnailSourceConverter}}"
                                    Aspect="AspectFill"
                                    IsVisible="{Binding HasPhoto}" />
                         </Grid>
