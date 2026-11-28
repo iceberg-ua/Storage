@@ -75,6 +75,9 @@ code and delete the line. An open question (rather than a decided difference) be
 - **Find keeps the tab bar.** The mockups open Find from the tab bar onto a screen with Back
   and no tab bar; in the app Find is a tab like the others, so it has the bar and no Back.
   Find pushed from a location's page or the Locations tab has Back and no bar, as drawn.
+- **Confirmations are the system's dialogs.** Delete and discard questions, including the
+  location delete with its "Delete everything inside it" checkbox (`Services/CheckboxAlert.cs`),
+  are Android's native alert, which the mockups do not draw.
 
 **Home** (`home.html`)
 - No settings button (there is no settings page yet).

@@ -312,7 +312,7 @@ public class RepositoryTests : IDisposable
 
         var photos = await locationRepo.DeleteAsync(garage.Id, deleteContents: true);
 
-        Assert.Equal(["drill-label.jpg", "drill.jpg", "garage.jpg", "shelf.jpg"], photos!.Order());
+        Assert.Equal(["drill-label.jpg", "drill.jpg", "garage.jpg", "shelf.jpg"], photos!.Order(StringComparer.Ordinal));
         Assert.Equal(["Attic"], _context.Locations.AsNoTracking().Select(l => l.Name));
         Assert.Equal(["Trunk"], _context.Items.AsNoTracking().Select(i => i.Name));
         Assert.Equal(["trunk.jpg"], _context.ItemPhotos.AsNoTracking().Select(p => p.FileName));
@@ -346,6 +346,24 @@ public class RepositoryTests : IDisposable
 
         Assert.Null((await locationRepo.GetContentsAsync(house.Id))!.ParentName);
         Assert.Null(await locationRepo.GetContentsAsync(-1));
+    }
+
+    [Fact]
+    public async Task DeleteInACycleMovesToTheTopLevelAndGetContentsSaysSo()
+    {
+        // A loop saved before saves rejected them: Garage is inside Shelf, Shelf inside Garage.
+        var locationRepo = new LocationRepository(_db);
+        var garage = await locationRepo.AddAsync(new Location { Name = "Garage" });
+        var shelf = await locationRepo.AddAsync(new Location { Name = "Shelf", ParentId = garage.Id });
+        await _context.Locations.Where(l => l.Id == garage.Id)
+            .ExecuteUpdateAsync(s => s.SetProperty(l => l.ParentId, shelf.Id));
+
+        // Its parent is inside it, so there is nowhere to move up to.
+        Assert.Null((await locationRepo.GetContentsAsync(garage.Id))!.ParentName);
+
+        await locationRepo.DeleteAsync(garage.Id);
+
+        Assert.Null((await LocationOf(shelf.Id)).ParentId);
     }
 
     private Task<Location> LocationOf(int id) => _context.Locations.AsNoTracking().SingleAsync(l => l.Id == id);

@@ -43,7 +43,9 @@ public static class CheckboxAlert
     private static Task<bool?> ShowNativeAsync(
         Context context, string title, string message, string checkedMessage, string checkboxLabel, string accept, string cancel)
     {
-        var result = new TaskCompletionSource<bool?>();
+        // Resumed off the click callback, so whatever the caller shows next opens after
+        // this dialog has finished closing.
+        var result = new TaskCompletionSource<bool?>(TaskCreationOptions.RunContinuationsAsynchronously);
 
         var checkBox = new CheckBox(context) { Text = checkboxLabel };
 

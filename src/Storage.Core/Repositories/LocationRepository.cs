@@ -310,17 +310,21 @@ public class LocationRepository : ILocationRepository
         var location = await context.Locations
             .AsNoTracking()
             .Where(l => l.Id == id)
-            .Select(l => new { ParentName = l.Parent == null ? null : l.Parent.Name })
+            .Select(l => new { l.ParentId, ParentName = l.Parent == null ? null : l.Parent.Name })
             .FirstOrDefaultAsync();
         if (location is null)
             return null;
 
         var subtree = await LocationTree.SubtreeIdsAsync(context, id);
+
+        // A parent inside its own subtree (a cycle from before saves rejected them) is
+        // where DeleteAsync won't move things, so the dialog mustn't name it either.
+        var parentName = location.ParentId is int parentId && subtree.Contains(parentId) ? null : location.ParentName;
         var items = await context.Items
             .CountAsync(i => i.LocationId != null && subtree.Contains(i.LocationId.Value));
         var directItems = await context.Items.CountAsync(i => i.LocationId == id);
 
-        return new LocationContents(subtree.Count - 1, items, directItems, location.ParentName);
+        return new LocationContents(subtree.Count - 1, items, directItems, parentName);
     }
 
     // Set-based updates and deletes rather than Remove: what EF would do to children it

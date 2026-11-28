@@ -81,22 +81,26 @@ public sealed class LocationDeletion
         return sure ? true : null;
     }
 
+    // Only the items directly in it move: items further down stay where they are, inside
+    // a sub-location that moves with them. At the top level there is no parent to move
+    // to, so sub-locations become top-level ones and the items lose their location.
     private static string WhereContentsGo(LocationContents contents)
     {
-        if (contents.ParentName is string parent)
-            return $"Its {Describe(contents.Locations, contents.Items)} will move to '{parent}'.";
-
-        // At the top level there is no parent to move to: sub-locations become top-level
-        // ones, and the items directly in it lose their location. Items further down stay
-        // where they are, inside a sub-location that moves.
+        var parent = contents.ParentName;
         var parts = new List<string>();
+
         if (contents.Locations > 0)
-            parts.Add($"Its {Count(contents.Locations, "location")} will move to the top level.");
+        {
+            var destination = parent is null ? "the top level" : $"'{parent}'";
+            parts.Add($"Its {Count(contents.Locations, "location")} will move to {destination}.");
+        }
+
         if (contents.DirectItems > 0)
         {
-            parts.Add(contents.DirectItems == 1
-                ? "The item directly in it will have no location."
-                : $"The {contents.DirectItems} items directly in it will have no location.");
+            var items = contents.DirectItems == 1 ? "The item" : $"The {contents.DirectItems} items";
+            parts.Add(parent is null
+                ? $"{items} directly in it will have no location."
+                : $"{items} directly in it will move to '{parent}'.");
         }
 
         return string.Join(" ", parts);
