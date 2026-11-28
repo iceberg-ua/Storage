@@ -287,6 +287,22 @@ public class PhotoServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task CreateMissingThumbnailsDropsTheThumbnailOfAPhotoDeletedMeanwhile()
+    {
+        _compressor.FailThumbnails = true;
+        var fileName = await _service.SaveAsync(SourceImage());
+        _compressor.FailThumbnails = false;
+
+        // The user deletes the item while the backfill is encoding its thumbnail.
+        _compressor.BeforeThumbnail = () => _service.DeleteAsync(fileName);
+
+        var created = await _service.CreateMissingThumbnailsAsync([fileName]);
+
+        Assert.Equal(0, created);
+        Assert.False(File.Exists(ThumbnailOf(fileName)));
+    }
+
+    [Fact]
     public async Task DeleteRemovesTheThumbnailToo()
     {
         var fileName = await _service.SaveAsync(SourceImage());
@@ -402,6 +418,9 @@ public class PhotoServiceTests : IDisposable
 
         public bool FailThumbnails { get; set; }
 
+        // Runs as a thumbnail encode starts, to stand in for something happening meanwhile.
+        public Action? BeforeThumbnail { get; set; }
+
         // Encodes, but the stream breaks partway through being written out.
         public bool BreakThumbnailStreams { get; set; }
 
@@ -416,6 +435,9 @@ public class PhotoServiceTests : IDisposable
             Assert.NotEqual(0, probe.Length);
 
             Calls.Add(new CompressorCall(maxEdgePixels, quality));
+
+            if (maxEdgePixels == PhotoService.ThumbnailEdgePixels)
+                BeforeThumbnail?.Invoke();
 
             if (FailThumbnails && maxEdgePixels == PhotoService.ThumbnailEdgePixels)
                 throw new InvalidOperationException("Could not decode");

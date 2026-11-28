@@ -133,8 +133,18 @@ public sealed class PhotoService : IPhotoService
                     await file.CopyToAsync(source);
                 }
 
-                if (await TryWriteThumbnailAsync(source, fileName))
-                    created++;
+                if (!await TryWriteThumbnailAsync(source, fileName))
+                    continue;
+
+                // The photo was deleted while its thumbnail was being made. The delete
+                // found no thumbnail to remove, so this one would have no photo.
+                if (!File.Exists(photo))
+                {
+                    TryDelete(Path.Combine(_thumbnailsDirectory, fileName));
+                    continue;
+                }
+
+                created++;
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
@@ -149,12 +159,11 @@ public sealed class PhotoService : IPhotoService
 
     public Task DeleteAsync(string? fileName)
     {
-        if (GetFullPath(fileName) is string path)
-        {
-            TryDelete(path);
-            TryDelete(Path.Combine(_thumbnailsDirectory, fileName!));
-        }
+        if (string.IsNullOrWhiteSpace(fileName))
+            return Task.CompletedTask;
 
+        TryDelete(Path.Combine(_photosDirectory, fileName));
+        TryDelete(Path.Combine(_thumbnailsDirectory, fileName));
         return Task.CompletedTask;
     }
 
@@ -190,7 +199,9 @@ public sealed class PhotoService : IPhotoService
         }
 
         // A thumbnail is written after its photo, so one whose photo is gone is left over
-        // from a delete that only got halfway. No grace period needed.
+        // from a delete that only got halfway. No grace period needed — but only because
+        // of that order: write a thumbnail before its photo and this pass could delete it
+        // mid-save.
         if (Directory.Exists(_thumbnailsDirectory))
         {
             foreach (var path in Directory.EnumerateFiles(_thumbnailsDirectory))
