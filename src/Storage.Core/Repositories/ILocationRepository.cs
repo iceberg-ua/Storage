@@ -57,8 +57,20 @@ public interface ILocationRepository
     /// </exception>
     Task UpdateAsync(Location location);
     /// <summary>
-    /// Deletes the location and returns the row as it was, or null when there was none.
-    /// Its photo file is the caller's to remove, since only it knows the delete went through.
+    /// What is inside the location, for the delete confirmation to describe. Null when
+    /// there is no such location.
     /// </summary>
-    Task<Location?> DeleteAsync(int id);
+    Task<LocationContents?> GetContentsAsync(int id);
+
+    /// <summary>
+    /// Deletes the location, in one transaction. With <paramref name="deleteContents"/>
+    /// every location nested under it and every item in any of them go too. Without it,
+    /// its sub-locations and items move to its parent (or to the top level and to no
+    /// location), and everything further down moves with them.
+    /// </summary>
+    /// <returns>
+    /// The photo files of every location and item deleted, for the caller to remove once
+    /// it knows the rows are gone; null when there was no such location.
+    /// </returns>
+    Task<IReadOnlyList<string>?> DeleteAsync(int id, bool deleteContents = false);
 }
