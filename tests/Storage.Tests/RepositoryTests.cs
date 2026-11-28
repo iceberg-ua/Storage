@@ -240,28 +240,135 @@ public class RepositoryTests : IDisposable
 
         var deleted = await locationRepo.DeleteAsync(location.Id);
 
-        Assert.Equal("attic.jpg", deleted?.PhotoFileName);
+        Assert.Equal(["attic.jpg"], deleted);
         Assert.Empty(_context.Locations.AsNoTracking());
         Assert.Null(await locationRepo.DeleteAsync(location.Id));
     }
 
     [Fact]
-    public async Task RefusedLocationDeleteDoesNotBlockLaterSaves()
+    public async Task DeleteLocationMovesWhatIsInsideUpToItsParent()
     {
         var locationRepo = new LocationRepository(_db);
+        var itemRepo = new ItemRepository(_db);
+
+        var house = await locationRepo.AddAsync(new Location { Name = "House" });
+        var garage = await locationRepo.AddAsync(new Location { Name = "Garage", ParentId = house.Id, PhotoFileName = "garage.jpg" });
+        var shelf = await locationRepo.AddAsync(new Location { Name = "Shelf", ParentId = garage.Id });
+        var bin = await locationRepo.AddAsync(new Location { Name = "Bin", ParentId = shelf.Id });
+        var drill = await itemRepo.AddAsync(new Item { Name = "Drill", LocationId = garage.Id });
+        var screws = await itemRepo.AddAsync(new Item { Name = "Screws", LocationId = bin.Id });
+        await itemRepo.SetItemPhotosAsync(drill.Id, ["drill.jpg"]);
+
+        // Its child is loaded nowhere: the moves must not depend on what EF has seen.
+        var photos = await locationRepo.DeleteAsync(garage.Id);
+
+        // Only its own photo: the drill moved, so its photo stays.
+        Assert.Equal(["garage.jpg"], photos);
+        Assert.Null(await _context.Locations.FindAsync(garage.Id));
+        Assert.Equal(house.Id, (await LocationOf(shelf.Id)).ParentId);
+        Assert.Equal(shelf.Id, (await LocationOf(bin.Id)).ParentId);
+        Assert.Equal(house.Id, (await ItemOf(drill.Id)).LocationId);
+        Assert.Equal(bin.Id, (await ItemOf(screws.Id)).LocationId);
+        Assert.Single(_context.ItemPhotos.AsNoTracking());
+    }
+
+    [Fact]
+    public async Task DeleteTopLevelLocationMovesSubLocationsToTheTopAndItemsToNoLocation()
+    {
+        var locationRepo = new LocationRepository(_db);
+        var itemRepo = new ItemRepository(_db);
 
         var garage = await locationRepo.AddAsync(new Location { Name = "Garage" });
-        await locationRepo.AddAsync(new Location { Name = "Shelf", ParentId = garage.Id });
+        var shelf = await locationRepo.AddAsync(new Location { Name = "Shelf", ParentId = garage.Id });
+        var drill = await itemRepo.AddAsync(new Item { Name = "Drill", LocationId = garage.Id });
 
-        // The delete's own context has never loaded the child, so EF can't null its
-        // ParentId and SQLite's foreign key refuses the delete.
-        await Assert.ThrowsAsync<DbUpdateException>(() => locationRepo.DeleteAsync(garage.Id));
+        var photos = await locationRepo.DeleteAsync(garage.Id);
 
-        // A later save still works, and the refused delete took nothing with it.
-        await locationRepo.AddAsync(new Location { Name = "Attic" });
-
-        Assert.Equal(["Attic", "Garage", "Shelf"], _context.Locations.AsNoTracking().Select(l => l.Name).Order());
+        Assert.NotNull(photos);
+        Assert.Empty(photos);
+        Assert.Null((await LocationOf(shelf.Id)).ParentId);
+        Assert.Null((await ItemOf(drill.Id)).LocationId);
     }
+
+    [Fact]
+    public async Task DeleteLocationWithContentsDeletesTheWholeTreeAndHandsBackEveryPhoto()
+    {
+        var locationRepo = new LocationRepository(_db);
+        var itemRepo = new ItemRepository(_db);
+        var tagRepo = new TagRepository(_db);
+
+        var garage = await locationRepo.AddAsync(new Location { Name = "Garage", PhotoFileName = "garage.jpg" });
+        var shelf = await locationRepo.AddAsync(new Location { Name = "Shelf", ParentId = garage.Id, PhotoFileName = "shelf.jpg" });
+        var bin = await locationRepo.AddAsync(new Location { Name = "Bin", ParentId = shelf.Id });
+        var drill = await itemRepo.AddAsync(new Item { Name = "Drill", LocationId = shelf.Id });
+        var screws = await itemRepo.AddAsync(new Item { Name = "Screws", LocationId = bin.Id });
+        await itemRepo.SetItemPhotosAsync(drill.Id, ["drill.jpg", "drill-label.jpg"]);
+        await tagRepo.SetItemTagsAsync(screws.Id, ["Hardware"]);
+
+        // Outside the tree, and untouched by its delete.
+        var attic = await locationRepo.AddAsync(new Location { Name = "Attic" });
+        var trunk = await itemRepo.AddAsync(new Item { Name = "Trunk", LocationId = attic.Id });
+        await itemRepo.SetItemPhotosAsync(trunk.Id, ["trunk.jpg"]);
+
+        var photos = await locationRepo.DeleteAsync(garage.Id, deleteContents: true);
+
+        Assert.Equal(["drill-label.jpg", "drill.jpg", "garage.jpg", "shelf.jpg"], photos!.Order(StringComparer.Ordinal));
+        Assert.Equal(["Attic"], _context.Locations.AsNoTracking().Select(l => l.Name));
+        Assert.Equal(["Trunk"], _context.Items.AsNoTracking().Select(i => i.Name));
+        Assert.Equal(["trunk.jpg"], _context.ItemPhotos.AsNoTracking().Select(p => p.FileName));
+
+        // The tag stays, with nothing on it.
+        var hardware = await _context.Tags.AsNoTracking().Include(t => t.Items).SingleAsync();
+        Assert.Empty(hardware.Items);
+    }
+
+    [Fact]
+    public async Task GetContentsCountsEveryLevelAndNamesWhereTheyWouldMove()
+    {
+        var locationRepo = new LocationRepository(_db);
+        var itemRepo = new ItemRepository(_db);
+
+        var house = await locationRepo.AddAsync(new Location { Name = "House" });
+        var garage = await locationRepo.AddAsync(new Location { Name = "Garage", ParentId = house.Id });
+        var shelf = await locationRepo.AddAsync(new Location { Name = "Shelf", ParentId = garage.Id });
+        await locationRepo.AddAsync(new Location { Name = "Bin", ParentId = shelf.Id });
+        await itemRepo.AddAsync(new Item { Name = "Drill", LocationId = garage.Id });
+        await itemRepo.AddAsync(new Item { Name = "Saw", LocationId = garage.Id });
+        await itemRepo.AddAsync(new Item { Name = "Screws", LocationId = shelf.Id });
+        await itemRepo.AddAsync(new Item { Name = "Lamp", LocationId = house.Id });
+
+        Assert.Equal(new LocationContents(2, 3, 2, "House"), await locationRepo.GetContentsAsync(garage.Id));
+
+        var bin = (await locationRepo.GetChildrenAsync(shelf.Id)).Single();
+        var empty = await locationRepo.GetContentsAsync(bin.Id);
+        Assert.True(empty!.IsEmpty);
+        Assert.Equal("Shelf", empty.ParentName);
+
+        Assert.Null((await locationRepo.GetContentsAsync(house.Id))!.ParentName);
+        Assert.Null(await locationRepo.GetContentsAsync(-1));
+    }
+
+    [Fact]
+    public async Task DeleteInACycleMovesToTheTopLevelAndGetContentsSaysSo()
+    {
+        // A loop saved before saves rejected them: Garage is inside Shelf, Shelf inside Garage.
+        var locationRepo = new LocationRepository(_db);
+        var garage = await locationRepo.AddAsync(new Location { Name = "Garage" });
+        var shelf = await locationRepo.AddAsync(new Location { Name = "Shelf", ParentId = garage.Id });
+        await _context.Locations.Where(l => l.Id == garage.Id)
+            .ExecuteUpdateAsync(s => s.SetProperty(l => l.ParentId, shelf.Id));
+
+        // Its parent is inside it, so there is nowhere to move up to.
+        Assert.Null((await locationRepo.GetContentsAsync(garage.Id))!.ParentName);
+
+        await locationRepo.DeleteAsync(garage.Id);
+
+        Assert.Null((await LocationOf(shelf.Id)).ParentId);
+    }
+
+    private Task<Location> LocationOf(int id) => _context.Locations.AsNoTracking().SingleAsync(l => l.Id == id);
+
+    private Task<Item> ItemOf(int id) => _context.Items.AsNoTracking().SingleAsync(i => i.Id == id);
 
     [Fact]
     public async Task ReferencedPhotosIncludeLocationPhotos()

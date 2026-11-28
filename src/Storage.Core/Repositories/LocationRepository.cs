@@ -303,18 +303,99 @@ public class LocationRepository : ILocationRepository
         await context.SaveChangesAsync();
     }
 
-    public async Task<Location?> DeleteAsync(int id)
+    public async Task<LocationContents?> GetContentsAsync(int id)
     {
         await using var context = await _contextFactory.CreateDbContextAsync();
-        var location = await context.Locations.FindAsync(id);
-        if (location != null)
-        {
-            // A location with children is Restrict, so SQLite refuses this delete. The
-            // context goes with the call, so the refusal can't be retried by a later save.
-            context.Locations.Remove(location);
-            await context.SaveChangesAsync();
-        }
 
-        return location;
+        var location = await context.Locations
+            .AsNoTracking()
+            .Where(l => l.Id == id)
+            .Select(l => new { l.ParentId, ParentName = l.Parent == null ? null : l.Parent.Name })
+            .FirstOrDefaultAsync();
+        if (location is null)
+            return null;
+
+        var subtree = await LocationTree.SubtreeIdsAsync(context, id);
+
+        // A parent inside its own subtree (a cycle from before saves rejected them) is
+        // where DeleteAsync won't move things, so the dialog mustn't name it either.
+        var parentName = location.ParentId is int parentId && subtree.Contains(parentId) ? null : location.ParentName;
+        var items = await context.Items
+            .CountAsync(i => i.LocationId != null && subtree.Contains(i.LocationId.Value));
+        var directItems = await context.Items.CountAsync(i => i.LocationId == id);
+
+        return new LocationContents(subtree.Count - 1, items, directItems, parentName);
+    }
+
+    // Set-based updates and deletes rather than Remove: what EF would do to children it
+    // happens to have loaded is exactly what made this delete depend on browsing history.
+    public async Task<IReadOnlyList<string>?> DeleteAsync(int id, bool deleteContents = false)
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        await using var transaction = await context.Database.BeginTransactionAsync();
+
+        var location = await context.Locations
+            .AsNoTracking()
+            .FirstOrDefaultAsync(l => l.Id == id);
+        if (location is null)
+            return null;
+
+        var subtree = await LocationTree.SubtreeIdsAsync(context, id);
+        // Deleting the contents takes the location with them; moving them up leaves it
+        // empty, so the delete below always finds nothing in the way.
+        var photos = deleteContents
+            ? await DeleteContentsAsync(context, subtree)
+            : await MoveContentsUpAsync(context, location, subtree);
+
+        await context.Locations.Where(l => l.Id == id).ExecuteDeleteAsync();
+        await transaction.CommitAsync();
+        return photos;
+    }
+
+    // Returns the photo files of every row it deletes, the location's own included.
+    private static async Task<IReadOnlyList<string>> DeleteContentsAsync(StorageDbContext context, HashSet<int> subtree)
+    {
+        var itemPhotos = await context.ItemPhotos
+            .Where(p => p.Item!.LocationId != null && subtree.Contains(p.Item.LocationId.Value))
+            .Select(p => p.FileName)
+            .ToListAsync();
+        var locationPhotos = await context.Locations
+            .Where(l => subtree.Contains(l.Id) && l.PhotoFileName != null)
+            .Select(l => l.PhotoFileName!)
+            .ToListAsync();
+
+        // The items' photo and tag rows go with them, by cascade.
+        await context.Items
+            .Where(i => i.LocationId != null && subtree.Contains(i.LocationId.Value))
+            .ExecuteDeleteAsync();
+
+        // A parent is Restrict, and SQLite checks that row by row, so one DELETE of the
+        // whole tree could hit a parent before its child. Unlinked first, they go in any order.
+        await context.Locations
+            .Where(l => subtree.Contains(l.Id))
+            .ExecuteUpdateAsync(s => s.SetProperty(l => l.ParentId, (int?)null));
+        await context.Locations
+            .Where(l => subtree.Contains(l.Id))
+            .ExecuteDeleteAsync();
+
+        return [.. locationPhotos, .. itemPhotos];
+    }
+
+    // Only the location itself is deleted, so only its own photo is returned.
+    private static async Task<IReadOnlyList<string>> MoveContentsUpAsync(
+        StorageDbContext context, Location location, HashSet<int> subtree)
+    {
+        // A cycle saved before saves rejected them could make the parent one of its own
+        // descendants; moving the children there would leave them pointing at themselves.
+        var target = location.ParentId is int parentId && !subtree.Contains(parentId) ? location.ParentId : null;
+
+        await context.Locations
+            .Where(l => l.ParentId == location.Id)
+            .ExecuteUpdateAsync(s => s.SetProperty(l => l.ParentId, target));
+        await context.Items
+            .Where(i => i.LocationId == location.Id)
+            .ExecuteUpdateAsync(s => s.SetProperty(i => i.LocationId, target));
+
+        return location.PhotoFileName is string photo ? [photo] : [];
     }
 }
